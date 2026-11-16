@@ -24,7 +24,7 @@
  *   with a half-specified dataset.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   defineModule,
   type BuilderModule,
@@ -35,6 +35,14 @@ import {
   type WeatherSelection,
 } from "@model-builder/core";
 import { useTranslation } from "@spatialhub/i18n";
+import { useArchives } from "./archives";
+
+/**
+ * The module's own surface, re-exported: a host installs a source through the same entry point it imports the
+ * module from, so it never reaches into the module's files. Same shape as `setGridEngine` and `setRegionSource`.
+ */
+export { setWeatherSource } from "./archives";
+export type { WeatherArchives, WeatherSource } from "./archives";
 
 /** The scenarios, low to high solar — the order the legacy shows them in. */
 const SCENARIOS: readonly WeatherChoice[] = ["p10", "p50", "p90"];
@@ -45,31 +53,6 @@ const ARCHIVE_NAMES: Record<string, string> = {
   "era5-land": "ERA5-Land",
   "cosmo-rea6": "COSMO-REA6",
 };
-
-/** What the backend says about its weather archives. */
-export interface WeatherArchives {
-  /** The archive runs use when a model chooses none; null until known. */
-  defaultProvider: string | null;
-  /** Archives with at least one year, each ascending. */
-  archives: Record<string, number[]>;
-}
-
-/**
- * What this module needs from a host: the archives it may choose from.
- *
- * One method, and deliberately not a year-by-archive lookup: the choice is *stored*, never fetched, and the
- * years are here only so the picker is honest about what the backend can actually serve.
- */
-export interface WeatherSource {
-  listArchives(): Promise<WeatherArchives>;
-}
-
-let source: WeatherSource | null = null;
-
-/** Install the source. The frame calls this at startup, the way it installs the grid engine. */
-export function setWeatherSource(next: WeatherSource | null): void {
-  source = next;
-}
 
 /**
  * The module's own model: what its controls have collected, and the node they were collected for.
@@ -181,29 +164,6 @@ const module = defineModule({
 
   validate: (ctx) => issuesFor(ctx.store),
 });
-
-/** The archives the picker may offer. Fetched once — the list is a property of the backend, not the model. */
-function useArchives(): { archives: WeatherArchives; failed: boolean } {
-  const [state, setState] = useState<WeatherArchives>({ defaultProvider: null, archives: {} });
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let live = true;
-    source
-      ?.listArchives()
-      .then((next) => {
-        if (live) setState(next);
-      })
-      .catch(() => {
-        if (live) setFailed(true);
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  return { archives: state, failed };
-}
 
 /** A row of mutually exclusive choices — one click each, and the click *is* the commit. */
 const ChoiceRow: React.FC<{

@@ -35,14 +35,13 @@ import {
 } from "@model-builder/core";
 import { useTranslation } from "@spatialhub/i18n";
 import {
-  catalogueSource,
   defaultProduct,
   expectedFitTech,
   HEAT_SUPPLY_TYPES,
   productType,
   productsOfType,
+  useCatalogue,
   vectorsOfType,
-  type CatalogueProduct,
 } from "./catalogue";
 
 /** The setting the autoresolve toggle writes, on the module's behalf. */
@@ -245,31 +244,6 @@ function fClassOf(
   feature: GeoJSON.Feature,
 ): string | undefined {
   return params?.electricity?.[osmId]?.fClass ?? stringOf(feature.properties?.building_type);
-}
-
-/** A hosted catalogue, or empty until one answers. */
-function useCatalogue(): { products: readonly CatalogueProduct[]; failed: boolean } {
-  const [products, setProducts] = useState<readonly CatalogueProduct[]>([]);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let live = true;
-    const source = catalogueSource();
-    if (source === null) return;
-    source
-      .load()
-      .then((next) => {
-        if (live) setProducts(next);
-      })
-      .catch(() => {
-        if (live) setFailed(true);
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  return { products, failed };
 }
 
 /** One catalogue type: what it converts, and the button that applies it to every building. */

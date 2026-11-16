@@ -17,6 +17,7 @@
  *    solvable where electric heating would exceed the transformer capacity pylovo sized for ordinary use.
  */
 
+import { useEffect, useSyncExternalStore } from "react";
 import type { EnergyVector } from "@model-builder/core";
 
 /** A product in the catalogue, as a host serves it (the legacy's `Technology`, minus what we do not use). */
@@ -38,16 +39,97 @@ export interface CatalogueSource {
   load(): Promise<readonly CatalogueProduct[]>;
 }
 
+/**
+ * What the picker knows right now.
+ *
+ * The list lives here, outside React, for the same reason `model-start`'s regions do: a load has to be
+ * startable from the install, not only from a component's mount, or it is never started at all.
+ */
+export interface CatalogueState {
+  products: readonly CatalogueProduct[];
+  /** True until the first answer lands: the picker cannot say "no products" before it has asked. */
+  loading: boolean;
+  /** True when the load itself failed — a different claim from an empty catalogue. */
+  failed: boolean;
+}
+
 let source: CatalogueSource | null = null;
+let state: CatalogueState = { products: [], loading: false, failed: false };
+let inFlight: Promise<void> | null = null;
+const listeners = new Set<() => void>();
+
+function publish(next: CatalogueState): void {
+  state = next;
+  for (const listener of [...listeners]) listener();
+}
 
 /** Install the source. The frame calls this at startup, the way it installs the grid engine. */
 export function setCatalogueSource(next: CatalogueSource | null): void {
   source = next;
+  // A new source may answer differently, so what the old one returned is no longer ours to show.
+  inFlight = null;
+  publish({ products: [], loading: next !== null, failed: false });
+
+  // **Installing a source is what asks for the catalogue.** The panel mounts before the shell's install
+  // effect runs — React runs child effects first — so the mount-time load in `useCatalogue` finds no source
+  // and bails, and nothing would ever ask again. Without this the picker sits on "loading" and the request is
+  // never made at all.
+  if (next !== null) void loadCatalogue();
+}
+
+/**
+ * Load the catalogue, once per source.
+ *
+ * Deduplicated while a load is in flight, and a no-op once one has landed: `loading` is the flag that says a
+ * load is owed. `setCatalogueSource` raises it and starts the load, the answer lowers it — so a panel that
+ * mounts later joins the running load instead of asking again.
+ */
+export function loadCatalogue(): Promise<void> {
+  if (!state.loading) return Promise.resolve();
+  if (inFlight !== null) return inFlight;
+
+  const installed = source;
+  if (installed === null) {
+    publish({ products: [], loading: false, failed: false });
+    return Promise.resolve();
+  }
+
+  inFlight = installed
+    .load()
+    .then((products) => publish({ products, loading: false, failed: false }))
+    .catch(() => publish({ products: [], loading: false, failed: true }))
+    .finally(() => {
+      inFlight = null;
+    });
+
+  return inFlight;
+}
+
+/** Subscribe to the picker's state — the shape `useSyncExternalStore` wants, exported so it can be tested. */
+export function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** The picker's state right now. */
+export function catalogueState(): CatalogueState {
+  return state;
 }
 
 /** The installed source, or null when no host has provided one. */
 export function catalogueSource(): CatalogueSource | null {
   return source;
+}
+
+/** The picker's state, loading the catalogue on first mount. */
+export function useCatalogue(): CatalogueState {
+  const snapshot = useSyncExternalStore(subscribe, catalogueState);
+  useEffect(() => {
+    void loadCatalogue();
+  }, []);
+  return snapshot;
 }
 
 /**
