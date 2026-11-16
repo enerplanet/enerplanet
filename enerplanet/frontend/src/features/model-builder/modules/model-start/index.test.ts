@@ -148,6 +148,40 @@ describe("model-start's behaviour", () => {
     expect(issues.map((issue) => issue.port).sort()).toEqual(["fromDate", "modelName", "region"]);
   });
 
+  it("stays finished when re-applied with every field untouched", async () => {
+    const store = createStore({});
+    const engine = createEngine(store);
+
+    hold(NODE, { modelName: NAME, fromDate: FROM, toDate: TO, region: REGION });
+    await engine.runModule(modelStart.module, { id: NODE });
+    expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
+
+    // The form omits whatever the user did not retype, so coming back to this node and pressing Apply again
+    // holds *nothing*. That must not un-finish work the store already holds — the node is still done, and the
+    // user is not asked to retype what they already set.
+    hold(NODE, {});
+    await engine.runModule(modelStart.module, { id: NODE });
+
+    expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
+    expect(store.data.modelName).toBe(NAME.trim());
+  });
+
+  it("stays finished after the region is changed on a revisit", async () => {
+    const store = createStore({});
+    const engine = createEngine(store);
+
+    hold(NODE, { modelName: NAME, fromDate: FROM, toDate: TO, region: REGION });
+    await engine.runModule(modelStart.module, { id: NODE });
+    expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
+
+    // Coming back to swap the region changes one field. The name and period are untouched and already in the
+    // store, so the node must stay finished — the user should not have to retype what they already set.
+    hold(NODE, { region: { country: "NL", state: "ZH" } });
+    await engine.runModule(modelStart.module, { id: NODE });
+
+    expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
+  });
+
   it("reports a period that starts after it ends", async () => {
     const { issues } = await runInScratch({
       module: modelStart.module,
