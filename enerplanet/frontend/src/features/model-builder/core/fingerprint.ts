@@ -8,14 +8,27 @@
  *
  * This is the comparison elision uses to decide "nothing changed" (T20) and the artefact
  * check uses to notice that a stored projection and its log disagree (T18).
+ *
+ * **The result is a fixed-width digest, not the canonical string.** The canonical string is
+ * built first and then hashed, because an artefact stores its fingerprint in a `varchar(255)`
+ * column (`model_sessions.fingerprint`): a projection holding a grid and its buildings
+ * canonicalises to kilobytes, and a projection that cannot be stored is a save that cannot
+ * happen. Hashing also makes the cost of the artefact check independent of the model's size.
+ *
+ * SHA-256, implemented here rather than pulled in, because a fingerprint is what decides
+ * whether a load trusts a stored projection — a collision there is a silently wrong model,
+ * and that is worth 60 lines of well-specified arithmetic (`FIPS 180-4`) over a
+ * collision-prone string hash with no dependency cost to weigh against. The test vectors are
+ * the published ones.
  */
 
-/** Deterministic string for any JSON-safe store value. */
+/** A hex SHA-256 digest of a value's canonical form. Always 64 characters. */
 export function fingerprint(value: unknown): string {
-  return stableStringify(value, new Set());
+  return sha256Hex(canonicalString(value, new Set()));
 }
 
-function stableStringify(value: unknown, seen: Set<unknown>): string {
+/** Deterministic string for any JSON-safe store value — the input the digest is taken of. */
+function canonicalString(value: unknown, seen: Set<unknown>): string {
   if (value === undefined) return "undefined";
   if (value === null) return "null";
 
@@ -31,7 +44,7 @@ function stableStringify(value: unknown, seen: Set<unknown>): string {
   }
 
   if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item, seen)).join(",")}]`;
+    return `[${value.map((item) => canonicalString(item, seen)).join(",")}]`;
   }
 
   if (typeof value === "object") {
@@ -41,7 +54,7 @@ function stableStringify(value: unknown, seen: Set<unknown>): string {
     const record = value as Record<string, unknown>;
     const body = Object.keys(record)
       .sort()
-      .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key], seen)}`)
+      .map((key) => `${JSON.stringify(key)}:${canonicalString(record[key], seen)}`)
       .join(",");
 
     seen.delete(value);
@@ -50,4 +63,87 @@ function stableStringify(value: unknown, seen: Set<unknown>): string {
 
   // Functions and symbols are not store values; keep the function total rather than throwing.
   return String(value);
+}
+
+/**
+ * SHA-256 in hex (`FIPS 180-4`).
+ *
+ * Straight from the specification: the round constants and the initial hash values are the
+ * document's, the message schedule is expanded from the 32-bit words below, and the padding
+ * is the standard `0x80` sentinel followed by the bit length as a 64-bit big-endian tail.
+ */
+const K = new Uint32Array([
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+]);
+
+function sha256Hex(input: string): string {
+  const bytes = new TextEncoder().encode(input);
+
+  // Pad: 0x80, zeros to 56 mod 64, then the length in bits as a 64-bit big-endian integer.
+  const withPadding = bytes.length + 1;
+  const padded = new Uint8Array(withPadding + ((56 - (withPadding % 64)) + 64) % 64 + 8);
+  padded.set(bytes);
+  padded[bytes.length] = 0x80;
+  const bits = BigInt(bytes.length) * 8n;
+  for (let i = 0; i < 8; i += 1) {
+    padded[padded.length - 1 - i] = Number((bits >> BigInt(8 * i)) & 0xffn);
+  }
+
+  const h = new Uint32Array([
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+  ]);
+  const w = new Uint32Array(64);
+
+  for (let offset = 0; offset < padded.length; offset += 64) {
+    for (let i = 0; i < 16; i += 1) {
+      const at = offset + i * 4;
+      w[i] = ((padded[at] << 24) | (padded[at + 1] << 16) | (padded[at + 2] << 8) | padded[at + 3]) >>> 0;
+    }
+    for (let i = 16; i < 64; i += 1) {
+      const s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+      const s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+    }
+
+    let [a, b, c, d, e, f, g, hh] = h;
+    for (let i = 0; i < 64; i += 1) {
+      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const temp1 = (hh + S1 + ch + K[i] + w[i]) >>> 0;
+      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const temp2 = (S0 + maj) >>> 0;
+
+      hh = g;
+      g = f;
+      f = e;
+      e = (d + temp1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (temp1 + temp2) >>> 0;
+    }
+
+    h[0] = (h[0] + a) >>> 0;
+    h[1] = (h[1] + b) >>> 0;
+    h[2] = (h[2] + c) >>> 0;
+    h[3] = (h[3] + d) >>> 0;
+    h[4] = (h[4] + e) >>> 0;
+    h[5] = (h[5] + f) >>> 0;
+    h[6] = (h[6] + g) >>> 0;
+    h[7] = (h[7] + hh) >>> 0;
+  }
+
+  return Array.from(h, (word) => word.toString(16).padStart(8, "0")).join("");
+}
+
+function rotr(word: number, by: number): number {
+  return ((word >>> by) | (word << (32 - by))) >>> 0;
 }
