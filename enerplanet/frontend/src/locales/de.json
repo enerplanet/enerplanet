@@ -2888,6 +2888,8 @@
       "required": "Wert eingeben",
       "positive": "Muss größer als 0 sein",
       "notNegative": "Muss 0 oder größer sein",
+      "atLeast": "Muss mindestens {{min}} sein",
+      "atMost": "Darf höchstens {{max}} sein",
       "notEditable": "Dieser Wert kann hier nicht bearbeitet werden"
     }
   },

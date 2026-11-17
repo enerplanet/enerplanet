@@ -2888,6 +2888,8 @@
       "required": "Voer een waarde in",
       "positive": "Moet groter dan 0 zijn",
       "notNegative": "Moet 0 of meer zijn",
+      "atLeast": "Moet {{min}} of meer zijn",
+      "atMost": "Moet {{max}} of minder zijn",
       "notEditable": "Deze waarde kan hier niet worden bewerkt"
     }
   },
