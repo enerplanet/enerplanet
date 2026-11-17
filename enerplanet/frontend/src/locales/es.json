@@ -1626,7 +1626,6 @@
       "storeys": "Plantas (geometría 3D)",
       "floorArea": "Superficie útil",
       "roomHeight": "Altura de planta",
-      "envelope": "Envolvente de referencia (TABULA)",
       "useType": {
         "SFH": "Vivienda unifamiliar",
         "TH": "Vivienda adosada",
