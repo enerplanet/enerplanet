@@ -2889,6 +2889,8 @@
       "required": "Introduzca un valor",
       "positive": "Debe ser mayor que 0",
       "notNegative": "Debe ser 0 o más",
+      "atLeast": "Debe ser {{min}} o más",
+      "atMost": "Debe ser {{max}} o menos",
       "notEditable": "Este valor no se puede editar aquí"
     }
   },

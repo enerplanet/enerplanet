@@ -2888,6 +2888,8 @@
       "required": "Enter a value",
       "positive": "Must be above 0",
       "notNegative": "Must be 0 or more",
+      "atLeast": "Must be {{min}} or more",
+      "atMost": "Must be {{max}} or less",
       "notEditable": "This value cannot be edited here"
     }
   },
