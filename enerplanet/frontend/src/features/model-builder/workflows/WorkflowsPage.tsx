@@ -155,12 +155,18 @@ const WorkflowsPage: React.FC = () => {
 
   const newId = useMemo(() => slugify(newLabel), [newLabel]);
 
+  // Every stored row's document, the catalogue a subflow node's expansion resolves through. Built from the one
+  // list call the page already makes, so a subflow costs no extra request (`shell/workflow.ts` reads the same
+  // list the same way).
+  const workflowDocuments = useMemo(() => items.map((item) => item.definition), [items]);
+
   // ── the editor, when one is open ───────────────────────────────────────────
   if (editing !== null) {
     return (
       <WorkflowEditor
         document={editing.document}
         catalogue={MODULES}
+        workflows={workflowDocuments}
         persisted={editing.persisted}
         dirty={dirty}
         saving={saving}

@@ -2965,10 +2965,12 @@
       "loadingModel": "Loading the model…",
       "loadingWorkflow": "Loading the workflow…",
       "noDefaultWorkflow": "No default workflow is set — run `make seed`.",
+      "noRequestedWorkflow": "No stored workflow matches \"{{id}}\".",
       "workflowLoadFailed": "The workflow could not be loaded: {{reason}}",
       "noSession": "This model has no experimental session to load.",
       "badModelId": "That model id is not a number.",
       "divergence": "This model's saved state disagreed with its history; it was rebuilt from the history instead.",
+      "variantSessionFailed": "The variant was created, but its session could not be saved: {{reason}}",
       "title": "Model Builder",
       "subtitle": "Module preview — one module at a time, on mock data",
       "module": "Module",
@@ -3230,7 +3232,19 @@
         "gateHint": "A module can be added once the chain already produces every port it requires.",
         "removeConfirm": "Removing this step also removes everything after it - a linear chain cannot have a hole. Remove {{count}} step(s)?",
         "unknownModule": "Unknown module \"{{moduleId}}\" at node \"{{nodeId}}\" - it is not in this build's catalogue.",
-        "notANode": "\"{{moduleId}}\" at node \"{{nodeId}}\" is not a node - it is a host module, which provides a service rather than rendering a step."
+        "notANode": "\"{{moduleId}}\" at node \"{{nodeId}}\" is not a node - it is a host module, which provides a service rather than rendering a step.",
+        "addSubflow": "Insert a workflow",
+        "subflowPickerHint": "A workflow is spliced in at this position; the fragment workflows are listed first.",
+        "subflowNone": "No stored workflows to insert.",
+        "choose": "Insert",
+        "fragment": "fragment",
+        "current": "current",
+        "subflow": "subflow",
+        "changeWorkflow": "Change workflow",
+        "subflowOwnedBy": "Steps from \"{{label}}\" - edited in that workflow, not here.",
+        "subflowExpansionFailed": "This workflow cannot be expanded here.",
+        "recursive": "would contain this workflow - a subflow cannot include itself, directly or transitively",
+        "unresolved": "cannot be resolved - it names a module or workflow this build does not have"
       }
     },
     "run-meme-calliope": {
@@ -3285,10 +3299,10 @@
       "description": "Make a family copy of this model. The variant becomes its own saved model, versioned within the family.",
       "create": "Create variant",
       "continue": "Continue",
-      "made": "Variant created",
+      "switchedTo": "This page is now on the variant.",
       "titleLabel": "Title",
       "idLabel": "Variant id",
-      "open": "Open the variant in the builder",
+      "rootLabel": "Comparison root",
       "bottom": {
         "notSet": "no variant yet",
         "ready": "variant {{id}}"

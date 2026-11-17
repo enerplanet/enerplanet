@@ -2961,10 +2961,12 @@
       "loadingModel": "Model wordt geladen…",
       "loadingWorkflow": "De workflow wordt geladen…",
       "noDefaultWorkflow": "Er is geen standaardworkflow ingesteld — voer `make seed` uit.",
+      "noRequestedWorkflow": "Geen opgeslagen workflow komt overeen met \"{{id}}\".",
       "workflowLoadFailed": "De workflow kon niet worden geladen: {{reason}}",
       "noSession": "Dit model heeft geen experimentele sessie om te laden.",
       "badModelId": "Dat model-id is geen getal.",
       "divergence": "De opgeslagen staat van dit model kwam niet overeen met de geschiedenis; het is in plaats daarvan uit de geschiedenis opgebouwd.",
+      "variantSessionFailed": "De variant is aangemaakt, maar de sessie kon niet worden opgeslagen: {{reason}}",
       "title": "Model Builder",
       "subtitle": "Modulevoorbeeld — één module tegelijk, met mock-data",
       "module": "Module",
@@ -3226,7 +3228,19 @@
         "gateHint": "Een module kan worden toegevoegd zodra de keten elke vereiste poort al produceert.",
         "removeConfirm": "Het verwijderen van deze stap verwijdert ook alles erna - een lineaire keten mag geen gat hebben. {{count}} stap(pen) verwijderen?",
         "unknownModule": "Onbekende module \"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" - deze staat niet in de catalogus van deze build.",
-        "notANode": "\"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" is geen knooppunt - het is een hostmodule die een dienst levert in plaats van een stap te tonen."
+        "notANode": "\"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" is geen knooppunt - het is een hostmodule die een dienst levert in plaats van een stap te tonen.",
+        "addSubflow": "Een workflow invoegen",
+        "subflowPickerHint": "Op deze positie wordt een workflow ingevoegd; de fragmentworkflows staan eerst.",
+        "subflowNone": "Geen opgeslagen workflows om in te voegen.",
+        "choose": "Invoegen",
+        "fragment": "fragment",
+        "current": "huidig",
+        "subflow": "subflow",
+        "changeWorkflow": "Workflow wijzigen",
+        "subflowOwnedBy": "Stappen uit \"{{label}}\" - bewerkt in die workflow, niet hier.",
+        "subflowExpansionFailed": "Deze workflow kan hier niet worden uitgevouwen.",
+        "recursive": "zou deze workflow bevatten - een subflow kan zichzelf niet bevatten, direct noch transitief",
+        "unresolved": "kan niet worden opgelost - hij noemt een module of workflow die deze build niet heeft"
       }
     },
     "run-meme-calliope": {
@@ -3281,10 +3295,10 @@
       "description": "Maakt een familiekopie van dit model. De variant wordt een eigen opgeslagen model, geversioneerd binnen de familie.",
       "create": "Variant aanmaken",
       "continue": "Doorgaan",
-      "made": "Variant aangemaakt",
+      "switchedTo": "Deze pagina staat nu op de variant.",
       "titleLabel": "Titel",
       "idLabel": "Variant-id",
-      "open": "Variant openen in de builder",
+      "rootLabel": "Vergelijkingsbasis",
       "bottom": {
         "notSet": "nog geen variant",
         "ready": "variant {{id}}"

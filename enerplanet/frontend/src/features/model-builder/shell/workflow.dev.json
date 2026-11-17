@@ -11,6 +11,9 @@
     { "id": "building-demand", "moduleId": "building-demand", "label": "Building demand" },
     { "id": "building-configurator", "moduleId": "building-configurator", "label": "Building configurator" },
     { "id": "technologies", "moduleId": "technologies", "label": "Technologies" },
-    { "id": "model-save", "moduleId": "model-save", "label": "Save model" }
+    { "id": "model-save", "moduleId": "model-save", "label": "Save model" },
+    { "id": "run-calliope", "moduleId": "run-meme-calliope", "label": "Run model (Calliope)" },
+    { "id": "run-pypsa", "moduleId": "run-meme-pypsa", "label": "Run model (PyPSA)" },
+    { "id": "result-overview", "moduleId": "result-overview", "label": "Result overview" }
   ]
 }

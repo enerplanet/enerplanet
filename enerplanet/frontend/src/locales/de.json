@@ -2965,10 +2965,12 @@
       "loadingModel": "Modell wird geladen…",
       "loadingWorkflow": "Der Workflow wird geladen…",
       "noDefaultWorkflow": "Es ist kein Standard-Workflow festgelegt — führe `make seed` aus.",
+      "noRequestedWorkflow": "Kein gespeicherter Workflow entspricht \"{{id}}\".",
       "workflowLoadFailed": "Der Workflow konnte nicht geladen werden: {{reason}}",
       "noSession": "Dieses Modell hat keine experimentelle Sitzung zum Laden.",
       "badModelId": "Diese Modell-ID ist keine Zahl.",
       "divergence": "Der gespeicherte Zustand dieses Modells stimmte nicht mit seiner Historie überein; es wurde stattdessen aus der Historie neu aufgebaut.",
+      "variantSessionFailed": "Die Variante wurde erstellt, aber ihre Sitzung konnte nicht gespeichert werden: {{reason}}",
       "title": "Model Builder",
       "subtitle": "Modulvorschau — ein Modul nach dem anderen, mit Mock-Daten",
       "module": "Modul",
@@ -3230,7 +3232,19 @@
         "gateHint": "Ein Modul kann hinzugefügt werden, sobald die Kette bereits jeden benötigten Port erzeugt.",
         "removeConfirm": "Das Entfernen dieses Schritts entfernt auch alles danach - eine lineare Kette darf keine Lücke haben. {{count}} Schritt(e) entfernen?",
         "unknownModule": "Unbekanntes Modul \"{{moduleId}}\" am Knoten \"{{nodeId}}\" - es ist nicht im Katalog dieses Builds.",
-        "notANode": "\"{{moduleId}}\" am Knoten \"{{nodeId}}\" ist kein Knoten - es ist ein Host-Modul, das einen Dienst bereitstellt, statt einen Schritt darzustellen."
+        "notANode": "\"{{moduleId}}\" am Knoten \"{{nodeId}}\" ist kein Knoten - es ist ein Host-Modul, das einen Dienst bereitstellt, statt einen Schritt darzustellen.",
+        "addSubflow": "Workflow einfügen",
+        "subflowPickerHint": "An dieser Stelle wird ein Workflow eingefügt; die Fragment-Workflows stehen zuerst.",
+        "subflowNone": "Keine gespeicherten Workflows zum Einfügen.",
+        "choose": "Einfügen",
+        "fragment": "Fragment",
+        "current": "aktuell",
+        "subflow": "Subflow",
+        "changeWorkflow": "Workflow ändern",
+        "subflowOwnedBy": "Schritte aus \"{{label}}\" - bearbeitet in diesem Workflow, nicht hier.",
+        "subflowExpansionFailed": "Dieser Workflow kann hier nicht expandiert werden.",
+        "recursive": "würde diesen Workflow enthalten - ein Subflow kann sich nicht selbst enthalten, weder direkt noch transitiv",
+        "unresolved": "kann nicht aufgelöst werden - er nennt ein Modul oder einen Workflow, den dieser Build nicht hat"
       }
     },
     "run-meme-calliope": {
@@ -3285,10 +3299,10 @@
       "description": "Erstellt eine Familienkopie dieses Modells. Die Variante wird ein eigenes gespeichertes Modell, innerhalb der Familie versioniert.",
       "create": "Variante erstellen",
       "continue": "Weiter",
-      "made": "Variante erstellt",
+      "switchedTo": "Diese Seite zeigt jetzt die Variante.",
       "titleLabel": "Titel",
       "idLabel": "Varianten-ID",
-      "open": "Variante im Builder öffnen",
+      "rootLabel": "Vergleichsbasis",
       "bottom": {
         "notSet": "noch keine Variante",
         "ready": "Variante {{id}}"

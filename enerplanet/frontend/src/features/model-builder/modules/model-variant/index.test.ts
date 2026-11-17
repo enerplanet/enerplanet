@@ -7,7 +7,8 @@
  *
  * The copy is made through a slot, so every behaviour case installs a fake gateway and asserts what the module
  * *does with the answers*: creates one copy on a run, never a second when a record already exists, commits the
- * record the gateway answered, and reports a missing gateway rather than pretending.
+ * record the gateway answered, **moves `modelId` onto the copy in the same transaction**, and reports a missing
+ * gateway rather than pretending.
  *
  * Written failing first.
  */
@@ -21,7 +22,7 @@ import {
   runInScratch,
   type ModelVariant,
 } from "@model-builder/core";
-import modelVariant, { builderPathFor, issuesFor } from "./index";
+import modelVariant, { issuesFor } from "./index";
 import { setModelVariantGateway, type ModelVariantGateway } from "./source";
 
 /** The node these cases run as — the module's own id, which is what a host uses in test mode. */
@@ -105,6 +106,22 @@ describe("model-variant's run", () => {
     expect(store.data.modelVariant).toEqual(variant({ variantModelId: 11, rootModelId: 1 }));
   });
 
+  it("switches this page onto the copy, in the same transaction as the record", async () => {
+    const gateway = fakeGateway();
+    setModelVariantGateway(gateway);
+
+    const { store, error } = await runInScratch(modelVariant);
+
+    expect(error).toBeUndefined();
+    // The switch: `modelId` moves onto the copy, so the store renders the variant in this same page.
+    expect(store.data.modelId).toBe(11);
+    expect(store.data.modelVariant).toEqual(variant({ variantModelId: 11, rootModelId: 1 }));
+    // One record, one transaction — both ports, stamped on this node.
+    expect(store.log).toHaveLength(1);
+    expect(store.log[0]?.nodeId).toBe(NODE);
+    expect(store.log[0]?.primary.map((op) => op.path).sort()).toEqual(["/modelId", "/modelVariant"]);
+  });
+
   it("creates nothing a second time when a variant is already recorded", async () => {
     const gateway = fakeGateway();
     setModelVariantGateway(gateway);
@@ -138,11 +155,5 @@ describe("model-variant's gate", () => {
     expect(issuesFor({})).toEqual([
       { port: "modelVariant", message: "No variant of this model has been made yet." },
     ]);
-  });
-});
-
-describe("model-variant's variant link", () => {
-  it("points at the builder's load contract, ?model=<id>", () => {
-    expect(builderPathFor(42)).toBe("/app/modelbuilder?model=42");
   });
 });

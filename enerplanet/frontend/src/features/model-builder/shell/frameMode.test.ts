@@ -60,7 +60,10 @@ const ENTRIES: readonly BuilderModule[] = [example, UNPLACED];
 const SEED = { modelName: "Frame fixture", resolution: 60 };
 const WORKFLOW_MODE: FrameMode = { kind: "workflow" };
 
-const workflowOf = () => toWorkflow(DEFINITION, ENTRIES, SEED);
+/** None of these documents composes a subflow, so the lookup resolves nothing. */
+const noSubflows = () => undefined;
+
+const workflowOf = () => toWorkflow(DEFINITION, ENTRIES, noSubflows, SEED);
 
 describe("the frame's mode decides what is on screen, and what the session starts from", () => {
   it("in workflow mode: the node's module, stamped with the node id, seeded from the flow", () => {
@@ -81,6 +84,7 @@ describe("the frame's mode decides what is on screen, and what the session start
     const twoNode = toWorkflow(
       { ...DEFINITION, nodes: [{ id: "solo", moduleId: "unplaced" }] },
       placed,
+      noSubflows,
       SEED,
     );
 
@@ -136,7 +140,7 @@ describe("the frame's mode decides what is on screen, and what the session start
   });
 
   it("shows nothing in workflow mode when the flow places nothing", () => {
-    const empty = toWorkflow({ ...DEFINITION, nodes: [{ id: "example", moduleId: "example" }] }, ENTRIES, SEED);
+    const empty = toWorkflow({ ...DEFINITION, nodes: [{ id: "example", moduleId: "example" }] }, ENTRIES, noSubflows, SEED);
 
     const view = frameView(WORKFLOW_MODE, { ...empty, flow: [] }, ENTRIES, createStore({}));
 
@@ -151,6 +155,7 @@ describe("the frame reports whether the module on screen is automatic", () => {
     const placed = toWorkflow(
       { ...DEFINITION, nodes: [{ id: "auto", moduleId: "auto-node" }] },
       entries,
+      noSubflows,
       SEED,
     );
 

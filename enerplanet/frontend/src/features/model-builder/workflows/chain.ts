@@ -8,7 +8,7 @@
  */
 
 import type { BuilderModule } from "../shell/contract";
-import type { WorkflowNodeDocument } from "./types";
+import { isSubflowNode, type WorkflowNodeDocument } from "./types";
 
 /** A node id not already taken, so `toWorkflow`'s uniqueness rule always holds for what we author. */
 export function nodeIdFor(moduleId: string, chain: readonly WorkflowNodeDocument[]): string {
@@ -29,6 +29,34 @@ export function appendModule(
     ...chain,
     { id: nodeIdFor(id, chain), moduleId: id, label: module.module.name ?? id },
   ];
+}
+
+/**
+ * Append a subflow node referencing `workflowId`. No label is set: `expand` falls back to the referenced
+ * workflow's own label (`node.label ?? child.label ?? child.id`), so the composed step reads correctly and
+ * keeps reading correctly if the reference is later switched — a label copied in here would go stale the
+ * moment the choice changes. The id is minted like a module's, off the workflow id, so it stays unique in
+ * the document.
+ */
+export function appendSubflow(
+  chain: readonly WorkflowNodeDocument[],
+  workflowId: string,
+): WorkflowNodeDocument[] {
+  return [...chain, { id: nodeIdFor(workflowId, chain), workflows: [workflowId] }];
+}
+
+/**
+ * Point the subflow node at `index` at `workflowId` — the choice changed, so nothing is appended and the
+ * chain's length and the node's position are untouched. A non-subflow node at `index` is left as it is.
+ */
+export function chooseSubflowWorkflow(
+  chain: readonly WorkflowNodeDocument[],
+  index: number,
+  workflowId: string,
+): WorkflowNodeDocument[] {
+  return chain.map((node, at) =>
+    at === index && isSubflowNode(node) ? { ...node, workflows: [workflowId] } : node,
+  );
 }
 
 /**

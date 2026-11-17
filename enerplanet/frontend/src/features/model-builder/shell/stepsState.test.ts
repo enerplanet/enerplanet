@@ -43,6 +43,9 @@ const SEED_NAME = "  Steps fixture  ";
 
 const SEED = { modelName: SEED_NAME, resolution: 60 };
 
+/** None of these documents composes a subflow, so the lookup resolves nothing. */
+const noSubflows = () => undefined;
+
 const TWO_STEPS = {
   id: "steps",
   label: "Two steps",
@@ -53,7 +56,7 @@ const TWO_STEPS = {
   ],
 };
 
-const workflowOf = (nodes: unknown) => toWorkflow({ ...TWO_STEPS, nodes }, ENTRIES, SEED);
+const workflowOf = (nodes: unknown) => toWorkflow({ ...TWO_STEPS, nodes }, ENTRIES, noSubflows, SEED);
 
 function replace(port: "modelName", prev: unknown, next: unknown): DiffOp {
   return { op: "replace", path: portPath(port), prev, next };

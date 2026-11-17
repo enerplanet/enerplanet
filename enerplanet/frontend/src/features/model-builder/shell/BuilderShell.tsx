@@ -69,6 +69,7 @@ import { createHttpGateway } from "../save/httpGateway";
 import { loadSession } from "../load/loader";
 import { moveToNode, saveSession } from "./actions";
 import { autoRunFor, createAutoGuard } from "./autoRun";
+import { createVariantSessionGuard, persistVariantSession } from "./variantSession";
 import { useStoreVersion } from "./useStoreVersion";
 import { WorkflowBar } from "./WorkflowBar";
 import { LedgerBar } from "./LedgerBar";
@@ -347,6 +348,13 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
    * not a second run while an input change is.
    */
   const autoGuard = useRef(createAutoGuard());
+  /**
+   * The fork's own session, owed once (`variantSession.ts`). A ref for the same reasons `autoGuard` is one: it
+   * must survive a re-render and StrictMode's double-invoke without being a reason to render, and the same guard
+   * object must see both invocations. It claims a fork the first time `modelVariant` appears on the session's
+   * store, and adopts whatever a freshly-adopted session already carries — a load or a reset owes no row.
+   */
+  const variantGuard = useRef(createVariantSessionGuard());
   const [saveNotice, setSaveNotice] = useState<string | undefined>(undefined);
   const [overlayOpen, setOverlayOpen] = useState(false);
   // The frame reads the store; the store tells it when it changed — a seal, an undo, a redo.
@@ -522,6 +530,46 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     launchAuto(plan.id, plan.module);
   }, [launchAuto, mode.kind, session.store, storeVersion, workflow]);
 
+  /**
+   * The fork's own session (`variantSession.ts`, `plan` D2). Committing `modelId` **is** the switch — the frame
+   * renders the one store and no page is navigated — but the copy is a model of its own and needs a session row
+   * of its own, keyed by its id. The row is a snapshot taken *after* the switch has sealed, which is why the
+   * shell writes it here and not from inside `run()`; the module only states what happened (`modelVariant`
+   * present, `modelId` moved).
+   *
+   * The guard is the whole idempotency: it claims a fork once, so a re-render, a later store change (the run
+   * downstream re-running against the variant), or StrictMode's double-invoke never write a second time, and a
+   * session that *arrived* with a variant recorded — a load, a reset — is adopted as already rowed and writes
+   * nothing. The claim is taken before the write, so a failure is reported and not retried; a later save of the
+   * same model upserts the same row.
+   *
+   * The write itself is synchronous up to its first await (`persistVariantSession` snapshots the store before it
+   * calls the gateway), so the row captures the session as the switch left it — not the runs that follow it in
+   * this same commit's other effects.
+   */
+  useEffect(() => {
+    if (mode.kind !== "workflow") return;
+    const plan = variantGuard.current.claim(session.store);
+    if (plan === undefined) return;
+    void persistVariantSession({
+      gateway,
+      store: session.store,
+      workflow: workflow.ref,
+      variantModelId: plan.variantModelId,
+    }).catch((thrown: unknown) => {
+      // The model and its copy exist; only the copy's session row is missing. Report it — the switch is already
+      // in the live store, and this model's next save writes the same row by the same key. Not retried here: the
+      // fork is claimed once.
+      setError(
+        t(
+          "modelBuilder.shell.variantSessionFailed",
+          "The variant was created, but its session could not be saved: {{reason}}",
+          { reason: thrown instanceof Error ? thrown.message : String(thrown) },
+        ),
+      );
+    });
+  }, [gateway, mode.kind, session.store, storeVersion, workflow, t]);
+
   /** Both branches get the same bar: with no node to show, the session still exists and can still be saved. */
   const bar = (
     <WorkflowBar
@@ -692,17 +740,33 @@ export const BuilderShell: React.FC = () => {
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // ── the flow to open: `?workflow=<id>`, a sibling of the frame's `?model=<id>` ─────────────────────
+  //
+  // The request names which stored workflow to run; absent, the default is loaded. It is a load parameter,
+  // not a control inside the session, because the flow is immutable once a session starts (`core/flow.ts`):
+  // a different pathway is a different load. The picker that will point at this is a later step; this is its
+  // seam, read the same way `?model=` is in the frame below.
+  const [search] = useSearchParams();
+  const requestedWorkflow = search.get("workflow");
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const loaded = await loadDefaultWorkflow();
+        const loaded = await loadDefaultWorkflow(requestedWorkflow ?? undefined);
         if (cancelled) return;
         if (loaded === undefined) {
           // A missing default is a data condition with a named fix, not a transport fault — the same
-          // distinction the `?model=` load draws between "no session" and a thrown error.
+          // distinction the `?model=` load draws between "no session" and a thrown error. A requested id
+          // that names no stored workflow takes the same path, naming the id it could not find.
           setError(
-            t("modelBuilder.shell.noDefaultWorkflow", "No default workflow is set — run `make seed`."),
+            requestedWorkflow === null
+              ? t("modelBuilder.shell.noDefaultWorkflow", "No default workflow is set — run `make seed`.")
+              : t(
+                  "modelBuilder.shell.noRequestedWorkflow",
+                  "No stored workflow matches \"{{id}}\".",
+                  { id: requestedWorkflow },
+                ),
           );
           return;
         }
@@ -721,7 +785,7 @@ export const BuilderShell: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [t, requestedWorkflow]);
 
   // Nothing renders until a flow exists: the frame derives its whole position from one, and an empty builder
   // that is about to fill in reads as data loss — the same reason the frame's own load shows a placeholder.

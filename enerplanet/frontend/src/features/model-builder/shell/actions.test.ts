@@ -32,6 +32,9 @@ import type { CreateContext, LegacyModelPayload, ModelGateway } from "../save/ga
 
 const ENTRIES: readonly BuilderModule[] = [example];
 
+/** None of these documents composes a subflow, so the lookup resolves nothing. */
+const noSubflows = () => undefined;
+
 /** A drawn ring, in the store's coordinate type (GeoJSON positions, not bare numbers). */
 const AREA: [number, number][][] = [[[9.7, 50.5], [9.71, 50.5], [9.71, 50.51]]];
 
@@ -55,7 +58,7 @@ const DEFINITION = {
   ],
 };
 
-const workflowOf = () => toWorkflow(DEFINITION, ENTRIES, SEED);
+const workflowOf = () => toWorkflow(DEFINITION, ENTRIES, noSubflows, SEED);
 
 const WORKFLOW_REF: WorkflowRef = { id: "steps", version: 1 };
 
@@ -205,7 +208,7 @@ describe("a move discards nothing; a change invalidates by influence", () => {
 
   /** A session over the chain, with the real invalidator wired in — a seal's cascade is influence (T7). */
   function chainSession(): { workflow: Workflow; store: Store; flow: Flow; registry: ModuleRegistry } {
-    const workflow = toWorkflow(CHAIN_DEFINITION, CHAIN, { coordinates: AREA_0 });
+    const workflow = toWorkflow(CHAIN_DEFINITION, CHAIN, noSubflows, { coordinates: AREA_0 });
     const store = createStore(workflow.initial, {
       deriveCascade: createInvalidator(workflow.flow, workflow.registry),
     });
@@ -258,7 +261,7 @@ describe("a move discards nothing; a change invalidates by influence", () => {
 
   /** A six-node session with the real invalidator wired in, so a seal's cascade is influence (T7). */
   function sixSession(): { store: Store; flow: Flow; registry: ModuleRegistry } {
-    const workflow = toWorkflow(SIX_DEFINITION, SIX, { coordinates: AREA_0 });
+    const workflow = toWorkflow(SIX_DEFINITION, SIX, noSubflows, { coordinates: AREA_0 });
     const store = createStore(workflow.initial, {
       deriveCascade: createInvalidator(workflow.flow, workflow.registry),
     });

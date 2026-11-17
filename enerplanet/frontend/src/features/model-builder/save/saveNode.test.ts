@@ -14,6 +14,8 @@ import { fromArtefact, type Artefact, type WorkflowRef } from "../core/artefact"
 import type { Flow, ModuleRegistry } from "../core/flow";
 import { createStore, type Store } from "../core/store";
 import { createEngine } from "../core/engine";
+import { createInvalidator } from "../core/invalidate";
+import { portPath } from "../core/diff";
 import { nodeStates } from "../core/position";
 import { defineModule, requiredPorts, type Module } from "../core/module";
 import { runInScratch } from "../core/testSupport";
@@ -301,5 +303,52 @@ describe("the completeness gate", () => {
     expect(missingPorts(store.data).length).toBeGreaterThan(0);
     expect(payloads).toHaveLength(1);
     expect(payloads[0].status).toBe("incomplete");
+  });
+});
+
+describe("the configuration the save persists", () => {
+  it("goes stale when it is edited — pruning the result, never the model id", async () => {
+    // The bug this pins: the node built its payload from the store but declared interests in only
+    // `modelId`/`saveResult`, so no `affect` edge ran from the configuration to its outputs. Editing the
+    // configuration therefore left the node `done` and the edit was never written back — a variant's run
+    // then submitted the model **as stored**, i.e. the configuration it was copied with, not the one the
+    // user just set. The whole point is that this edit must make the save stale.
+    const payloads: LegacyModelPayload[] = [];
+    // The registry the frame runs with: the save node is in it, or nothing declares the edge from the
+    // configuration to the node's outputs and the store derives no cascade (`createInvalidator`).
+    const modules: Record<string, Module> = { ...registry };
+    const store = createStore(
+      seed({
+        coordinates: [RING],
+        buildings: { type: "FeatureCollection", features: [] },
+        transformers: { type: "FeatureCollection", features: [] },
+        lines: { type: "FeatureCollection", features: [] },
+        mvLines: { type: "FeatureCollection", features: [] },
+        grids: [],
+      }),
+      { deriveCascade: createInvalidator(FLOW, modules) },
+    );
+    const node = saveNodeFor(store, payloads);
+    modules[NODE_ID] = node;
+    const withNode = { ...modules };
+
+    // Save once: the node records the model id and the result.
+    await createEngine(store).runModule(node, { id: NODE_ID });
+    expect(nodeStates(FLOW, withNode, store)[NODE_ID]).toBe("done");
+    expect(store.data.modelId).toBe(42);
+
+    // Now adjust the configuration the save persisted — a settings port it carries into `model.json`.
+    // Omit the cascade, so the store derives it from the change through the invalidator.
+    store.applyTransaction([
+      { op: "replace", path: portPath("cookingCarrier"), prev: undefined, next: "gas" },
+    ]);
+
+    // The cascade pruned the save's *record* of the save: the stored model no longer matches the store.
+    expect(store.data.saveResult).toBeUndefined();
+    // …but never the model's identity. `modelId` does not change when the configuration does, and pruning it
+    // would block the variant fork and both run nodes, every one of which requires it.
+    expect(store.data.modelId).toBe(42);
+    // And the node reads stale: it must run again before anything is run on the model as stored.
+    expect(nodeStates(FLOW, withNode, store)[NODE_ID]).toBe("stale");
   });
 });

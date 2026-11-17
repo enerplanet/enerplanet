@@ -2,8 +2,9 @@
  * `model-variant`'s view — rendered to a string, because the app has no DOM test environment.
  *
  * The point is the two states the sidebar owes the user: the form before a variant exists (its forward action),
- * and what it made afterwards (the copy's title and id, and a link that opens the variant in the builder). The
- * status strip is pinned for the same two states. `t` echoes its key, so no i18n or DOM is involved.
+ * and what the switch did afterwards — this page is now on the copy (its title and id), and the root id the
+ * comparison reads as its baseline. There is no link: the page is not left. The status strip is pinned for the
+ * same two states. `t` echoes its key, so no i18n or DOM is involved.
  */
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -18,8 +19,8 @@ import modelVariant from "./index";
 const TITLE = "modelBuilder.model-variant.title";
 const CREATE = "modelBuilder.model-variant.create";
 const CONTINUE = "modelBuilder.model-variant.continue";
-const MADE = "modelBuilder.model-variant.made";
-const OPEN = "modelBuilder.model-variant.open";
+const SWITCHED_TO = "modelBuilder.model-variant.switchedTo";
+const ROOT_LABEL = "modelBuilder.model-variant.rootLabel";
 const BOTTOM_NOT_SET = "modelBuilder.model-variant.bottom.notSet";
 const BOTTOM_READY = "modelBuilder.model-variant.bottom.ready";
 
@@ -41,22 +42,25 @@ describe("model-variant's sidebar", () => {
 
     expect(html).toContain(TITLE);
     expect(html).toContain(CREATE);
-    // Nothing has been made, so there is no result panel and no link.
-    expect(html).not.toContain(MADE);
-    expect(html).not.toContain(OPEN);
+    // Nothing has been made, so there is no result panel.
+    expect(html).not.toContain(SWITCHED_TO);
+    expect(html).not.toContain(ROOT_LABEL);
   });
 
-  it("shows the copy's title and id and a link to open it in the builder", () => {
+  it("states that this page is now on the copy, and names the root the comparison will use", () => {
     const html = render("sidebar", {
-      modelId: 1,
-      modelVariant: { variantModelId: 11, rootModelId: 1, title: "Base v1" },
+      modelId: 42,
+      modelVariant: { variantModelId: 42, rootModelId: 91, title: "Base v1" },
     });
 
-    expect(html).toContain(MADE);
+    expect(html).toContain(SWITCHED_TO);
     expect(html).toContain("Base v1");
-    expect(html).toContain("11");
-    expect(html).toContain(OPEN);
-    expect(html).toContain('href="/app/modelbuilder?model=11"');
+    // The copy's own id, and the family's root — the id the comparison reads as its baseline.
+    expect(html).toContain("42");
+    expect(html).toContain(ROOT_LABEL);
+    expect(html).toContain("91");
+    // The page is not navigated away from: no anchor to another builder load.
+    expect(html).not.toContain("<a ");
     // The forward action remains, now to be left behind; it no longer offers to create.
     expect(html).toContain(CONTINUE);
     expect(html).not.toContain(CREATE);
@@ -73,7 +77,7 @@ describe("model-variant's status strip", () => {
 
   it("reports the variant once one has been made", () => {
     const html = render("bottom", {
-      modelId: 1,
+      modelId: 11,
       modelVariant: { variantModelId: 11, rootModelId: 1 },
     });
 

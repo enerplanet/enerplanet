@@ -57,7 +57,7 @@ The authoritative documents are outside the repo tree, in `.local/ModularThesis/
 | `gateway.ts` | the adapter interface this feature owns. **Call A** (`createModel` / `updateModel`) is the legacy payload; **Call B** (`saveSession` / `loadSession`) is the session artefact. The legacy side-effects of a create — finalising draft transformers, claiming the draft's series — live behind `createModel`, so the save logic never grows a legacy special case. |
 | `httpGateway.ts` | the real adapter: the gateway bound to the backend over `@/lib/axios` (the app-wide, CSRF-aware client — not another feature's service module). The client is injectable so the endpoint paths and payload keys are pinned in tests. |
 | `saveModel.ts` | the two-call save (T13): the legacy payload built from the ports, the flow-derived status, and a partial save reported rather than thrown away. |
-| `saveNode.ts` | the `model-save` **node**: declares the whole persisted surface, requires `coordinates` (the backend resolves the country from them), and seals the save as one transaction. A refusal throws, so nothing is sealed. |
+| `saveNode.ts` | the `model-save` **node**: declares the whole persisted surface, requires `coordinates` (the backend resolves the country from them), and seals the save as one transaction. A refusal throws, so nothing is sealed. It also **reads** the configuration it persists and declares `affect` from those ports to `saveResult` (`PERSISTED_CONFIG`) — so editing the configuration makes the save stale and the edit is written back before anything runs on the model as stored. The edge stops at `saveResult` on purpose: a configuration change is not an identity change, and pruning `modelId` would block every node that requires it. |
 
 ## `shell/` — the frame
 
@@ -152,6 +152,40 @@ npx vitest run                             # whole frontend suite
 npx tsc -p tsconfig.app.json --noEmit      # typecheck
 npx eslint src/features/model-builder --ext .ts,.tsx
 ```
+
+## The flows this feature runs
+
+Two stored workflows are seeded (`cmd/seed/`), and the editor authors more.
+
+- **The default flow** — `… → model-save → run-calliope → run-pypsa → result-overview`. It is what the
+  builder loads when nothing is requested. **It really runs models**: walking past the save to the run
+  nodes submits a real MEME run, which takes minutes and spends compute. There is no dry-run mode.
+- **The variant flow** (`?workflow=<id>`) — `model-save → model-variant → adjust → run → run →
+  compare-variant`. `?workflow=` sits beside the existing `?model=<id>` and loads a named stored
+  workflow; with no request the default is used. There is no picker yet — the picker is the pathway
+  step, and the parameter is the seam it will drive.
+- **A subflow node** is `{ id, workflows: […], label? }` in a *document* — not a module. It is
+  **expanded in place** by the loader before the runtime sees anything (`workflows/expand.ts`), with
+  each composed node's id **namespaced by its container** and its label prefixed. The namespacing is
+  correctness rather than tidiness: the transaction log keys by node id, so the same subflow inserted
+  twice must yield disjoint ids. The container never reaches the runtime — a node is rendered through
+  its module, and a subflow has none.
+- **A fragment** is a stored workflow whose document says `isSubflow: true`: authored without
+  standalone validation (its requirements are only judgeable at the insertion site), refused by the
+  loader as a flow of its own, and offered by the editor as an insert. `adjust-model` is the seeded
+  fragment — `building-configurator` then `technologies`.
+
+Deliberately deferred, and known rather than hidden:
+
+- **Several candidates at one position.** A subflow node's `workflows` is a list; the editor renders
+  the first and the verdicts are computed per position, but the tabbed multi-candidate choice and the
+  ask at run time are not built. The verdict function (`subflowVerdict`) is already the seam.
+- **`skippable`.** Declared in the core's node shape, read by nothing. It is what an optional step
+  needs, and the second `result-overview` pass is its first customer.
+- **A run's record is not tied to what was persisted.** A run reads `modelId`, which a configuration
+  edit never moves, so editing and re-saving *after* a run has finished does not invalidate that run.
+  The flows that exist put the run after the save, so it does not bite; closing it means having the
+  save publish a revision of what it persisted, which the run nodes then require.
 
 ## Design notes worth knowing before you touch the core
 

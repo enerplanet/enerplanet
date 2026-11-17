@@ -8,7 +8,7 @@
  * diffs as *your change* rather than as a reshuffle.
  */
 
-import type { WorkflowDocument, WorkflowNodeDocument } from "./types";
+import { isSubflowNode, type WorkflowDocument, type WorkflowNodeDocument } from "./types";
 
 /** A definition's id, derived from its label: lowercase, runs of non-alphanumerics to single dashes. */
 export function slugify(label: string): string {
@@ -46,11 +46,17 @@ export function documentWithNodes(
  * target is that person's file, so copying the stored order would reshuffle every line of it on the first
  * round trip — the diff would be the reordering, not the change. Re-imposing this order makes a copy of an
  * unchanged workflow paste back as a no-op.
+ *
+ * `description` and `isSubflow` sit where a person writes them — after `label`, before `seed` — because the
+ * seed file places them there; putting them anywhere else would reshuffle the file on the first paste.
  */
-const DOCUMENT_KEY_ORDER = ["id", "version", "label", "seed", "nodes"] as const;
+const DOCUMENT_KEY_ORDER = ["id", "version", "label", "description", "isSubflow", "seed", "nodes"] as const;
 
-/** The same, per node. A node carries no execution flags — `auto` is the module's (`Module.auto`). */
+/** The same, per node, for a module node. A node carries no execution flags — `auto` is the module's (`Module.auto`). */
 const NODE_KEY_ORDER = ["id", "moduleId", "label"] as const;
+
+/** The same, per node, for a subflow node: its kind's fields, ordered as a person writes them. */
+const SUBFLOW_NODE_KEY_ORDER = ["id", "workflows", "label"] as const;
 
 /**
  * Keys in `order` first, then anything else in the order it arrived.
@@ -78,9 +84,11 @@ function ordered(record: Record<string, unknown>, order: readonly string[]): Rec
  * used for that. The trailing newline is there because the paste target is a source file.
  */
 export function copyPayload(document: WorkflowDocument): string {
-  const nodes = (document.nodes ?? []).map((node) =>
-    ordered(node as unknown as Record<string, unknown>, NODE_KEY_ORDER),
-  );
+  // Each node is ordered by its kind: the two kinds carry different fields, so one list cannot place both.
+  const nodes = (document.nodes ?? []).map((node) => {
+    const record = node as unknown as Record<string, unknown>;
+    return ordered(record, isSubflowNode(node) ? SUBFLOW_NODE_KEY_ORDER : NODE_KEY_ORDER);
+  });
   const canonical = ordered(
     { ...(document as unknown as Record<string, unknown>), nodes },
     DOCUMENT_KEY_ORDER,

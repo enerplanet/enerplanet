@@ -37,11 +37,12 @@ const HOST = entry("host", "Provider Host", [], []);
 
 const CATALOGUE = [BASE, PRODUCER, CONSUMER, HOST];
 
-function render(document: WorkflowDocument, dirty = false): string {
+function render(document: WorkflowDocument, dirty = false, workflows: WorkflowDocument[] = []): string {
   return renderToStaticMarkup(
     <WorkflowEditor
       document={document}
       catalogue={CATALOGUE}
+      workflows={workflows}
       persisted
       dirty={dirty}
       saving={false}
@@ -121,5 +122,57 @@ describe("a stored node naming a host module", () => {
 describe("the header", () => {
   it("shows unsaved changes when the chain is dirty", () => {
     expect(render(empty, true)).toContain("Unsaved changes");
+  });
+});
+
+describe("a subflow node", () => {
+  const GRID: WorkflowDocument = {
+    id: "grid",
+    version: 1,
+    label: "Grid",
+    description: "Builds the grid from the buildings.",
+    nodes: [{ id: "gen", moduleId: "producer", label: "Producer" }],
+  };
+  const withSubflow: WorkflowDocument = {
+    id: "x",
+    version: 1,
+    label: "X",
+    nodes: [{ id: "s", workflows: ["grid"] }],
+  };
+
+  it("offers a control to insert a workflow, apart from the module palette", () => {
+    expect(render(empty)).toContain("Insert a workflow");
+  });
+
+  it("renders as a bracket naming the referenced workflow and its description", () => {
+    const html = render(withSubflow, false, [GRID]);
+
+    expect(html).toContain("subflow");
+    expect(html).toContain("Change workflow");
+    expect(html).toContain("Grid");
+    expect(html).toContain("Builds the grid from the buildings.");
+  });
+
+  it("renders the referenced workflow's expansion inside it, ids namespaced and labels prefixed", () => {
+    const html = render(withSubflow, false, [GRID]);
+
+    // The child node as `expand` composes it inside this document: id namespaced by the subflow node,
+    // label prefixed with the container's — and marked as belonging to the other workflow, not editable here.
+    expect(html).toContain("Grid / Producer");
+    expect(html).toContain("s/gen");
+    expect(html).toContain("Steps from");
+  });
+
+  it("says so rather than blanking the bracket when the referenced workflow cannot be expanded", () => {
+    const ghost: WorkflowDocument = {
+      id: "x",
+      version: 1,
+      label: "X",
+      nodes: [{ id: "s", workflows: ["nope"] }],
+    };
+    const html = render(ghost, false, [GRID]);
+
+    expect(html).toContain("subflow");
+    expect(html).toContain("This workflow cannot be expanded here.");
   });
 });

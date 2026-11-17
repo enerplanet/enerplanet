@@ -18,10 +18,10 @@ the dev flow.
 ## How the bar moves now
 
 **The bar moves by position, not by undo.** The prior-step control is a *jump*: it takes you back to
-an earlier node and **discards nothing** — no data is pruned, no redo tail appears. The forward
-control is **Continue**: it runs the node you are on and keeps walking through any `auto` node it
-lands on, stopping at the next node you can act on. That is how `building-demand` runs — it has no
-button of its own.
+an earlier node and **discards nothing** — no data is pruned, no redo tail appears. There is **no
+forward control**: a step advances by *running itself*. An interactive node carries its own action,
+and an `auto` node runs **on arrival** (`shell/autoRun.ts`) — the walk lands on it and it starts. That
+is how `building-demand` runs with no button anywhere.
 
 ## The walk
 
@@ -54,8 +54,8 @@ Choose a year or a scenario, then apply.
 change the dates in `model-start`, the weather step should go **orange** on its own.
 
 ### 5. `building-demand` — runs itself
-**Expect:** you do not press anything. Press **Continue** on `weather`'s successor and the walk
-passes straight through this node, calling pylovo per building.
+**Expect:** you do not press anything. Apply `weather` and the walk lands on `building-demand`, which
+runs on arrival, calling pylovo per building.
 
 If it stops here instead, the node is telling you something is missing — the message is the point.
 

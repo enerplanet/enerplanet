@@ -59,6 +59,71 @@ describe("the copy payload", () => {
 
     expect(Object.keys(round.nodes[0])).toEqual(["id", "moduleId", "label"]);
   });
+
+  it("places description and isSubflow after label, where the seed file writes them", () => {
+    const stored = JSON.parse(
+      '{"seed":"a.json","nodes":[],"isSubflow":true,"label":"X","description":"A flow.","version":1,"id":"x"}',
+    ) as WorkflowDocument;
+    const round = JSON.parse(copyPayload(stored)) as Record<string, unknown>;
+
+    expect(Object.keys(round)).toEqual(["id", "version", "label", "description", "isSubflow", "seed", "nodes"]);
+  });
+
+  it("orders a subflow node's keys by its own kind, not the module kind's", () => {
+    const stored = JSON.parse(
+      '{"id":"x","version":1,"label":"X","nodes":[{"label":"Y","workflows":["a","b"],"id":"y"}]}',
+    ) as WorkflowDocument;
+    const round = JSON.parse(copyPayload(stored)) as { nodes: Record<string, unknown>[] };
+
+    expect(Object.keys(round.nodes[0])).toEqual(["id", "workflows", "label"]);
+  });
+
+  it("writes a document with a description and a subflow node byte-identically, so an unchanged one pastes back as a no-op", () => {
+    // The fixture the byte-identity claim was missing: a description (the field step 1 added after `label`)
+    // and a subflow node (the second kind). Before these keys were ordered, a copy reshuffled the seed file
+    // on the first paste — the exact defect this pins.
+    const stored = JSON.parse(
+      `{
+      "id": "dev-flow",
+      "version": 1,
+      "label": "Development flow",
+      "description": "The default development flow.",
+      "seed": "testdata/dev-flow.json",
+      "nodes": [
+        { "id": "model-start", "moduleId": "model-start", "label": "Model start" },
+        { "id": "adjust", "workflows": ["adjust-flow", "cheap-flow"], "label": "Adjust" }
+      ]
+    }`,
+    ) as WorkflowDocument;
+
+    expect(copyPayload(stored)).toBe(
+      [
+        "{",
+        '  "id": "dev-flow",',
+        '  "version": 1,',
+        '  "label": "Development flow",',
+        '  "description": "The default development flow.",',
+        '  "seed": "testdata/dev-flow.json",',
+        '  "nodes": [',
+        "    {",
+        '      "id": "model-start",',
+        '      "moduleId": "model-start",',
+        '      "label": "Model start"',
+        "    },",
+        "    {",
+        '      "id": "adjust",',
+        '      "workflows": [',
+        '        "adjust-flow",',
+        '        "cheap-flow"',
+        "      ],",
+        '      "label": "Adjust"',
+        "    }",
+        "  ]",
+        "}",
+        "",
+      ].join("\n"),
+    );
+  });
 });
 
 describe("a saved document", () => {

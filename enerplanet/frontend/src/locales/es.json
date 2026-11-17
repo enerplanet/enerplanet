@@ -2962,10 +2962,12 @@
       "loadingModel": "Cargando el modelo…",
       "loadingWorkflow": "Cargando el flujo de trabajo…",
       "noDefaultWorkflow": "No hay un flujo de trabajo predeterminado — ejecuta `make seed`.",
+      "noRequestedWorkflow": "Ningún flujo de trabajo guardado coincide con \"{{id}}\".",
       "workflowLoadFailed": "No se pudo cargar el flujo de trabajo: {{reason}}",
       "noSession": "Este modelo no tiene una sesión experimental que cargar.",
       "badModelId": "Ese id de modelo no es un número.",
       "divergence": "El estado guardado de este modelo no coincidía con su historial; se reconstruyó desde el historial.",
+      "variantSessionFailed": "La variante se creó, pero su sesión no se pudo guardar: {{reason}}",
       "title": "Model Builder",
       "subtitle": "Vista previa de módulos: un módulo a la vez, con datos simulados",
       "module": "Módulo",
@@ -3227,7 +3229,19 @@
         "gateHint": "Se puede añadir un módulo cuando la cadena ya produce todos los puertos que requiere.",
         "removeConfirm": "Quitar este paso también quita todo lo que viene después - una cadena lineal no puede tener un hueco. ¿Quitar {{count}} paso(s)?",
         "unknownModule": "Módulo desconocido \"{{moduleId}}\" en el nodo \"{{nodeId}}\" - no está en el catálogo de esta compilación.",
-        "notANode": "\"{{moduleId}}\" en el nodo \"{{nodeId}}\" no es un nodo: es un módulo anfitrión que presta un servicio en lugar de representar un paso."
+        "notANode": "\"{{moduleId}}\" en el nodo \"{{nodeId}}\" no es un nodo: es un módulo anfitrión que presta un servicio en lugar de representar un paso.",
+        "addSubflow": "Insertar un flujo de trabajo",
+        "subflowPickerHint": "Se inserta un flujo de trabajo en esta posición; los flujos de fragmento se listan primero.",
+        "subflowNone": "No hay flujos de trabajo almacenados para insertar.",
+        "choose": "Insertar",
+        "fragment": "fragmento",
+        "current": "actual",
+        "subflow": "subflujo",
+        "changeWorkflow": "Cambiar flujo de trabajo",
+        "subflowOwnedBy": "Pasos de \"{{label}}\": se editan en ese flujo de trabajo, no aquí.",
+        "subflowExpansionFailed": "Este flujo de trabajo no se puede expandir aquí.",
+        "recursive": "contendría este flujo de trabajo: un subflujo no puede incluirse a sí mismo, ni directa ni transitivamente",
+        "unresolved": "no se puede resolver: nombra un módulo o un flujo de trabajo que esta compilación no tiene"
       }
     },
     "run-meme-calliope": {
@@ -3282,10 +3296,10 @@
       "description": "Crea una copia familiar de este modelo. La variante se convierte en un modelo guardado propio, versionado dentro de la familia.",
       "create": "Crear variante",
       "continue": "Continuar",
-      "made": "Variante creada",
+      "switchedTo": "Esta página ahora muestra la variante.",
       "titleLabel": "Título",
       "idLabel": "ID de la variante",
-      "open": "Abrir la variante en el builder",
+      "rootLabel": "Raíz de la comparación",
       "bottom": {
         "notSet": "aún sin variante",
         "ready": "variante {{id}}"

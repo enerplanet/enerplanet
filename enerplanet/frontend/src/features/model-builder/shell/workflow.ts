@@ -19,8 +19,10 @@
 
 import devSeed from "./testdata/dev-flow.json";
 import { workflowService } from "../workflows/service";
+import { expand, type WorkflowLookup } from "../workflows/expand";
+import type { WorkflowDocument, WorkflowNodeDocument } from "../workflows/types";
 import type { WorkflowRef } from "../core/artefact";
-import type { Flow, FlowNode, ModuleRegistry, SeedPorts } from "../core/flow";
+import type { Flow, ModuleRegistry, SeedPorts } from "../core/flow";
 import type { Module } from "../core/module";
 import type { ModelData, PortKey } from "../core/ports";
 import { MODULES } from "./moduleRegistry";
@@ -50,16 +52,23 @@ export interface Workflow {
 }
 
 /**
- * Build a workflow from a definition, the modules it may place, and the seed.
+ * Build a workflow from a definition, the modules it may place, the documents its subflows resolve through,
+ * and the seed.
  *
- * Refuses, rather than half-working later: a definition with no id, one that places nothing, a node whose
- * module nobody declared, two nodes sharing an id — the last because a node id is how history names a
- * position, so a duplicate makes the log ambiguous — and a `version` that is present but not a real one,
- * because a reference to a version that never existed is worse than no reference at all.
+ * Refuses, rather than half-working later: a definition with no id, one that is a **fragment** (`isSubflow` —
+ * authored to be inserted into another flow, never run as one of its own), one that places nothing, two
+ * nodes sharing an id — the last because a node id is how history names a position, so a duplicate makes the
+ * log ambiguous — and a `version` that is present but not a real one, because a reference to a version that
+ * never existed is worse than no reference at all.
+ *
+ * The *flow* — the nodes the runtime walks, a subflow's expansion spliced in its place — is `expand`'s, not
+ * this function's. That is why the undeclared-module check lives there now: it is the same check whether the
+ * unnamed module sits at the root or inside a child workflow, and `expand` is the one place both are walked.
  */
 export function toWorkflow(
   definition: unknown,
   entries: readonly BuilderModule[],
+  lookup: WorkflowLookup,
   seed: Readonly<ModelData>,
 ): Workflow {
   const raw = asRecord(definition);
@@ -69,6 +78,15 @@ export function toWorkflow(
     throw new Error("[model-builder] the workflow has no id");
   }
 
+  // A fragment is inserted into another flow, never run as one of its own: the editor marks fragments and the
+  // picker leaves them out, so this is the last place the rule can be enforced. Checked after the id so the
+  // message can name the workflow the user has to fix.
+  if (raw.isSubflow === true) {
+    throw new Error(
+      `[model-builder] workflow "${id}" is a fragment (isSubflow) — it is authored to be inserted into another flow and cannot be run on its own`,
+    );
+  }
+
   const registry: Record<string, Module> = {};
   for (const entry of entries) registry[entry.module.id] = entry.module;
 
@@ -76,13 +94,11 @@ export function toWorkflow(
     throw new Error(`[model-builder] workflow "${id}" places no nodes`);
   }
 
-  const flow: FlowNode[] = [];
+  // Node ids must be present and unique among the nodes as authored. This is the document's own level: a
+  // subflow's children are namespaced by `expand`, so their ids are a different question from these.
   const seen = new Set<string>();
-
   raw.nodes.forEach((candidate, index) => {
-    const node = asRecord(candidate);
-    const nodeId = asString(node.id);
-
+    const nodeId = asString(asRecord(candidate).id);
     if (nodeId === undefined) {
       throw new Error(`[model-builder] workflow "${id}" node ${index} has no id`);
     }
@@ -92,21 +108,6 @@ export function toWorkflow(
       );
     }
     seen.add(nodeId);
-
-    const moduleId = asString(node.moduleId);
-    if (moduleId === undefined || registry[moduleId] === undefined) {
-      throw new Error(
-        `[model-builder] workflow "${id}" node "${nodeId}": moduleId "${moduleId}" is not declared`,
-      );
-    }
-
-    const label = asString(node.label);
-
-    flow.push({
-      id: nodeId,
-      moduleId,
-      ...(label === undefined ? {} : { label }),
-    });
   });
 
   // A version that is present must be a real one: silently reading a `0` or a string as "v1" would record a
@@ -117,10 +118,22 @@ export function toWorkflow(
     throw new Error(`[model-builder] workflow "${id}" has an invalid version: ${String(rawVersion)}`);
   }
   const version = rawVersion === undefined ? 1 : (rawVersion as number);
+  const label = asString(raw.label) ?? id;
+
+  // The nodes arrive as `unknown`; the document is built once, here, and `expand` is what walks it — the
+  // module check, a subflow's expansion, and the composition refusals (a cycle, an unresolvable subflow) all
+  // live there, so the loader does not carry a second copy of any of them.
+  const document: WorkflowDocument = {
+    id,
+    version,
+    label,
+    nodes: raw.nodes as WorkflowNodeDocument[],
+  };
+  const flow = expand(document, lookup, registry);
 
   return {
     id,
-    label: asString(raw.label) ?? id,
+    label,
     flow,
     registry,
     seeds: Object.keys(seed) as PortKey[],
@@ -131,19 +144,38 @@ export function toWorkflow(
 }
 
 /**
- * The workflow the frame loads: the definition from the database, the seed from the static import.
+ * The workflow the frame loads: a requested definition from the database, or the default one, with the seed
+ * from the static import.
  *
- * Returns `undefined` when nothing is marked default — a *data condition* the shell reports (naming the fix,
- * "run `make seed`"), not an exception. The `list` call can reject, and `toWorkflow` can refuse a document
- * that names an unknown module; both throw, and the shell catches them, because a stored row is user data
- * and a white screen is not a report (plan §3). Only a developer-authored definition earned the throw the
- * frame used to take for granted.
+ * One `GET /workflows` serves both halves of the load. It returns every workflow **with its definition**, so
+ * the same list that names the default also resolves every subflow: the lookup is built from the rows as they
+ * arrive, and no second request and no per-subflow fetch is made. A subflow's target that is not in the list
+ * stays unresolved, and `toWorkflow` refuses it through `expand`.
+ *
+ * A `requestedId` names the workflow to run — the seam the picker will drive (`Plan.md`'s pathways: a
+ * pathway is a different load, so the builder is handed which flow to open). The request is matched against
+ * the document's own id, the id a session references and a subflow resolves through, not the row's serial.
+ * When it is absent the `is_default` row is the one loaded.
+ *
+ * Returns `undefined` when nothing matched — the default row for no request, or the named row for one that no
+ * stored workflow carries. A *data condition* the shell reports (naming the fix), not an exception. The `list`
+ * call can reject, and `toWorkflow` can refuse a document that is a fragment, names an unknown module, or
+ * composes into a cycle or an unresolvable subflow; both throw, and the shell catches them, because a stored
+ * row is user data and a white screen is not a report (plan §3). Only a developer-authored definition earned
+ * the throw the frame used to take for granted.
  */
-export async function loadDefaultWorkflow(): Promise<Workflow | undefined> {
+export async function loadDefaultWorkflow(requestedId?: string): Promise<Workflow | undefined> {
   const rows = await workflowService.list();
-  const row = rows.find((entry) => entry.is_default);
+  const row =
+    requestedId === undefined
+      ? rows.find((entry) => entry.is_default)
+      : rows.find((entry) => entry.definition.id === requestedId);
   if (row === undefined) return undefined;
-  return toWorkflow(row.definition, MODULES, devSeed);
+  // Every row's document, keyed by the document's own id — the id a subflow references. Built from the one
+  // list call, so resolving a subflow costs no request.
+  const byId = new Map(rows.map((entry) => [entry.definition.id, entry.definition]));
+  const lookup: WorkflowLookup = (workflowId) => byId.get(workflowId);
+  return toWorkflow(row.definition, MODULES, lookup, devSeed);
 }
 
 /** Narrowing, because a definition arrives as `unknown` the moment it stops being a local import. */

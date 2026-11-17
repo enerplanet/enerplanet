@@ -34,8 +34,11 @@ const DEFINITION = {
 
 const SEED: Readonly<ModelData> = { modelName: "fixture" };
 
+/** This document composes no subflow, so the lookup resolves nothing. */
+const noSubflows = () => undefined;
+
 function render(): string {
-  const workflow = toWorkflow(DEFINITION, ENTRIES, SEED);
+  const workflow = toWorkflow(DEFINITION, ENTRIES, noSubflows, SEED);
   return renderToStaticMarkup(
     <WorkflowBar
       workflow={workflow}

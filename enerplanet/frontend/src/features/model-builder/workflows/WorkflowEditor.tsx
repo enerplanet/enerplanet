@@ -7,22 +7,46 @@
  * module may declare a port it never writes, so the engine, not this palette, decides whether a node runs
  * (`gate.ts` carries the full caveat).
  *
+ * A **subflow** is not a module, so it is not a row in the palette: its own control opens a picker
+ * (`subflowCandidates`) listing every stored workflow judged for this position. Choosing one appends a
+ * subflow node, which renders as a **bracket** around the expansion of the workflow it references — the
+ * nodes that workflow brings in, shown as belonging to it and not editable here. The bracket names that
+ * workflow and carries a control to change it (the same picker, pre-set, appending nothing). A node's list
+ * of candidates may hold several; this renders the first, and the per-candidate tabs attach inside the
+ * bracket (see `renderSubflow`).
+ *
  * Removing an entry drops it and everything after it: a linear chain cannot have a hole, and the confirm
  * says so. Unsaved changes are shown in the header.
  */
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
-import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Layers, Plus, Repeat, Save, Trash2 } from "lucide-react";
+import type { FlowNode, ModuleRegistry } from "../core/flow";
 import { declaredPorts, isHostModule } from "../core/module";
 import type { BuilderModule } from "../shell/contract";
-import { appendModule, removeFrom, removedCount } from "./chain";
-import { paletteFor, type PaletteEntry } from "./gate";
-import type { WorkflowDocument, WorkflowNodeDocument } from "./types";
+import {
+  appendModule,
+  appendSubflow,
+  chooseSubflowWorkflow,
+  removeFrom,
+  removedCount,
+} from "./chain";
+import { expand, type WorkflowLookup } from "./expand";
+import { paletteFor, producedPorts, type PaletteEntry } from "./gate";
+import { subflowCandidates, type SubflowCandidate } from "./subflow";
+import type { SubflowNodeDocument, WorkflowDocument, WorkflowNodeDocument } from "./types";
+import { isSubflowNode } from "./types";
 
 export interface WorkflowEditorProps {
   document: WorkflowDocument;
   catalogue: readonly BuilderModule[];
+  /**
+   * Every stored workflow **with its document** — the candidates a subflow picker offers and the documents a
+   * subflow node's expansion resolves through (`WorkflowLookup`). The page passes the list it already holds;
+   * the workflow being edited is left in it, since `subflowVerdict` refuses it as `recursive`.
+   */
+  workflows: readonly WorkflowDocument[];
   /** Whether the server already has a row for this document (create vs. update on save). */
   persisted: boolean;
   dirty: boolean;
@@ -32,6 +56,9 @@ export interface WorkflowEditorProps {
   onSave: () => void;
   onBack: () => void;
 }
+
+/** The remove control's label key — shared by the module row, the subflow bracket and the confirm button. */
+const REMOVE_KEY = "modelBuilder.workflows.editor.remove";
 
 /** One port as a chip. `missing` styles the ports a module is still waiting for. */
 const PortChip: React.FC<{ port: string; missing?: boolean }> = ({ port, missing }) => (
@@ -98,9 +125,127 @@ const PaletteRow: React.FC<{ entry: PaletteEntry; onAdd: () => void }> = ({ entr
   );
 };
 
+/**
+ * The subflow picker: every stored workflow, its label and description, and the verdict as a row state.
+ *
+ * An `ok` verdict leaves the row selectable; `missing`, `recursive` and `unresolved` grey it and name the
+ * reason. `missing` names the ports the chain prefix has not produced, in the same chip as the palette; the
+ * other two are a single sentence, because they name a whole-document defect rather than a port. `current`
+ * marks the candidate a "change" was opened from; it is not a second filter — a candidate the verdict
+ * refuses stays refused whether or not it is current.
+ */
+const SubflowPicker: React.FC<{
+  candidates: readonly SubflowCandidate[];
+  current: string | null;
+  onChoose: (workflowId: string) => void;
+  onCancel: () => void;
+}> = ({ candidates, current, onChoose, onCancel }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground">
+          {t("modelBuilder.workflows.editor.addSubflow", "Insert a workflow")}
+        </p>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
+        >
+          {t("modelBuilder.workflows.newForm.cancel", "Cancel")}
+        </button>
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        {t(
+          "modelBuilder.workflows.editor.subflowPickerHint",
+          "A workflow is spliced in at this position; the fragment workflows are listed first.",
+        )}
+      </p>
+
+      {candidates.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {t("modelBuilder.workflows.editor.subflowNone", "No stored workflows to insert.")}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {candidates.map((candidate) => {
+            const ok = candidate.verdict.ok;
+            return (
+              <li
+                key={candidate.document.id}
+                className={`flex items-start gap-3 rounded-lg border p-3 ${
+                  ok ? "border-border bg-card" : "border-dashed border-border bg-muted/40 opacity-70"
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 truncate text-sm font-medium text-foreground">
+                    {candidate.document.label}
+                    {candidate.fragment && (
+                      <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                        {t("modelBuilder.workflows.editor.fragment", "fragment")}
+                      </span>
+                    )}
+                    {current === candidate.document.id && (
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                        {t("modelBuilder.workflows.editor.current", "current")}
+                      </span>
+                    )}
+                  </p>
+                  <p className="truncate font-mono text-[11px] text-muted-foreground">{candidate.document.id}</p>
+
+                  {candidate.document.description !== undefined && candidate.document.description !== "" && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">{candidate.document.description}</p>
+                  )}
+
+                  {/* The refusal says why, rather than only that it is refused. */}
+                  {!ok && (
+                    <p className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400">
+                      {candidate.verdict.reason === "missing" ? (
+                        <>
+                          <span>{t("modelBuilder.workflows.editor.needs", "needs")}</span>
+                          {candidate.verdict.missing.map((port) => (
+                            <PortChip key={port} port={port} missing />
+                          ))}
+                        </>
+                      ) : (
+                        <span>
+                          {candidate.verdict.reason === "recursive"
+                            ? t(
+                                "modelBuilder.workflows.editor.recursive",
+                                "would contain this workflow - a subflow cannot include itself, directly or transitively",
+                              )
+                            : t(
+                                "modelBuilder.workflows.editor.unresolved",
+                                "cannot be resolved - it names a module or workflow this build does not have",
+                              )}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onChoose(candidate.document.id)}
+                  disabled={!ok}
+                  className="shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {t("modelBuilder.workflows.editor.choose", "Insert")}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   document,
   catalogue,
+  workflows,
   persisted,
   dirty,
   saving,
@@ -111,12 +256,60 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 }) => {
   const { t } = useTranslation();
   const [pendingRemove, setPendingRemove] = useState<number | null>(null);
+  /** Which picker is open: appending at the end, or changing the subflow node at `index`. */
+  const [picker, setPicker] = useState<{ kind: "append" } | { kind: "change"; index: number } | null>(
+    null,
+  );
 
   const byId = useMemo(
     () => new Map(catalogue.map((entry) => [entry.module.id, entry])),
     [catalogue],
   );
-  const palette = useMemo(() => paletteFor(catalogue, document.nodes), [catalogue, document.nodes]);
+  // The documents a subflow node's expansion resolves through, keyed by the id a subflow references — the same
+  // shape `expand` takes, built once from the workflow list the page already holds.
+  const lookup = useMemo<WorkflowLookup>(() => {
+    const byWorkflowId = new Map(workflows.map((workflow) => [workflow.id, workflow]));
+    return (workflowId) => byWorkflowId.get(workflowId);
+  }, [workflows]);
+  // The registry `subflowVerdict` flattens a candidate through — the catalogue's modules by id.
+  const registry = useMemo<ModuleRegistry>(
+    () => Object.fromEntries(catalogue.map((entry) => [entry.module.id, entry.module])),
+    [catalogue],
+  );
+  const palette = useMemo(
+    () => paletteFor(catalogue, document.nodes, lookup),
+    [catalogue, document.nodes, lookup],
+  );
+
+  /**
+   * The candidates for the open picker, judged against the chain prefix that ends where the subflow sits:
+   * the whole chain for an append, the nodes before it for a change.
+   */
+  const candidates = useMemo(() => {
+    if (picker === null) return [];
+    const prefix = picker.kind === "append" ? document.nodes.length : picker.index;
+    const produced = producedPorts(document.nodes.slice(0, prefix), catalogue, lookup);
+    return subflowCandidates(workflows, produced, registry, lookup, document.id);
+  }, [picker, document.nodes, document.id, workflows, catalogue, lookup, registry]);
+
+  /**
+   * Each subflow node's expansion: the referenced workflow's module nodes, ids namespaced by the node and
+   * labels prefixed with it, exactly as `expand` composes them inside this document. Read per node — a
+   * one-node document holding just that node — so a defect inside one subflow does not blank the others.
+   * `null` when the expansion cannot be walked (an unresolved reference, a module this build lacks).
+   */
+  const expansions = useMemo(() => {
+    const byNode = new Map<string, FlowNode[] | null>();
+    for (const node of document.nodes) {
+      if (!isSubflowNode(node)) continue;
+      try {
+        byNode.set(node.id, expand({ ...document, nodes: [node] }, lookup, registry));
+      } catch {
+        byNode.set(node.id, null);
+      }
+    }
+    return byNode;
+  }, [document, lookup, registry]);
 
   const remove = (index: number): void => {
     onChange(removeFrom(document.nodes, index));
@@ -128,6 +321,122 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     // takes its dependents with it, and that is what the confirm states.
     if (removedCount(document.nodes, index) <= 1) remove(index);
     else setPendingRemove(index);
+  };
+
+  const choose = (workflowId: string): void => {
+    if (picker === null) return;
+    onChange(
+      picker.kind === "append"
+        ? appendSubflow(document.nodes, workflowId)
+        : chooseSubflowWorkflow(document.nodes, picker.index, workflowId),
+    );
+    setPicker(null);
+  };
+
+  /** A subflow node's row: the bracket around the workflow it brings in, with the control to change it. */
+  const renderSubflow = (node: SubflowNodeDocument, index: number): React.ReactNode => {
+    const referenced = lookup(node.workflows[0] ?? "");
+    const children = expansions.get(node.id) ?? null;
+    return (
+      <li
+        key={node.id}
+        className="rounded-lg border-2 border-dashed border-violet-300 bg-violet-50/40 p-3 dark:border-violet-800 dark:bg-violet-950/20"
+      >
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-200 text-violet-800 dark:bg-violet-900/50 dark:text-violet-200">
+            <Layers className="h-3.5 w-3.5" />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-2 truncate text-sm font-medium text-foreground">
+              {referenced?.label ?? node.workflows[0] ?? node.id}
+              <span className="rounded bg-violet-200 px-1.5 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-900/50 dark:text-violet-200">
+                {t("modelBuilder.workflows.editor.subflow", "subflow")}
+              </span>
+            </p>
+            <p className="truncate font-mono text-[11px] text-muted-foreground">
+              {node.workflows.join(", ")}
+            </p>
+            {referenced?.description !== undefined && referenced.description !== "" && (
+              <p className="mt-1 text-[11px] text-muted-foreground">{referenced.description}</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPicker({ kind: "change", index })}
+            className="flex shrink-0 items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
+          >
+            <Repeat className="h-3.5 w-3.5" />
+            {t("modelBuilder.workflows.editor.changeWorkflow", "Change workflow")}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => askRemove(index)}
+            className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+            aria-label={t(REMOVE_KEY, "Remove")}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* The bracket proper: the nodes this workflow contributes, marked as belonging to it and read-only
+            here — they live in that document, and that is where they are edited. */}
+        <div className="mt-3 ml-3 border-l-2 border-violet-300 pl-3 dark:border-violet-800">
+          <p className="mb-1.5 text-[11px] text-muted-foreground">
+            {t(
+              "modelBuilder.workflows.editor.subflowOwnedBy",
+              "Steps from \"{{label}}\" - edited in that workflow, not here.",
+              { label: referenced?.label ?? node.workflows[0] ?? node.id },
+            )}
+          </p>
+
+          {children === null ? (
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+              {t(
+                "modelBuilder.workflows.editor.subflowExpansionFailed",
+                "This workflow cannot be expanded here.",
+              )}
+            </p>
+          ) : (
+            <ol className="space-y-1.5">
+              {children.map((child, at) => (
+                <li
+                  key={child.id}
+                  className="flex items-center gap-2 rounded-md border border-border bg-card/60 px-2 py-1.5 opacity-80"
+                >
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
+                    {at + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-foreground">
+                      {child.label ?? child.moduleId}
+                    </span>
+                    <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                      {child.id}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+
+          {/* A node's candidate list may hold several workflows; this renders the first (`expand`'s default
+              `choose`). The per-candidate tabs attach here, selecting which one this bracket shows. */}
+          {picker?.kind === "change" && picker.index === index && (
+            <div className="mt-3">
+              <SubflowPicker
+                candidates={candidates}
+                current={node.workflows[0] ?? null}
+                onChoose={choose}
+                onCancel={() => setPicker(null)}
+              />
+            </div>
+          )}
+        </div>
+      </li>
+    );
   };
 
   return (
@@ -197,6 +506,10 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           ) : (
             <ol className="space-y-2">
               {document.nodes.map((node, index) => {
+                // A subflow node is not a module — it references a workflow to splice in here, so it renders
+                // as the bracket around that workflow's expansion rather than as an ordinary chain row.
+                if (isSubflowNode(node)) return renderSubflow(node, index);
+
                 const entry = byId.get(node.moduleId);
                 // Two ways a stored node can name something that is not a step this build can run. Both are
                 // data conditions to report — naming the node and the module — rather than exceptions that
@@ -249,7 +562,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                       type="button"
                       onClick={() => askRemove(index)}
                       className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-                      aria-label={t("modelBuilder.workflows.editor.remove", "Remove")}
+                      aria-label={t(REMOVE_KEY, "Remove")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -275,7 +588,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                   onClick={() => remove(pendingRemove)}
                   className="rounded-md bg-destructive px-3 py-1 text-sm text-destructive-foreground hover:opacity-90"
                 >
-                  {t("modelBuilder.workflows.editor.remove", "Remove")}
+                  {t(REMOVE_KEY, "Remove")}
                 </button>
                 <button
                   type="button"
@@ -289,7 +602,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           )}
         </section>
 
-        {/* The palette — the whole catalogue, gated. */}
+        {/* The palette — the whole catalogue, gated — and, above it, the subflow's own control. */}
         <section className="min-w-0 flex-1 lg:max-w-sm">
           <h3 className="mb-2 text-sm font-semibold text-foreground">
             {t("modelBuilder.workflows.editor.palette", "Modules")}
@@ -300,6 +613,29 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
               "A module can be added once the chain already produces every port it requires.",
             )}
           </p>
+
+          {/* A subflow is not a module, so it does not sit in the list below: its own control opens the
+              picker, which appends nothing until a workflow is chosen. */}
+          <button
+            type="button"
+            onClick={() => setPicker({ kind: "append" })}
+            className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            <Layers className="h-4 w-4" />
+            {t("modelBuilder.workflows.editor.addSubflow", "Insert a workflow")}
+          </button>
+
+          {picker?.kind === "append" && (
+            <div className="mb-3">
+              <SubflowPicker
+                candidates={candidates}
+                current={null}
+                onChoose={choose}
+                onCancel={() => setPicker(null)}
+              />
+            </div>
+          )}
+
           <ul className="space-y-2">
             {palette.map((entry) => (
               <PaletteRow

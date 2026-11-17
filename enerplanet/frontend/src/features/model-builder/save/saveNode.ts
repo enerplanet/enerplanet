@@ -144,6 +144,62 @@ function recordSave(modelId: number, created: boolean): Partial<ModelData> {
   return { modelId, saveResult: { modelId, created } };
 }
 
+/**
+ * The configuration the node persists, by port — every store field `saveModel` reads to build the payload.
+ *
+ * Kept as one list because it has to serve **two** roles, and they must agree: it is what the node reads
+ * through `ctx.read` (the dependency its `run` actually has), and it is the set of `affect` inputs whose
+ * declaration the invalidator trusts. Splitting it into two hand-written lists is how a port ends up read
+ * but not declared — which is exactly the bug this list exists to prevent: the configuration was persisted
+ * yet invisible to the invalidation, so editing it never made the save stale and the edit was never written
+ * back.
+ *
+ * The config block (`saveModel`'s `buildSaveConfig`, `save/saveModel.ts`) contributes `buildings`,
+ * `buildingParams`, `technologies`, `lines`, `mvLines`, `transformers`, `grids`, `weatherSelection`,
+ * `cookingCarrier`, `mode`, `electricityPrices`, `advancedParams`; the payload itself
+ * (`buildModelPayload`) contributes `modelName`, `fromDate`, `toDate`, `coordinates`, `workspaceId`.
+ *
+ * **`resolution` is deliberately absent.** It is declared (the completeness gate reports it) but the payload
+ * hard-codes `resolution: 60` — the store's value is a port the backend ignores — so a change to it moves
+ * nothing a re-save would send, and no edge is honest. `draftId`/`userId` are session handles the create call
+ * carries, not model configuration.
+ */
+const PERSISTED_CONFIG: Module["affect"] = {
+  // The `config` object `saveModel` builds.
+  buildings: ["saveResult"],
+  buildingParams: ["saveResult"],
+  technologies: ["saveResult"],
+  lines: ["saveResult"],
+  mvLines: ["saveResult"],
+  transformers: ["saveResult"],
+  grids: ["saveResult"],
+  weatherSelection: ["saveResult"],
+  cookingCarrier: ["saveResult"],
+  mode: ["saveResult"],
+  electricityPrices: ["saveResult"],
+  advancedParams: ["saveResult"],
+  // The payload's own fields, which change what a re-save would send just as surely.
+  modelName: ["saveResult"],
+  fromDate: ["saveResult"],
+  toDate: ["saveResult"],
+  coordinates: ["saveResult"],
+  workspaceId: ["saveResult"],
+};
+
+/**
+ * Where every persisted-configuration edge lands: **`saveResult`, and never `modelId`**.
+ *
+ * Editing the configuration leaves the *stored model* stale — it no longer matches the store — so the node
+ * must run again before anything is run on the model as stored. That is the whole reason the edge exists, and
+ * it stops at `saveResult` because that port **is** the node's record of the save: prune it and the node reads
+ * `stale` and re-runs.
+ *
+ * `modelId` is not pruned, and that is the point rather than an omission. The model's **identity** does not
+ * change when its configuration does: pruning it would block every node that requires `modelId` — the variant
+ * fork and both run nodes — for a change that never moved it, and would turn a config edit into a reason to
+ * forget which model this session belongs to. An identity survives a configuration change; the save that
+ * wrote the configuration does not.
+ */
 export function createSaveNode(options: SaveNodeOptions): Module {
   const nodeId = options.id ?? "model-save";
 
@@ -161,17 +217,24 @@ export function createSaveNode(options: SaveNodeOptions): Module {
       { port: "workspaceId" },
       { port: "coordinates", required: true },
       { port: "buildings" },
+      { port: "buildingParams" },
+      { port: "technologies" },
       { port: "lines" },
       { port: "mvLines" },
       { port: "transformers" },
       { port: "grids" },
+      { port: "weatherSelection" },
+      { port: "cookingCarrier" },
+      { port: "mode" },
+      { port: "electricityPrices" },
       { port: "advancedParams" },
       { port: "draftId" },
       { port: "userId" },
       { port: "modelId" },
       { port: "saveResult" },
     ],
-    affect: {},
+    // The configuration this node persists is a real dependency of its outputs: see `PERSISTED_CONFIG`.
+    affect: PERSISTED_CONFIG,
     // The node *is* the module here, so the regions its UI mounts into are declared here too: the
     // sidebar carries the verdict, the payload and the save action; the status strip carries one line.
     layout: ["sidebar", "bottom"],
@@ -189,6 +252,13 @@ export function createSaveNode(options: SaveNodeOptions): Module {
 
       const { store, gateway, flow, registry } = session;
       const modelId = store.data.modelId;
+
+      // Read the configuration this save persists **through the context**, so the node's dependency is on the
+      // record the engine sees, not only in the store `saveModel` builds the payload from. The values are not
+      // used here — the payload is still assembled by `saveModel` from the live store, the feature's save seam
+      // — but reading them is what states the dependency in `run` itself, over the very list `affect` declares,
+      // so a port cannot be read without being declared.
+      for (const port of Object.keys(PERSISTED_CONFIG) as PortKey[]) ctx.read(port);
 
       const outcome = await saveModel(gateway, {
         store,

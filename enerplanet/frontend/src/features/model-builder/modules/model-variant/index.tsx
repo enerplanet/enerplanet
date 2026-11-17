@@ -1,5 +1,6 @@
 /**
- * The `model-variant` module — make a **family copy** of the saved model and record it.
+ * The `model-variant` module — make a **family copy** of the saved model, record it, and switch this page onto
+ * the copy.
  *
  * **What an interactive node is.** A step the user starts: there is no `auto`, nothing runs on arrival, and the
  * node carries its own forward action (`shell/actions.ts`: the frame's `Continue` is gone, so an interactive
@@ -11,16 +12,26 @@
  * that a host installs at startup — the module knows nothing of the app's HTTP client — and there is no default,
  * because a fabricated variant would be a lie about the backend.
  *
- * **What it commits, and why that is a port.** The record of the copy — `modelVariant` in `core/ports.ts` — names
- * the copy and the family's root original. It is a **port** and not an `advancedParams` entry because the compare
- * node (E) declares it `required`, which is what places the comparison *after* this node by construction. Adding
- * the port was a core change.
+ * **What it commits, and why the record is a port.** The record of the copy — `modelVariant` in `core/ports.ts` —
+ * names the copy and the family's root original. It is a **port** and not an `advancedParams` entry because the
+ * compare node (E) declares it `required`, which is what places the comparison *after* this node by construction.
+ * Adding the port was a core change.
+ *
+ * **The switch is the same transaction.** Alongside the record, `run()` writes `modelId` = the copy's id. The
+ * node already reads `modelId`, so the write is the supported read → rewrite shape (`core/engine.ts`'s
+ * anti-clobber rule licenses a port the module consumed), and a port a module both reads and rewrites is a
+ * self-edge — its own write is not pruned by its own invalidation (`core/invalidate.ts`, `core/influence.ts`).
+ * The consequences are the wanted ones: committing `modelId` *is* the switch — the frame renders this one store
+ * and no page is navigated — and every node that reads `modelId` (both run nodes, the results node) is pruned
+ * and left `stale`, which is how the run downstream re-runs against the variant. The copy's own session row is
+ * the shell's job, not this node's: the row is a snapshot taken *after* this transaction seals, and the shell
+ * owns the session (`shell/variantSession.ts`).
  *
  * **Copying twice is refused.** `run()` reads `modelVariant` before writing it, and uses the read as the guard:
  * a recorded variant means the copy was already made, so a second press seals a zero-diff step and forks
  * nothing. That is the same read-before-write the anti-clobber rule forces, doing the double duty the node needs.
  *
- * `seal` is left at the default, `at-completion`: one record, one writer, one natural transaction.
+ * `seal` is left at the default, `at-completion`: the record and the switch are one record, one transaction.
  */
 
 import {
@@ -40,17 +51,6 @@ import { modelVariantGateway } from "./source";
 export { setModelVariantGateway, type ModelVariantGateway } from "./source";
 
 /**
- * Where a model opens in the builder — the load contract `shell/BuilderShell.tsx` reads (`?model=<id>`).
- *
- * A module may import only `@model-builder/core` and `@spatialhub/i18n`, so it cannot use `react-router`'s
- * `Link`/`useNavigate`. A plain `<a href>` to the route still opens the builder in this app and this tab; it
- * only forgoes the client-side transition (`result-overview` draws the same line for its results link).
- */
-export function builderPathFor(modelId: number): string {
-  return `/app/modelbuilder?model=${modelId}`;
-}
-
-/**
  * What this module stands behind: a **variant it made**.
  *
  * An absent record means the copy has not been made, so the session rests on this node (the node stays `stale`)
@@ -68,8 +68,8 @@ const module = defineModule({
   id: "model-variant",
   name: "Model variant",
 
-  // `modelId` is required — the backend copies a saved model, and `model-save` is what produces the id.
-  // `modelVariant` is what this node writes.
+  // `modelId` is required — the backend copies a saved model, and `model-save` is what produces the id. It is
+  // read and, on a fork, rewritten: the switch (`run()`). `modelVariant` is what this node records.
   params: [
     { port: "modelId", required: true },
     { port: "modelVariant" },
@@ -103,7 +103,10 @@ const module = defineModule({
       return;
     }
 
-    ctx.commit({ modelVariant: await gateway.createVariant(modelId) });
+    // The record and the switch, in one transaction. `modelId` was read above, so the rewrite is legal
+    // (`core/engine.ts`) and it is a self-edge, so the node does not re-stale itself (`core/invalidate.ts`).
+    const variant = await gateway.createVariant(modelId);
+    ctx.commit({ modelVariant: variant, modelId: variant.variantModelId });
   },
 
   validate: (ctx) => issuesFor(ctx.store),
@@ -140,11 +143,13 @@ const StatusStrip: React.FC<ModuleViewProps> = ({ data, nodeId }) => {
 };
 
 /**
- * The `sidebar` region: the node's description, what it made once it has, and its forward action.
+ * The `sidebar` region: the node's description, what it did once a variant exists, and its forward action.
  *
  * The forward action is one control. Before a variant exists it creates it; after one exists the same control
- * re-seals the step (advancing without forking — see `run()`), and the sidebar then shows the copy's title, its
- * id and a link that opens the variant in the builder.
+ * re-seals the step (advancing without forking — see `run()`). Once a variant exists the sidebar states plainly
+ * what the switch did: this page is now on the copy — its title and id — and the family's root original, which is
+ * the id the comparison reads as its baseline. Everything shown comes from the `modelVariant` port; nothing here
+ * is invented.
  */
 const Sidebar: React.FC<ModuleViewProps> = ({ data, run }) => {
   const { t } = useTranslation();
@@ -162,7 +167,7 @@ const Sidebar: React.FC<ModuleViewProps> = ({ data, run }) => {
       {variant !== undefined && (
         <div className="shrink-0 space-y-3">
           <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-            {t("modelBuilder.model-variant.made")}
+            {t("modelBuilder.model-variant.switchedTo")}
           </p>
           <dl className="space-y-1 text-sm">
             <div className="flex items-baseline justify-between gap-4 border-b border-border/60 pb-1">
@@ -173,16 +178,11 @@ const Sidebar: React.FC<ModuleViewProps> = ({ data, run }) => {
               <dt className="text-muted-foreground">{t("modelBuilder.model-variant.idLabel")}</dt>
               <dd className="whitespace-nowrap tabular-nums text-foreground">{variant.variantModelId}</dd>
             </div>
+            <div className="flex items-baseline justify-between gap-4 border-b border-border/60 pb-1">
+              <dt className="text-muted-foreground">{t("modelBuilder.model-variant.rootLabel")}</dt>
+              <dd className="whitespace-nowrap tabular-nums text-foreground">{variant.rootModelId}</dd>
+            </div>
           </dl>
-
-          {/* A plain anchor: the module may not import react-router (see `builderPathFor`). No `target`, so it
-              opens in this app and this tab. */}
-          <a
-            href={builderPathFor(variant.variantModelId)}
-            className="block w-full rounded-lg border border-border px-3 py-2 text-center text-sm text-foreground hover:bg-muted"
-          >
-            {t("modelBuilder.model-variant.open")}
-          </a>
         </div>
       )}
 

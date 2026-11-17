@@ -41,8 +41,11 @@ const SEED_NAME = "  Bar fixture  ";
 
 const SEED = { modelName: SEED_NAME, resolution: 60 };
 
+/** None of these documents composes a subflow, so the lookup resolves nothing. */
+const noSubflows = () => undefined;
+
 function workflowOf(definition: unknown): Workflow {
-  return toWorkflow(definition, [example], SEED);
+  return toWorkflow(definition, [example], noSubflows, SEED);
 }
 
 /** Seal one node's work, so a case can say "history looks like this" without running anything. */

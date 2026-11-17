@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import type { Module, Param } from "../core/module";
 import type { BuilderModule } from "../shell/contract";
-import { appendModule, nodeIdFor, removeFrom, removedCount } from "./chain";
+import { appendModule, appendSubflow, chooseSubflowWorkflow, nodeIdFor, removeFrom, removedCount } from "./chain";
 import type { WorkflowNodeDocument } from "./types";
 
 function entry(id: string, name?: string, params: Param[] = []): BuilderModule {
@@ -39,6 +39,50 @@ describe("appending a module", () => {
   it("derives a free node id against the ids already taken", () => {
     expect(nodeIdFor("weather", [{ id: "weather", moduleId: "weather" }])).toBe("weather-2");
     expect(nodeIdFor("weather", [])).toBe("weather");
+  });
+});
+
+describe("appending a subflow", () => {
+  it("appends a node referencing the workflow, with no label and an id minted off the workflow id", () => {
+    expect(appendSubflow([], "grid")).toEqual([{ id: "grid", workflows: ["grid"] }]);
+  });
+
+  it("keeps node ids unique when the same workflow is inserted twice", () => {
+    const once = appendSubflow([], "grid");
+    const twice = appendSubflow(once, "grid");
+
+    expect(twice.map((n) => n.id)).toEqual(["grid", "grid-2"]);
+  });
+
+  it("mints the id against the ids already taken, module and subflow alike", () => {
+    const taken: WorkflowNodeDocument[] = [{ id: "grid", moduleId: "grid" }];
+    expect(appendSubflow(taken, "grid")).toEqual([
+      { id: "grid", moduleId: "grid" },
+      { id: "grid-2", workflows: ["grid"] },
+    ]);
+  });
+});
+
+describe("changing a subflow's workflow", () => {
+  it("points the node at the new workflow and appends nothing", () => {
+    const withSub: WorkflowNodeDocument[] = [
+      { id: "a", moduleId: "a" },
+      { id: "grid", workflows: ["grid"] },
+      { id: "c", moduleId: "c" },
+    ];
+    const next = chooseSubflowWorkflow(withSub, 1, "other");
+
+    expect(next).toEqual([
+      { id: "a", moduleId: "a" },
+      { id: "grid", workflows: ["other"] },
+      { id: "c", moduleId: "c" },
+    ]);
+    expect(next).toHaveLength(withSub.length);
+  });
+
+  it("leaves a module node at that position untouched", () => {
+    const onlyModule: WorkflowNodeDocument[] = [{ id: "a", moduleId: "a" }];
+    expect(chooseSubflowWorkflow(onlyModule, 0, "other")).toEqual(onlyModule);
   });
 });
 

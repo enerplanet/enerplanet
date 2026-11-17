@@ -63,20 +63,26 @@ describe("the model-save module's declaration", () => {
     // from upstream — but declaring them is what makes the completeness gate and the flow gate possible.
     expect([...declared].sort()).toEqual([
       "advancedParams",
+      "buildingParams",
       "buildings",
+      "cookingCarrier",
       "coordinates",
       "draftId",
+      "electricityPrices",
       "fromDate",
       "grids",
       "lines",
+      "mode",
       "modelId",
       "modelName",
       "mvLines",
       "resolution",
       "saveResult",
+      "technologies",
       "toDate",
       "transformers",
       "userId",
+      "weatherSelection",
       "workspaceId",
     ]);
     // The backend resolves the country from `coordinates` and refuses a model without them.
