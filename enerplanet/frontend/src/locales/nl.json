@@ -3289,6 +3289,30 @@
         "notSet": "nog geen variant",
         "ready": "variant {{id}}"
       }
+    },
+    "compare-variant": {
+      "title": "Variant vergelijken",
+      "description": "Een snelle vergelijking van het originele model van de familie met de variant. De volledige vergelijkingspagina toont de details.",
+      "baseline": "Origineel",
+      "comparison": "Variant",
+      "production": "Productie (kWh)",
+      "consumption": "Verbruik (kWh)",
+      "peakDemand": "Piekvraag (kW)",
+      "loading": "Resultaten worden geladen…",
+      "failed": "De resultaten konden niet worden geladen.",
+      "noVariant": "Nog geen variant — maak er eerst een.",
+      "noGateway": "Geen vergelijkingsgateway: een host installeert er een met setCompareVariantGateway() (shell/compareVariantGateway.ts).",
+      "notRun": "Nog niet gedraaid.",
+      "link": "Volledige vergelijkingspagina openen",
+      "continue": "Doorgaan",
+      "bottom": {
+        "loading": "laden…",
+        "noGateway": "geen vergelijkingsgateway",
+        "failed": "niet beschikbaar",
+        "ready": "beide kanten gereed",
+        "partial": "één kant nog niet gedraaid",
+        "empty": "geen kant gedraaid"
+      }
     }
   }
 }

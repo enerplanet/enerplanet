@@ -36,6 +36,8 @@ import resultOverview from "../modules/result-overview";
 
 import modelVariant from "../modules/model-variant";
 
+import compareVariant from "../modules/compare-variant";
+
 export const MODULES: readonly BuilderModule[] = [
   modelStart,
   mapProvider,
@@ -50,6 +52,7 @@ export const MODULES: readonly BuilderModule[] = [
   runMemePypsa,
   resultOverview,
   modelVariant,
+  compareVariant,
 ];
 
 /**

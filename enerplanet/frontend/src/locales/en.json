@@ -3293,6 +3293,30 @@
         "notSet": "no variant yet",
         "ready": "variant {{id}}"
       }
+    },
+    "compare-variant": {
+      "title": "Compare variant",
+      "description": "A quick comparison of the family's original model against the variant. Open the full comparison page for the detail.",
+      "baseline": "Original",
+      "comparison": "Variant",
+      "production": "Production (kWh)",
+      "consumption": "Consumption (kWh)",
+      "peakDemand": "Peak demand (kW)",
+      "loading": "Loading the results…",
+      "failed": "The results could not be loaded.",
+      "noVariant": "No variant yet — make one first.",
+      "noGateway": "No comparison gateway: a host installs one with setCompareVariantGateway() (shell/compareVariantGateway.ts).",
+      "notRun": "Not run yet.",
+      "link": "Open the full comparison page",
+      "continue": "Continue",
+      "bottom": {
+        "loading": "loading…",
+        "noGateway": "no comparison gateway",
+        "failed": "unavailable",
+        "ready": "both sides ready",
+        "partial": "one side not run yet",
+        "empty": "neither side run yet"
+      }
     }
   }
 }

@@ -3293,6 +3293,30 @@
         "notSet": "noch keine Variante",
         "ready": "Variante {{id}}"
       }
+    },
+    "compare-variant": {
+      "title": "Variante vergleichen",
+      "description": "Ein schneller Vergleich des Originalmodells der Familie mit der Variante. Die vollständige Vergleichsseite zeigt die Details.",
+      "baseline": "Original",
+      "comparison": "Variante",
+      "production": "Erzeugung (kWh)",
+      "consumption": "Verbrauch (kWh)",
+      "peakDemand": "Spitzenlast (kW)",
+      "loading": "Ergebnisse werden geladen…",
+      "failed": "Die Ergebnisse konnten nicht geladen werden.",
+      "noVariant": "Noch keine Variante – zuerst eine erstellen.",
+      "noGateway": "Kein Vergleichs-Gateway: Ein Host installiert eines mit setCompareVariantGateway() (shell/compareVariantGateway.ts).",
+      "notRun": "Noch nicht berechnet.",
+      "link": "Vollständige Vergleichsseite öffnen",
+      "continue": "Weiter",
+      "bottom": {
+        "loading": "lädt…",
+        "noGateway": "kein Vergleichs-Gateway",
+        "failed": "nicht verfügbar",
+        "ready": "beide Seiten bereit",
+        "partial": "eine Seite noch nicht berechnet",
+        "empty": "keine Seite berechnet"
+      }
     }
   }
 }

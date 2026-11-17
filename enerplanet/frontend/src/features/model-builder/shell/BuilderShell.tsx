@@ -56,6 +56,7 @@ import { installMemeRunGateway } from "./memeRunGateway";
 import { installMemePypsaLegGateway } from "./memePypsaLegGateway";
 import { installResultOverviewGateway } from "./resultOverviewGateway";
 import { installModelVariantGateway } from "./modelVariantGateway";
+import { installCompareVariantGateway } from "./compareVariantGateway";
 import { setCatalogueSource } from "../modules/technologies";
 import { pylovoGridEngine } from "./gridEngine";
 import { backendWeatherSource } from "./weatherSource";
@@ -185,6 +186,9 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     // The model-variant gateway: the family copy is created through the backend's own model endpoints, which
     // a module may not reach, so the shell supplies it through the module's slot.
     installModelVariantGateway();
+    // The compare-variant gateway: both sides' result summaries read the backend's structured-results
+    // endpoint, which a module may not reach, so the shell supplies it through the module's slot.
+    installCompareVariantGateway();
   }, []);
   const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
