@@ -2956,5 +2956,386 @@
     "subtitle": "Beheer API-toegangstokens voor",
     "title": "API-tokens",
     "usageHint": "Gebruik het token vanuit elke app: Authorization: Bearer <token>. Alleen-lezen tokens kunnen modellen opvragen en resultaten downloaden met de rechten van deze gebruiker."
+  },
+  "modelBuilder": {
+    "shell": {
+      "loadingModel": "Model wordt geladen…",
+      "loadingWorkflow": "De workflow wordt geladen…",
+      "noDefaultWorkflow": "Er is geen standaardworkflow ingesteld — voer `make seed` uit.",
+      "noRequestedWorkflow": "Geen opgeslagen workflow komt overeen met \"{{id}}\".",
+      "workflowLoadFailed": "De workflow kon niet worden geladen: {{reason}}",
+      "noSession": "Dit model heeft geen experimentele sessie om te laden.",
+      "badModelId": "Dat model-id is geen getal.",
+      "divergence": "De opgeslagen staat van dit model kwam niet overeen met de geschiedenis; het is in plaats daarvan uit de geschiedenis opgebouwd.",
+      "variantSessionFailed": "De variant is aangemaakt, maar de sessie kon niet worden opgeslagen: {{reason}}",
+      "title": "Model Builder",
+      "subtitle": "Modulevoorbeeld — één module tegelijk, met mock-data",
+      "module": "Module",
+      "reset": "Sessie opnieuw starten",
+      "noModules": "Er zijn nog geen modules geregistreerd.",
+      "noMap": "Er is nog geen basiskaart-provider geladen.",
+      "layers": "Toegevoegde lagen: {{count}}",
+      "noNode": "Deze workflow heeft hier geen stap.",
+      "mode": "modus",
+      "modeWorkflow": "workflow"
+    },
+    "grid-generation": {
+      "title": "Het synthetische net",
+      "description": "Genereert gebouwen, transformatoren en kabels uit het getekende gebied.",
+      "generate": "Net genereren",
+      "regenerate": "Net opnieuw genereren",
+      "generating": "Bezig met genereren…",
+      "lossConfirm": "Toch vervangen",
+      "loss": "Opnieuw genereren vervangt dit net en gooit het daarop gebouwde vraag- en technologiewerk weg.",
+      "failed": "Het net kon niet worden gegenereerd: {{reason}}",
+      "bottom": {
+        "none": "Nog geen net.",
+        "buildings": "gebouwen",
+        "transformers": "transformatoren",
+        "cables": "kabels",
+        "mvCables": "MS-kabels"
+      },
+      "map": {
+        "title": "Het net",
+        "empty": "Genereer een net om het hier te zien."
+      }
+    },
+    "map-provider": {
+      "start": "Start",
+      "clickToClose": "Klik om te sluiten"
+    },
+    "building-configurator": {
+      "title": "Gebouwconfigurator",
+      "configured": "{{configured}} van {{total}} gebouwen geconfigureerd",
+      "hint": "Klik op een gebouw op de kaart om het in detail te configureren.",
+      "continue": "Doorgaan",
+      "edited": "{{count}} gebouw(en) bewerkt, nog niet vastgelegd"
+    },
+    "area-draw": {
+      "drawAnother": "Nog een gebied tekenen",
+      "drawnCount": "Getekend: {{count}}",
+      "mapMissing": "De kaart is nog niet gereed — probeer het zo meteen opnieuw.",
+      "ringTooSmall": "Die polygoon had geen oppervlakte, dus er is niets toegevoegd.",
+      "title": "Modelgebied",
+      "description": "Teken het gebied waarin het model wordt gebouwd. Een of meer polygonen — al het overige wordt daarbinnen gegenereerd.",
+      "mapTitle": "Gebied",
+      "mapHint": "Teken het gebied op de kaart. Klik om hoekpunten te plaatsen; klik op de startmarkering om het te sluiten, of rechtsklik. Escape annuleert.",
+      "draw": "Gebied tekenen",
+      "drawing": "Tekenen…",
+      "unapplied": "Dit gebied is nog niet toegepast.",
+      "applied": "Het gebied is toegepast.",
+      "polygons": "Getekende polygonen",
+      "nothing": "Nog geen polygoon getekend.",
+      "polygon": "{{index}}.",
+      "points": "{{count}} punten",
+      "area": "{{area}} km²",
+      "total": "Totale oppervlakte",
+      "apply": "Gebied toepassen",
+      "confirmApply": "Toch toepassen",
+      "confirmBody": "Dit gebied toepassen verwijdert het bestaande net ({{count}} gebouwen) en alles wat daarop is gebouwd.",
+      "confirmCancel": "Huidig gebied behouden",
+      "undo": "Laatste ongedaan maken",
+      "clear": "Alles wissen",
+      "discard": "Wijzigingen verwerpen",
+      "rulesHint": "Het net, de vraag en de technologieën worden binnen dit gebied gegenereerd. Het wijzigen ervan verwijdert wat op het oude is gebouwd."
+    },
+    "model-start": {
+      "title": "Modelstart",
+      "description": "Maakt het model aan: de naam, de periode, de resolutie en de regio waarin wordt getekend.",
+      "nameLabel": "Modelnaam",
+      "period": {
+        "label": "Periode",
+        "none": "Nog geen periode gekozen.",
+        "q1": "K1",
+        "q2": "K2",
+        "q3": "K3",
+        "q4": "K4"
+      },
+      "regionLabel": "Regio",
+      "regionNone": "kies een regio",
+      "regionsLoading": "Regio's worden geladen…",
+      "regionsUnavailable": "Regio's zijn momenteel niet beschikbaar.",
+      "apply": "Toepassen",
+      "rulesHint": "Dit is het ingangsknooppunt: het vereist niets, en alles daarna leest wat het aanlegt."
+    },
+    "save": {
+      "refused": "niets verzonden: {{reason}}"
+    },
+    "bar": {
+      "save": "Opslaan",
+      "saved": "opgeslagen · {{status}}",
+      "savedPartial": "model opgeslagen, sessie niet",
+      "prior": "vorige",
+      "current": "huidige",
+      "next": "volgende",
+      "complete": "workflow voltooid",
+      "testMode": "testmodus"
+    },
+    "ledger": {
+      "history": "geschiedenis",
+      "empty": "nog niets",
+      "discarded": "verworpen",
+      "jump": "sprong",
+      "auto": "auto"
+    },
+    "steps": {
+      "moveTo": "Ga naar {{step}}",
+      "title": "stappen",
+      "blocked": "heeft {{ports}} nodig",
+      "pruned": "verloren: {{ports}}"
+    },
+    "example-interactive": {
+      "title": "Voorbeeldmodule",
+      "description": "Een werkend voorbeeld en tegelijk de template: leest zijn invoer uit de store, committeert via de engine en rendert in alle vier regio's.",
+      "nameLabel": "Modelnaam",
+      "resolutionLabel": "Tijdstap",
+      "resolutionUnit": "{{minutes}} min",
+      "apply": "Naam toepassen",
+      "rulesHint": "Deze module declareert precies de poorten die hij aanraakt. De store is zijn enige staat, en run() is het enige schrijfpad.",
+      "bottom": {
+        "notSet": "niet gezet"
+      },
+      "map": {
+        "title": "Kaartregio",
+        "hint": "De kaart is een tijdelijke interactieservice, geen modelstaat — wat bewaard moet blijven, wordt in de store gecommitteerd.",
+        "useRing": "Dit gebied gebruiken",
+        "clear": "Wissen",
+        "points": "{{count}} punten"
+      },
+      "review": "Controleren voor het opslaan",
+      "overlay": {
+        "title": "Klaar om op te slaan?",
+        "hint": "Wat de save-node zou zien: de gedeclareerde poorten van deze module en het oordeel van validate().",
+        "close": "Sluiten",
+        "complete": "validate() is tevreden — er ontbreekt niets.",
+        "issue": "{{port}}: {{message}}",
+        "required": "vereist",
+        "area": "Gebied",
+        "areaNone": "nog niet getekend",
+        "areaDrawn": "{{rings}} ring(en), {{points}} punt(en)",
+        "shellHint": "Escape sluit dit paneel. De host bezit de omlijsting van de overlay — de verduistering, de centrering, de uitweg."
+      }
+    },
+    "example-auto": {
+      "running": "Gebied wordt samengevat…",
+      "runningHint": "Draait vanzelf — de samenvatting wordt afgeleid uit het getekende gebied.",
+      "done": "Gebied samengevat",
+      "failed": "Het samenvatten van het gebied is mislukt",
+      "retry": "Opnieuw uitvoeren",
+      "bottom": {
+        "present": "samenvatting aanwezig",
+        "notSet": "nog geen samenvatting"
+      }
+    },
+    "dashboard": {
+      "newModel": "Nieuw model (experimenteel)"
+    },
+    "model-save": {
+      "title": "Model opslaan",
+      "description": "Slaat het model en de sessie op, zodat het opnieuw geladen kan worden.",
+      "ready": "Alles wat het model nodig heeft is aanwezig.",
+      "saving": "Opslaan…",
+      "save": "Model opslaan",
+      "saved": "Opgeslagen.",
+      "conversion": "model.json",
+      "required": "verplicht",
+      "notSet": "niet ingesteld",
+      "bottom": {
+        "ready": "klaar om op te slaan",
+        "missing": "{{count}} ontbreekt"
+      }
+    },
+    "weather": {
+      "title": "Weer",
+      "description": "Welke weergegevens de runs van het model gebruiken. De reeks zelf haalt de backend op tijdens de run.",
+      "scenarioLabel": "Zonnejaar",
+      "scenario": {
+        "p10": "Laag (p10)",
+        "p50": "Typisch (p50)",
+        "p90": "Hoog (p90)"
+      },
+      "scenarioHint": "Een scenariojaar heeft geen eigen kalenderjaar; de periode van het model bepaalt de datums.",
+      "continue": "Doorgaan",
+      "archiveLabel": "Archief",
+      "noFetchHint": "Hier worden geen weergegevens opgehaald — de config verwijst naar een dataset en de backend haalt de reeks op bij de run."
+    },
+    "building-demand": {
+      "title": "Gebouwvraag",
+      "description": "Vraag per gebouw voor elke energiedrager, op basis van de gebouwen van het net.",
+      "vector": "Drager",
+      "buildings": "Gebouwen",
+      "totalKwh": "Totaal kWh/a",
+      "sourceEstimate": "geschat door de energiedienst, één verzoek per gebouw",
+      "sourceMirror": "gespiegeld van gebouwklasse en oppervlak — tijdens de run is de backend leidend",
+      "autoHint": "Deze stap loopt vanzelf zodra de flow er aankomt: hij leest de gebouwen, vraagt de dienst en legt de antwoorden vast. Hier is niets in te stellen.",
+      "running": "Vraag wordt geschat…",
+      "runningHint": "Loopt vanzelf — één verzoek per gebouw.",
+      "done": "Vraag geschat",
+      "failed": "De vraagschatting is mislukt",
+      "retry": "Opnieuw uitvoeren"
+    },
+    "technologies": {
+      "title": "Technologieën",
+      "description": "Waar elk gebouw door wordt voorzien. Een technologie plaatsen verandert niets aan de backend tot het model is opgeslagen en doorgerekend.",
+      "assigned": "{{assigned}} van {{total}} gebouwen",
+      "autoresolve": "Warmte automatisch aanvullen",
+      "autoresolveHint": "Kent elk gebouw met warmtevraag en nog zonder voorziening een passende warmtetechnologie toe. Die toewijzingen zijn als geschat gemarkeerd — een gok op gebouwklasse, die je mag overrulen.",
+      "assign": "Technologie toewijzen",
+      "assignAll": "Aan allemaal toewijzen",
+      "loading": "Catalogus wordt geladen…",
+      "unavailable": "De catalogus is niet bereikbaar; er kunnen geen technologieën worden toegewezen.",
+      "continue": "Doorgaan",
+      "noSelectionHint": "Er wordt één technologie per type op alle gebouwen toegepast. Selectie per gebouw is er nog niet."
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "Stel de stromen samen die de Model Builder uitvoert",
+      "new": "Nieuwe workflow",
+      "newSubflow": "Nieuwe subflow",
+      "buildYourOwn": "Bouw je eigen module",
+      "loading": "Workflows laden...",
+      "loadError": "De workflows konden niet worden geladen: {{reason}}",
+      "empty": "Nog geen workflows.",
+      "defaultBadge": "standaard",
+      "copy": "JSON kopiëren",
+      "copied": "Gekopieerd",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "deleteConfirm": "\"{{label}}\" verwijderen?",
+      "deleteDefaultRefused": "De standaardworkflow kan niet worden verwijderd.",
+      "deleteReport": "Verwijderd - {{sessions}} sessie(s) verwezen ernaar.",
+      "error": {
+        "save": "De workflow kon niet worden opgeslagen: {{reason}}"
+      },
+      "newForm": {
+        "label": "Label",
+        "id": "id: {{id}}",
+        "create": "Aanmaken",
+        "cancel": "Annuleren",
+        "subflowNote": "Een subflow is een fragment: hij wordt in een andere workflow ingevoegd en gevalideerd waar hij wordt ingevoegd, niet op zichzelf."
+      },
+      "editor": {
+        "back": "Terug naar de lijst",
+        "version": "versie {{version}}",
+        "unsaved": "Niet-opgeslagen wijzigingen",
+        "saved": "Opgeslagen",
+        "save": "Opslaan",
+        "saving": "Opslaan...",
+        "chain": "Keten",
+        "chainEmpty": "De keten is leeg. Voeg een module toe om te beginnen.",
+        "palette": "Modules",
+        "add": "Toevoegen",
+        "remove": "Verwijderen",
+        "moveUp": "Omhoog",
+        "moveDown": "Omlaag",
+        "moveBlocked": "deze verplaatsing laat deze poorten onvervuld:",
+        "needs": "heeft nodig",
+        "produces": "produceert",
+        "gateHint": "Een module kan worden toegevoegd zodra de keten elke vereiste poort al produceert.",
+        "fragmentWarning": "Validatie is uitgeschakeld bij het bewerken van een fragment: de vereisten worden gelezen waar het wordt ingevoegd, dus de modules worden hier niet gecontroleerd.",
+        "fragmentInputs": "Heeft nodig van de workflow die het invoegt:",
+        "fragmentInputsNone": "Dit fragment heeft niets nodig van de omringende workflow.",
+        "removeConfirm": "Het verwijderen van deze stap verwijdert ook alles erna - een lineaire keten mag geen gat hebben. {{count}} stap(pen) verwijderen?",
+        "unknownModule": "Onbekende module \"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" - deze staat niet in de catalogus van deze build.",
+        "notANode": "\"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" is geen knooppunt - het is een hostmodule die een dienst levert in plaats van een stap te tonen.",
+        "addSubflow": "Een workflow invoegen",
+        "subflowPickerHint": "Op deze positie wordt een workflow ingevoegd; de fragmentworkflows staan eerst.",
+        "subflowNone": "Geen opgeslagen workflows om in te voegen.",
+        "choose": "Invoegen",
+        "fragment": "fragment",
+        "current": "huidig",
+        "subflow": "subflow",
+        "changeWorkflow": "Workflow wijzigen",
+        "subflowOwnedBy": "Stappen uit \"{{label}}\" - bewerkt in die workflow, niet hier.",
+        "subflowExpansionFailed": "Deze workflow kan hier niet worden uitgevouwen.",
+        "recursive": "zou deze workflow bevatten - een subflow kan zichzelf niet bevatten, direct noch transitief",
+        "unresolved": "kan niet worden opgelost - hij noemt een module of workflow die deze build niet heeft"
+      }
+    },
+    "run-meme-calliope": {
+      "running": "Model wordt doorgerekend…",
+      "runningHint": "Dit duurt een paar minuten. Je kunt deze pagina verlaten en terugkomen — de run gaat door op de server en deze stap gaat verder waar hij gebleven was.",
+      "done": "Modelrun voltooid",
+      "failed": "De modelrun is mislukt",
+      "retry": "Opnieuw uitvoeren",
+      "bottom": {
+        "notRun": "nog niet gedraaid",
+        "running": "loopt…",
+        "completed": "voltooid",
+        "failed": "mislukt"
+      }
+    },
+    "run-meme-pypsa": {
+      "running": "Powerflow wordt berekend…",
+      "runningHint": "Dit duurt een paar minuten. Je kunt deze pagina verlaten en terugkomen — de powerflow gaat door op de server en deze stap gaat verder waar hij gebleven was.",
+      "done": "Powerflow voltooid",
+      "failed": "De powerflow is mislukt",
+      "retry": "Opnieuw uitvoeren",
+      "bottom": {
+        "notRun": "nog niet gedraaid",
+        "running": "loopt…",
+        "completed": "voltooid",
+        "failed": "mislukt"
+      }
+    },
+    "result-overview": {
+      "title": "Resultatenoverzicht",
+      "description": "Een samenvatting van de resultaten van de modelrun. De volledige resultatenpagina bevat de details.",
+      "loading": "Resultaten worden geladen…",
+      "failed": "De resultaten konden niet worden geladen.",
+      "noGateway": "Geen resultatengateway: een host installeert er een met setResultOverviewGateway() (shell/resultOverviewGateway.ts).",
+      "production": "Productie (kWh)",
+      "consumption": "Verbruik (kWh)",
+      "peakDemand": "Piekvraag (kW)",
+      "timesteps": "Tijdstappen",
+      "locations": "Resultaatlocaties",
+      "carriers": "Energiedragers",
+      "link": "Volledige resultatenpagina openen",
+      "continue": "Doorgaan",
+      "bottom": {
+        "loading": "laden…",
+        "noGateway": "geen resultatengateway",
+        "failed": "niet beschikbaar",
+        "ready": "{{count}} energiedrager(s)"
+      }
+    },
+    "model-variant": {
+      "title": "Modelvariant",
+      "description": "Maakt een familiekopie van dit model. De variant wordt een eigen opgeslagen model, geversioneerd binnen de familie.",
+      "create": "Variant aanmaken",
+      "continue": "Doorgaan",
+      "switchedTo": "Deze pagina staat nu op de variant.",
+      "titleLabel": "Titel",
+      "idLabel": "Variant-id",
+      "rootLabel": "Vergelijkingsbasis",
+      "bottom": {
+        "notSet": "nog geen variant",
+        "ready": "variant {{id}}"
+      }
+    },
+    "compare-variant": {
+      "title": "Variant vergelijken",
+      "description": "Een snelle vergelijking van het originele model van de familie met de variant. De volledige vergelijkingspagina toont de details.",
+      "baseline": "Origineel",
+      "comparison": "Variant",
+      "production": "Productie (kWh)",
+      "consumption": "Verbruik (kWh)",
+      "peakDemand": "Piekvraag (kW)",
+      "loading": "Resultaten worden geladen…",
+      "failed": "De resultaten konden niet worden geladen.",
+      "noVariant": "Nog geen variant — maak er eerst een.",
+      "noGateway": "Geen vergelijkingsgateway: een host installeert er een met setCompareVariantGateway() (shell/compareVariantGateway.ts).",
+      "notRun": "Nog niet gedraaid.",
+      "link": "Volledige vergelijkingspagina openen",
+      "continue": "Doorgaan",
+      "bottom": {
+        "loading": "laden…",
+        "noGateway": "geen vergelijkingsgateway",
+        "failed": "niet beschikbaar",
+        "ready": "beide kanten gereed",
+        "partial": "één kant nog niet gedraaid",
+        "empty": "geen kant gedraaid"
+      }
+    }
   }
 }

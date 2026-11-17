@@ -421,6 +421,18 @@ class ModelService {
     const response = await axios.delete(`${this.baseURL}/${id}/shares/${shareId}`);
     return response.data;
   }
+
+  // Ids of the models the experimental builder has a session for. This is only a
+  // decoration on the model list, so any failure yields an empty set rather than
+  // throwing and taking the list down with it.
+  async getExperimentalSessionModelIds(): Promise<number[]> {
+    try {
+      const response = await axios.get<{ data: number[] }>('/model-sessions/ids');
+      return Array.isArray(response.data?.data) ? response.data.data : [];
+    } catch {
+      return [];
+    }
+  }
 }
 
 export const modelService = new ModelService();

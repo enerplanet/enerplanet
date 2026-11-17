@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Heat-link mode — producer → consumer wiring (plan §2).
+// Heat-link mode — producer → consumer wiring.
 //
 // Two-step map interaction on top of the unified `activeMode`:
 //   1. Click a PRODUCER building (one whose assigned techs resolve heat, i.e.

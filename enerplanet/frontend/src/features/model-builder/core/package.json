@@ -1,0 +1,25 @@
+{
+  "name": "@model-builder/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Model Builder core contract: ports, the module contract, the store, the engine and the history primitives. Dependency-free TypeScript, consumed as source (no build step).",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/react": "^19.1.8",
+    "typescript": "~5.8.3",
+    "vitest": "^4.0.14"
+  }
+}

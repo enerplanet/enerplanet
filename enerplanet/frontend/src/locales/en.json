@@ -2956,5 +2956,386 @@
     "subtitle": "Manage API access tokens for",
     "title": "API Tokens",
     "usageHint": "Use the token from any app: Authorization: Bearer <token>. Read-only tokens can list models and download results with this user's permissions."
+  },
+  "modelBuilder": {
+    "shell": {
+      "loadingModel": "Loading the model…",
+      "loadingWorkflow": "Loading the workflow…",
+      "noDefaultWorkflow": "No default workflow is set — run `make seed`.",
+      "noRequestedWorkflow": "No stored workflow matches \"{{id}}\".",
+      "workflowLoadFailed": "The workflow could not be loaded: {{reason}}",
+      "noSession": "This model has no experimental session to load.",
+      "badModelId": "That model id is not a number.",
+      "divergence": "This model's saved state disagreed with its history; it was rebuilt from the history instead.",
+      "variantSessionFailed": "The variant was created, but its session could not be saved: {{reason}}",
+      "title": "Model Builder",
+      "subtitle": "Module preview — one module at a time, on mock data",
+      "module": "Module",
+      "reset": "Reset session",
+      "noModules": "No modules are registered yet.",
+      "noMap": "No basemap provider module is loaded yet.",
+      "layers": "Layers added: {{count}}",
+      "noNode": "This workflow has no node here.",
+      "mode": "mode",
+      "modeWorkflow": "workflow"
+    },
+    "grid-generation": {
+      "title": "The synthetic grid",
+      "description": "Generate buildings, transformers and cables from the drawn area.",
+      "generate": "Generate grid",
+      "regenerate": "Regenerate grid",
+      "generating": "Generating…",
+      "lossConfirm": "Replace it anyway",
+      "loss": "Generating again replaces this grid and discards the demand and technology work built on it.",
+      "failed": "The grid could not be generated: {{reason}}",
+      "bottom": {
+        "none": "No grid yet.",
+        "buildings": "buildings",
+        "transformers": "transformers",
+        "cables": "cables",
+        "mvCables": "MV cables"
+      },
+      "map": {
+        "title": "The grid",
+        "empty": "Generate a grid to see it here."
+      }
+    },
+    "map-provider": {
+      "start": "Start",
+      "clickToClose": "Click to close"
+    },
+    "building-configurator": {
+      "title": "Building configurator",
+      "configured": "{{configured}} of {{total}} buildings configured",
+      "hint": "Click a building on the map to configure it in detail.",
+      "continue": "Continue",
+      "edited": "{{count}} building(s) edited, not yet committed"
+    },
+    "area-draw": {
+      "drawAnother": "Draw another area",
+      "drawnCount": "Drawn: {{count}}",
+      "mapMissing": "The map is not ready yet — try again in a moment.",
+      "ringTooSmall": "That polygon had no area, so nothing was added.",
+      "title": "Model area",
+      "description": "Draw the area the model is built in. One or more polygons — everything else is generated inside them.",
+      "mapTitle": "Area",
+      "mapHint": "Draw the area on the map. Click to place corners; click the start marker to close it, or right-click. Escape cancels.",
+      "draw": "Draw area",
+      "drawing": "Drawing…",
+      "unapplied": "This area is not applied yet.",
+      "applied": "The area is applied.",
+      "polygons": "Drawn polygons",
+      "nothing": "No polygon drawn yet.",
+      "polygon": "{{index}}.",
+      "points": "{{count}} points",
+      "area": "{{area}} km²",
+      "total": "Total area",
+      "apply": "Apply area",
+      "confirmApply": "Apply anyway",
+      "confirmBody": "Applying this area removes the existing grid ({{count}} buildings) and everything built on it.",
+      "confirmCancel": "Keep the current area",
+      "undo": "Undo last",
+      "clear": "Clear all",
+      "discard": "Discard changes",
+      "rulesHint": "The grid, the demand and the technologies are generated inside this area. Changing it removes what is built on the old one."
+    },
+    "model-start": {
+      "title": "Model start",
+      "description": "Create the model: what it is called, the period it covers, its resolution, and the region it is drawn in.",
+      "nameLabel": "Model name",
+      "period": {
+        "label": "Period",
+        "none": "No period chosen yet.",
+        "q1": "Q1",
+        "q2": "Q2",
+        "q3": "Q3",
+        "q4": "Q4"
+      },
+      "regionLabel": "Region",
+      "regionNone": "choose a region",
+      "regionsLoading": "Loading regions…",
+      "regionsUnavailable": "Regions are unavailable right now.",
+      "apply": "Apply",
+      "rulesHint": "This is the entry node: it requires nothing, and everything downstream reads what it seeds."
+    },
+    "save": {
+      "refused": "nothing was sent: {{reason}}"
+    },
+    "bar": {
+      "save": "save",
+      "saved": "saved · {{status}}",
+      "savedPartial": "model saved, session not",
+      "prior": "prior",
+      "current": "current",
+      "next": "next",
+      "complete": "flow complete",
+      "testMode": "test mode"
+    },
+    "ledger": {
+      "history": "history",
+      "empty": "nothing yet",
+      "discarded": "discarded",
+      "jump": "jump",
+      "auto": "auto"
+    },
+    "steps": {
+      "moveTo": "Go to {{step}}",
+      "title": "steps",
+      "blocked": "needs {{ports}}",
+      "pruned": "lost {{ports}}"
+    },
+    "example-interactive": {
+      "title": "Example module",
+      "description": "A working example and the template: reads its inputs from the store, commits through the engine, and renders into all four regions.",
+      "nameLabel": "Model name",
+      "resolutionLabel": "Timestep",
+      "resolutionUnit": "{{minutes}} min",
+      "apply": "Apply the name",
+      "rulesHint": "This module declares exactly the ports it touches. The store is the only state it has, and run() is the only write path.",
+      "bottom": {
+        "notSet": "not set"
+      },
+      "map": {
+        "title": "Map region",
+        "hint": "The map is a transient interaction service, not model state — anything worth keeping gets committed to the store.",
+        "useRing": "Use this area",
+        "clear": "Clear",
+        "points": "{{count}} points"
+      },
+      "review": "Review before saving",
+      "overlay": {
+        "title": "Ready to save?",
+        "hint": "What the save node would see: this module's declared ports, and the verdict of validate().",
+        "close": "Close",
+        "complete": "validate() is happy — nothing is missing.",
+        "issue": "{{port}}: {{message}}",
+        "required": "required",
+        "area": "Area",
+        "areaNone": "not drawn yet",
+        "areaDrawn": "{{rings}} ring(s), {{points}} point(s)",
+        "shellHint": "Escape closes this panel. The host owns the overlay's chrome — the scrim, the centring, the way out."
+      }
+    },
+    "example-auto": {
+      "running": "Summarising the area…",
+      "runningHint": "Running on its own — the summary is derived from the drawn area.",
+      "done": "Area summarised",
+      "failed": "The area summary failed",
+      "retry": "Run again",
+      "bottom": {
+        "present": "summary present",
+        "notSet": "no summary yet"
+      }
+    },
+    "dashboard": {
+      "newModel": "New Model (experimental)"
+    },
+    "model-save": {
+      "title": "Save model",
+      "description": "Saves the model and records the session, so it can be loaded again.",
+      "ready": "Everything the model needs is here.",
+      "saving": "Saving…",
+      "save": "Save model",
+      "saved": "Saved.",
+      "conversion": "model.json",
+      "required": "required",
+      "notSet": "not set",
+      "bottom": {
+        "ready": "ready to save",
+        "missing": "{{count}} missing"
+      }
+    },
+    "weather": {
+      "title": "Weather",
+      "description": "Which weather dataset the model's runs use. The series itself is fetched by the backend at run time.",
+      "scenarioLabel": "Solar year",
+      "scenario": {
+        "p10": "Low (p10)",
+        "p50": "Typical (p50)",
+        "p90": "High (p90)"
+      },
+      "scenarioHint": "A scenario year has no calendar year of its own; the model's period sets the dates.",
+      "continue": "Continue",
+      "archiveLabel": "Archive",
+      "noFetchHint": "No weather data is fetched here — the config references a dataset and the backend retrieves the series when the model runs."
+    },
+    "building-demand": {
+      "title": "Building demand",
+      "description": "Per-building demand for each energy vector, taken from the grid's buildings.",
+      "vector": "Vector",
+      "buildings": "Buildings",
+      "totalKwh": "Total kWh/a",
+      "sourceEstimate": "estimated by the energy service, one request per building",
+      "sourceMirror": "mirrored from the building class and area — the backend is authoritative at run time",
+      "autoHint": "This step runs on its own the moment the flow lands on it: it reads the buildings, asks the service and records the answers. There is nothing to configure here.",
+      "running": "Estimating demand…",
+      "runningHint": "Running on its own — one request per building.",
+      "done": "Demand estimated",
+      "failed": "The demand estimate failed",
+      "retry": "Run again"
+    },
+    "technologies": {
+      "title": "Technologies",
+      "description": "What each building is supplied by. Placing a technology changes nothing on the backend until the model is saved and run.",
+      "assigned": "{{assigned}} of {{total}} buildings",
+      "autoresolve": "Fill in heat automatically",
+      "autoresolveHint": "Assigns an expected-fit heat technology to every building with heat demand and no supply yet. Those assignments are marked as estimated — a guess by class, and yours to overrule.",
+      "assign": "Assign a technology",
+      "assignAll": "Assign to all",
+      "loading": "Loading the catalogue…",
+      "unavailable": "The catalogue is not reachable; no technologies can be assigned.",
+      "continue": "Continue",
+      "noSelectionHint": "One technology per type is applied to every building. Per-building selection is not available yet."
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "Author the flows the Model Builder runs",
+      "new": "New workflow",
+      "newSubflow": "New subflow",
+      "buildYourOwn": "Build your own module",
+      "loading": "Loading workflows...",
+      "loadError": "The workflows could not be loaded: {{reason}}",
+      "empty": "No workflows yet.",
+      "defaultBadge": "default",
+      "copy": "Copy JSON",
+      "copied": "Copied",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete \"{{label}}\"?",
+      "deleteDefaultRefused": "The default workflow cannot be deleted.",
+      "deleteReport": "Deleted - {{sessions}} session(s) referenced it.",
+      "error": {
+        "save": "The workflow could not be saved: {{reason}}"
+      },
+      "newForm": {
+        "label": "Label",
+        "id": "id: {{id}}",
+        "create": "Create",
+        "cancel": "Cancel",
+        "subflowNote": "A subflow is a fragment: it is spliced into another workflow and validated where it is inserted, not on its own."
+      },
+      "editor": {
+        "back": "Back to the list",
+        "version": "version {{version}}",
+        "unsaved": "Unsaved changes",
+        "saved": "Saved",
+        "save": "Save",
+        "saving": "Saving...",
+        "chain": "Chain",
+        "chainEmpty": "The chain is empty. Add a module to begin.",
+        "palette": "Modules",
+        "add": "Add",
+        "remove": "Remove",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "moveBlocked": "this move would leave these ports unmet:",
+        "needs": "needs",
+        "produces": "produces",
+        "gateHint": "A module can be added once the chain already produces every port it requires.",
+        "fragmentWarning": "Validation is off while editing a fragment: its requirements are read where it is inserted, so its modules are not gated here.",
+        "fragmentInputs": "Needs from the flow that inserts it:",
+        "fragmentInputsNone": "This fragment needs nothing from the flow around it.",
+        "removeConfirm": "Removing this step also removes everything after it - a linear chain cannot have a hole. Remove {{count}} step(s)?",
+        "unknownModule": "Unknown module \"{{moduleId}}\" at node \"{{nodeId}}\" - it is not in this build's catalogue.",
+        "notANode": "\"{{moduleId}}\" at node \"{{nodeId}}\" is not a node - it is a host module, which provides a service rather than rendering a step.",
+        "addSubflow": "Insert a workflow",
+        "subflowPickerHint": "A workflow is spliced in at this position; the fragment workflows are listed first.",
+        "subflowNone": "No stored workflows to insert.",
+        "choose": "Insert",
+        "fragment": "fragment",
+        "current": "current",
+        "subflow": "subflow",
+        "changeWorkflow": "Change workflow",
+        "subflowOwnedBy": "Steps from \"{{label}}\" - edited in that workflow, not here.",
+        "subflowExpansionFailed": "This workflow cannot be expanded here.",
+        "recursive": "would contain this workflow - a subflow cannot include itself, directly or transitively",
+        "unresolved": "cannot be resolved - it names a module or workflow this build does not have"
+      }
+    },
+    "run-meme-calliope": {
+      "running": "Running the model…",
+      "runningHint": "This takes a few minutes. You can leave this page and come back — the run continues on the server, and this step resumes where it left off.",
+      "done": "Model run finished",
+      "failed": "The model run failed",
+      "retry": "Run again",
+      "bottom": {
+        "notRun": "not run yet",
+        "running": "running…",
+        "completed": "completed",
+        "failed": "failed"
+      }
+    },
+    "run-meme-pypsa": {
+      "running": "Running the power flow…",
+      "runningHint": "This takes a few minutes. You can leave this page and come back — the power flow continues on the server, and this step resumes where it left off.",
+      "done": "Power flow finished",
+      "failed": "The power flow failed",
+      "retry": "Run again",
+      "bottom": {
+        "notRun": "not run yet",
+        "running": "running…",
+        "completed": "completed",
+        "failed": "failed"
+      }
+    },
+    "result-overview": {
+      "title": "Result overview",
+      "description": "A summary of what the model run produced. Open the full results page for the details.",
+      "loading": "Loading the results…",
+      "failed": "The results could not be loaded.",
+      "noGateway": "No results gateway: a host installs one with setResultOverviewGateway() (shell/resultOverviewGateway.ts).",
+      "production": "Production (kWh)",
+      "consumption": "Consumption (kWh)",
+      "peakDemand": "Peak demand (kW)",
+      "timesteps": "Timesteps",
+      "locations": "Result locations",
+      "carriers": "Carriers",
+      "link": "Open the full results page",
+      "continue": "Continue",
+      "bottom": {
+        "loading": "loading…",
+        "noGateway": "no results gateway",
+        "failed": "unavailable",
+        "ready": "{{count}} carrier(s)"
+      }
+    },
+    "model-variant": {
+      "title": "Model variant",
+      "description": "Make a family copy of this model. The variant becomes its own saved model, versioned within the family.",
+      "create": "Create variant",
+      "continue": "Continue",
+      "switchedTo": "This page is now on the variant.",
+      "titleLabel": "Title",
+      "idLabel": "Variant id",
+      "rootLabel": "Comparison root",
+      "bottom": {
+        "notSet": "no variant yet",
+        "ready": "variant {{id}}"
+      }
+    },
+    "compare-variant": {
+      "title": "Compare variant",
+      "description": "A quick comparison of the family's original model against the variant. Open the full comparison page for the detail.",
+      "baseline": "Original",
+      "comparison": "Variant",
+      "production": "Production (kWh)",
+      "consumption": "Consumption (kWh)",
+      "peakDemand": "Peak demand (kW)",
+      "loading": "Loading the results…",
+      "failed": "The results could not be loaded.",
+      "noVariant": "No variant yet — make one first.",
+      "noGateway": "No comparison gateway: a host installs one with setCompareVariantGateway() (shell/compareVariantGateway.ts).",
+      "notRun": "Not run yet.",
+      "link": "Open the full comparison page",
+      "continue": "Continue",
+      "bottom": {
+        "loading": "loading…",
+        "noGateway": "no comparison gateway",
+        "failed": "unavailable",
+        "ready": "both sides ready",
+        "partial": "one side not run yet",
+        "empty": "neither side run yet"
+      }
+    }
   }
 }

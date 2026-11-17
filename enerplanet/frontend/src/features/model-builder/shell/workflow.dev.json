@@ -1,0 +1,19 @@
+{
+  "id": "dev-flow",
+  "version": 1,
+  "label": "Development flow",
+  "seed": "testdata/dev-flow.json",
+  "nodes": [
+    { "id": "model-start", "moduleId": "model-start", "label": "Model start" },
+    { "id": "area-draw", "moduleId": "area-draw", "label": "Area draw" },
+    { "id": "grid-generation", "moduleId": "grid-generation", "label": "Grid generation" },
+    { "id": "weather", "moduleId": "weather", "label": "Weather" },
+    { "id": "building-demand", "moduleId": "building-demand", "label": "Building demand" },
+    { "id": "building-configurator", "moduleId": "building-configurator", "label": "Building configurator" },
+    { "id": "technologies", "moduleId": "technologies", "label": "Technologies" },
+    { "id": "model-save", "moduleId": "model-save", "label": "Save model" },
+    { "id": "run-calliope", "moduleId": "run-meme-calliope", "label": "Run model (Calliope)" },
+    { "id": "run-pypsa", "moduleId": "run-meme-pypsa", "label": "Run model (PyPSA)" },
+    { "id": "result-overview", "moduleId": "result-overview", "label": "Result overview" }
+  ]
+}

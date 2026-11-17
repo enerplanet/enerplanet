@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Heat resolution (supply side) — expected-fit table + resolution helpers.
-// Port of the harness demo (~/Roo-TMP/heat-harness/data/expectedFit.ts) into the
-// production configurator flow (plan §1). Heuristic, review-flagged, user-
+// Port of the heat-harness demo's expected-fit logic into the production configurator
+// flow. Heuristic, review-flagged, user-
 // overridable; auto-assigned techs are badged "estimated" in the UI.
 //
 // One resolver: expected-demand→tech ; one detector: does a building's
@@ -63,7 +63,7 @@ const EXPECTED_FIT: Record<string, string> = {
   farm: "gas_boiler",
   barn: "gas_boiler",
   stable: "gas_boiler",
-  greenhouse: "air_source_heat_pump", // solar thermal not in catalog — see plan §1
+  greenhouse: "air_source_heat_pump", // solar thermal not in the catalog
 };
 
 

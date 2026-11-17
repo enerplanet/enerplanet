@@ -1,0 +1,150 @@
+/**
+ * Reversible diffs and sealed transactions.
+ *
+ * A transaction is pure data: `primary` is what the action changed, `cascade` is what
+ * invalidation pruned. Because every op carries `prev` *and* `next`, undo/redo/replay are
+ * offline operations — no module and no backend involved.
+ */
+
+import type { ModelData, PortKey } from "./ports";
+
+export type DiffOp =
+  | { op: "replace"; path: string; prev: unknown; next: unknown }
+  | { op: "remove"; path: string; prev: unknown };
+
+/** Why a transaction exists. */
+export type TransactionKind =
+  /** A change to the model, produced by running a module. */
+  | "action"
+  /** A position move inside the immutable flow — the target's outputs are
+   *  pruned structurally, and everything it discarded rides in `cascade`. */
+  | "jump";
+
+/** Where a jump came from and where it went — node ids within the one immutable flow. */
+export interface JumpRef {
+  from: string;
+  to: string;
+}
+
+/**
+ * One sealed action. `revision` is 1-based and monotonically increasing; the log is
+ * append-only, so a revision identifies an entry for the lifetime of the session.
+ */
+export interface Transaction {
+  readonly revision: number;
+  /** The action's own diff. Empty for a jump — moving the position changes no value. */
+  readonly primary: readonly DiffOp[];
+  /** Downstream values the action invalidated, or a jump discarded. */
+  readonly cascade: readonly DiffOp[];
+  /** Workflow node that produced it, when known. */
+  readonly nodeId?: string;
+  /**
+   * The workflow node that produced it was an **auto** node.
+   *
+   * Stamped at seal time so history never has to consult the workflow to know which
+   * transactions it may skip when undoing.
+   */
+  readonly auto?: boolean;
+  /**
+   * `"jump"` for a position move, `"action"` (or absent) for a change.
+   *
+   * A jump that prunes nothing is the one documented **zero-diff transaction**: the intent is
+   * itself what is being recorded, which is the deliberate exception to "a no-op seals nothing".
+   */
+  readonly kind?: TransactionKind;
+  /** Set with `kind: "jump"`. */
+  readonly jump?: JumpRef;
+}
+
+/** JSON-pointer path of a top-level port, e.g. `"/buildings"`. */
+export function portPath(port: PortKey): string {
+  return `/${port}`;
+}
+
+function segments(path: string): string[] {
+  return path.split("/").filter((segment) => segment.length > 0);
+}
+
+export function getAtPath(data: unknown, path: string): unknown {
+  let current: unknown = data;
+  for (const segment of segments(path)) {
+    if (current === null || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current;
+}
+
+/**
+ * Immutable write: clones only the objects along `path`, shares everything else.
+ *
+ * Paths address **object keys**, not array indices — nested writes so far are vector-keyed
+ * records (`/buildingParams/electricity`). Replacing an array (a GeoJSON collection, the
+ * coordinates) happens whole, at a key.
+ */
+function setAtPath(root: ModelData, path: string, value: unknown): ModelData {
+  const parts = segments(path);
+  const next = { ...root } as Record<string, unknown>;
+  let target: Record<string, unknown> = next;
+  let source: Record<string, unknown> = root as unknown as Record<string, unknown>;
+
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = parts[i];
+    const childSource = source[key];
+    const child =
+      childSource !== null && typeof childSource === "object"
+        ? { ...(childSource as Record<string, unknown>) }
+        : {};
+    target[key] = child;
+    source = childSource as Record<string, unknown>;
+    target = child;
+  }
+
+  target[parts[parts.length - 1]] = value;
+  return next as unknown as ModelData;
+}
+
+function removeAtPath(root: ModelData, path: string): ModelData {
+  const parts = segments(path);
+  const next = { ...root } as Record<string, unknown>;
+  let target: Record<string, unknown> = next;
+  let source: Record<string, unknown> = root as unknown as Record<string, unknown>;
+
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = parts[i];
+    const childSource = source[key];
+    if (childSource === null || typeof childSource !== "object") return next as unknown as ModelData;
+    const child = { ...(childSource as Record<string, unknown>) };
+    target[key] = child;
+    source = childSource as Record<string, unknown>;
+    target = child;
+  }
+
+  delete target[parts[parts.length - 1]];
+  return next as unknown as ModelData;
+}
+
+/** Apply one op, immutably. */
+export function applyDiff(data: ModelData, op: DiffOp): ModelData {
+  if (op.op === "remove" || op.next === undefined) return removeAtPath(data, op.path);
+  return setAtPath(data, op.path, op.next);
+}
+
+/** Apply a sequence of ops, immutably. */
+export function applyDiffs(data: ModelData, ops: readonly DiffOp[]): ModelData {
+  return ops.reduce<ModelData>((acc, op) => applyDiff(acc, op), data);
+}
+
+/**
+ * Reverse a diff. Applied in reverse order so multi-op diffs restore correctly:
+ * undo restores a transaction's pre-values exactly.
+ *
+ * Inverting a `remove` therefore restores the value it dropped — the first bug this
+ * function had.
+ */
+export function invertDiffs(ops: readonly DiffOp[]): DiffOp[] {
+  return [...ops].reverse().map((op) =>
+    op.op === "replace"
+      ? { op: "replace", path: op.path, prev: op.next, next: op.prev }
+      : { op: "replace", path: op.path, prev: undefined, next: op.prev },
+  );
+}
