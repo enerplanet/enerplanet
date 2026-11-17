@@ -1,7 +1,7 @@
 /**
- * Re-run and jump mechanics — case T20 slice C, which is T12's loopback.
+ * Re-run and jump mechanics.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §G. A jump moves the session back inside the same
+ * A jump moves the session back inside the same
  * immutable flow. It discards **only what a later node uses** — a node overwrites its own params
  * when it runs again, and configuration nothing reads is worth keeping. It also rests the position
  * on its target (`position.ts`), so a jump that discards nothing (a bare re-save) still moves the
@@ -88,7 +88,6 @@ async function runAll(store: ReturnType<typeof createStore>): Promise<void> {
   }
 }
 
-// ── T20 (re-run) ────────────────────────────────────────────────────────────
 
 describe("T20c — a jump drops back without throwing the tail away", () => {
   it("prunes only what a later node uses, keeping configuration and unused outputs", async () => {

@@ -1,5 +1,5 @@
 /**
- * The `model-save` node (case T13) — the flow's last step, and the only node that talks to the
+ * The `model-save` node — the flow's last step, and the only node that talks to the
  * backend.
  *
  * The engine's contract is unchanged: the node reads and writes ports through its `ModuleCtx`, and a
@@ -64,12 +64,12 @@ export interface SaveSession {
  *
  * This is the completeness gate's list, and it is deliberately wider than the hard refusal below. `validate()`
  * is a *verdict for the UI* ("ready to save" vs "missing: X, Y"): an unfinished model is still saveable as
- * `incomplete` (§6), so a missing grid must be reported, never treated as a veto.
+ * `incomplete`, so a missing grid must be reported, never treated as a veto.
  *
  * Three things are absent on purpose:
  * - `workspaceId` / `userId` are the *session's* identity, not something the form collects or the user can fix
  *   — the host seeds them and the backend resolves the caller from the session, so reporting them would be noise.
- * - `advancedParams` has sane defaults and nothing upstream produces it (`Modules.md` §4: it "must not gate the
+ * - `advancedParams` has sane defaults and nothing upstream produces it (it "must not gate the
  *   terminal node").
  * - `modelId` / `draftId` belong to the create/edit path, not to completeness.
  */
@@ -87,8 +87,8 @@ const PERSISTED: readonly { port: PortKey; message: string }[] = [
 ];
 
 /**
- * What the model is still missing before it can be run — the spec's "ready-to-save vs *missing: X, Y*"
- * (`model-save.md`), and the literal expression of the data-awareness requirement.
+ * What the model is still missing before it can be run — the "ready-to-save vs *missing: X, Y*" distinction,
+ * and the literal expression of the data-awareness requirement.
  */
 export function missingPorts(data: Readonly<ModelData>): ValidationIssue[] {
   return PERSISTED.filter((entry) => data[entry.port] === undefined).map(({ port, message }) => ({
@@ -304,7 +304,7 @@ export function createSaveNode(options: SaveNodeOptions): Module {
  * `complete` reads false on every save and a finished model could never be promoted to `draft` — which is
  * exactly what a run requires. The honest question is whether every **other** node is done.
  *
- * `incomplete` is what an unfinished model gets, and §6 lets it round-trip that way: the bar's save pins
+ * `incomplete` is what an unfinished model gets, and it may round-trip that way: the bar's save pins
  * `incomplete` for the same reason. A complete first save is `draft`; a complete re-save is `modified`,
  * since a model that has been through here once already exists.
  */

@@ -153,7 +153,7 @@ describe("the conversion output — the model.json this store produces", () => {
   });
 
   it("sends an empty config for an unfinished model, and says so", () => {
-    // §6's split: there is no model yet, so Call A carries `{}` rather than a config full of defaults,
+    // The split: there is no model yet, so Call A carries `{}` rather than a config full of defaults,
     // and the status is what tells a legacy consumer the model is not runnable. The real state travels
     // in Call B's artefact either way.
     const store = createStore({

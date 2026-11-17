@@ -1,5 +1,5 @@
 /**
- * Typed failures of the write boundary (`Plan.md` §12).
+ * Typed failures of the write boundary.
  *
  * A rejected write must never leave the store half-changed: the engine validates every
  * commit *before* a transaction exists, so these errors always mean "nothing happened".
@@ -14,7 +14,7 @@ export type PortWriteRejection =
   /** The module would blind-overwrite a value it never read (anti-clobber). */
   | "clobber"
   /**
-   * The value carries nothing: an empty string, `null`, or `undefined` (T22).
+   * The value carries nothing: an empty string, `null`, or `undefined`.
    *
    * A zero-member collection is *not* empty here — "no transformers in this area" is a fact a module is
    * entitled to record, and whether that result is finished is the module's own call in `validate()`.
@@ -36,7 +36,7 @@ export class PortWriteRejected extends Error {
 }
 
 /**
- * A node was asked to run at a position whose inputs do not exist (T21).
+ * A node was asked to run at a position whose inputs do not exist.
  *
  * The available-set the palette uses is a *planning* aid and is deliberately optimistic — a
  * port a module only reads may look "available" before anything produced it. The store is the
@@ -79,7 +79,7 @@ export class ReentrantStoreWrite extends Error {
  *
  * Going *forward* is not a jump. The flow walks forward by running nodes, so the session reaches
  * a later node by running it — never by declaring itself there. A jump is therefore always a move
- * back (T20, T12), and the guard runs before anything is sealed, so a refused jump writes nothing.
+ * back, and the guard runs before anything is sealed, so a refused jump writes nothing.
  */
 export class JumpNotBackwards extends Error {
   readonly target: string;

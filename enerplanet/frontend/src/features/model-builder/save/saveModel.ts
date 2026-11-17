@@ -1,20 +1,19 @@
 /**
- * The save node's logic (case T13) — the two-call split, and the legacy payload built from the store.
+ * The save node's logic — the two-call split, and the legacy payload built from the store.
  *
- * The payload shape is not invented here: `.local/ModularThesis/prototypes/sk-node-workflow/
- * integration/saveService.ts` is a verbatim extraction of the legacy `saveAreaData`
- * (`configurator/hooks/useAreaSelect.ts:370-404`), and `buildSaveConfig` / `buildModelPayload` reproduce it
- * key for key. That extraction is the oracle the tests check against — parity is the whole reason this code
+ * The payload shape is not invented here: it reproduces the legacy `saveAreaData`
+ * (`configurator/hooks/useAreaSelect.ts:370-404`) verbatim, and `buildSaveConfig` / `buildModelPayload`
+ * reproduce it key for key. That legacy shape is the oracle the tests check against — parity is the whole reason this code
  * exists, so it is pinned rather than approximated.
  *
  * One respect in which the oracle is *not* the original, worth knowing before trusting the comparison blindly:
  * the extraction curates `config` to the ports the store holds, while the legacy spread the whole `pylovoData`
- * object — so `meta` and `boundary` travelled on the real wire and do not here. `modules/model-save.md` carries
- * the full parity audit. One legacy config key is still written absent rather than reproduced: **`site`**,
+ * object — so `meta` and `boundary` travelled on the real wire and do not here. One legacy config key is
+ * still written absent rather than reproduced: **`site`**,
  * which the legacy sets when the user edits the grid — it clones pylovo's grid into an editable site and
  * records that copy's identity (`{ mode: 'site', site_id, revision }`) so the save points at the copy rather
  * than the original. That is `grid-editor`'s output, and `grid-editor` is deferred, so there is nothing
- * honest to write. The other keys the audit listed (`weather*`, `cookingCarrier`, `mode`,
+ * honest to write. The other keys (`weather*`, `cookingCarrier`, `mode`,
  * `electricity_prices`) now have ports and are written verbatim.
  *
  * Two deliberate differences from the legacy original:
@@ -179,7 +178,7 @@ export interface SaveRequest {
    */
   onCreated?: (modelId: number, created: boolean) => void | Promise<void>;
   /**
-   * Pin the status instead of deriving it from completeness. The workflow bar's save pins `incomplete` (§6):
+   * Pin the status instead of deriving it from completeness. The workflow bar's save pins `incomplete`:
    * an unfinished model still round-trips with its session, and *finishing* one — the real `model.json`,
    * promoted to `draft` so that a run accepts it — belongs to the save node behind its completeness gate.
    * Absent, the status is derived below, which is what that node's own path relies on.
@@ -205,7 +204,7 @@ export async function saveModel(
 
   const complete = position(flow, registry, store).complete;
   // Pinned by the caller when the caller is the workflow bar; otherwise derived from completeness, which is
-  // the difference §6 draws between the bar's save and the save node's.
+  // the difference between the bar's save and the save node's.
   const status: SaveStatus =
     request.status ?? (complete ? (request.modelId === undefined ? "draft" : "modified") : "incomplete");
 

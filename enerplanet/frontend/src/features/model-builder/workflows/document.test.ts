@@ -1,5 +1,5 @@
 /**
- * The document helpers (plan §9). The one that matters: the copy payload is the stored document,
+ * The document helpers. The one that matters: the copy payload is the stored document,
  * **pretty-printed with its own key order** — the paste target is a source file, so a diff after a paste
  * must be the change, not a reshuffle.
  *

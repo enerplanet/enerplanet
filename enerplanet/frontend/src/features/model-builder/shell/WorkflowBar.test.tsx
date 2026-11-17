@@ -1,5 +1,5 @@
 /**
- * The workflow bar — the fact this file exists to pin: there is **no forward control** (T15).
+ * The workflow bar — the fact this file exists to pin: there is **no forward control**.
  *
  * An auto node runs on arrival and an interactive module advances by running itself, so a Continue button
  * would be the frame owning a control whose enabled-ness depends on node state the frame cannot see. The bar

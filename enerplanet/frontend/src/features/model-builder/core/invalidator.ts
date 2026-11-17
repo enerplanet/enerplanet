@@ -1,5 +1,5 @@
 /**
- * The invalidator (`Plan.md` §5) — turns a change into the **stale ports** it leaves behind.
+ * The invalidator — turns a change into the **stale ports** it leaves behind.
  *
  * A pure function of the change, the projection and the modules currently in the flow:
  * each module's `affect` map supplies the static potential edges, and three rules make the
@@ -11,7 +11,7 @@
  *
  * What it deliberately does *not* do is predict what a re-run would compute: that is
  * unknowable without running it. The finer minimality is bought at the re-run boundary,
- * where a node that re-derives an identical value seals no transaction (T20's elision).
+ * where a node that re-derives an identical value seals no transaction.
  *
  * The cascade is expressed as ports, never as nodes — mapping stale ports back onto the flow
  * is the flow layer's job, which keeps history and invalidation free of workflow knowledge.
@@ -54,7 +54,7 @@ function topLevelPort(path: string): PortKey | undefined {
  * Stage the candidate cascade for a change.
  *
  * @returns prune ops, in declared `affect` order — the caller seals them into the same
- *          transaction as the change that caused them (`Plan.md` §6).
+ *          transaction as the change that caused them.
  */
 export function stageCascade({ changed, primary, data, modules }: CascadeInput): DiffOp[] {
   const superseded = new Set<PortKey>(changedPorts(primary));

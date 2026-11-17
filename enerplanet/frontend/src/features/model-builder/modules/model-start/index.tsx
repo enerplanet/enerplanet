@@ -1,13 +1,13 @@
 /**
  * `model-start` — the workflow's **entry node**: it creates the model session.
  *
- * `Modules.md` §3: *"create the model session. Seeds identity + metadata and an empty store."* It is the only
+ * *"create the model session. Seeds identity + metadata and an empty store."* It is the only
  * module a workflow can start from, and it requires nothing — which is what makes it an entry node rather than
  * a step that happens to come first.
  *
  * It replaces the name/date/resolution/region portion of the legacy flow
  * (`configurator/hooks/useAreaSelect/helpers/modelSettings.ts` + `SidebarPanel.tsx` + `RegionSelector.tsx`).
- * Region selection is **entered here** — there is no separate `region-select` module (`modules/model-start.md`)
+ * Region selection is **entered here** — there is no separate `region-select` module
  * — and the map **follows the region the model holds**: applying frames the region just committed, and so do
  * loading a model and undoing a change, because all three move the same stored value.
  *
@@ -21,7 +21,7 @@
  *             business, never this one's.
  *
  * `seal: "per-commit"` — the fields are independent, so a partial state is one this module stands behind
- * (`spec/core.md` T16), and each click or Apply still lands in its own sealed transaction.
+ * and each click or Apply still lands in its own sealed transaction.
  */
 
 import { useEffect, useState } from "react";
@@ -282,7 +282,7 @@ const module = defineModule({
   id: "model-start",
   name: "Model start",
 
-  // The module's whole store surface (`Modules.md` §3). It requires **nothing** — that is what makes it the
+  // The module's whole store surface. It requires **nothing** — that is what makes it the
   // entry node — and it writes the identity and metadata a model needs before anything else can run.
   //
   // `workspaceId`/`userId` are declared but never written: they are the *session's* identity, seeded by the
@@ -308,7 +308,7 @@ const module = defineModule({
   // Nothing can invalidate this module's work, because nothing feeds it: it has no inputs at all.
   affect: {},
 
-  // Independent fields, so each commit stands alone and the user gets field-level undo (`spec/core.md` T16).
+  // Independent fields, so each commit stands alone and the user gets field-level undo.
   seal: "per-commit",
 
   layout: ["sidebar", "map"],

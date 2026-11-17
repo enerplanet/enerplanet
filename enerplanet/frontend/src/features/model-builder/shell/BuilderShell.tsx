@@ -1,5 +1,5 @@
 /**
- * The Model Builder frame (`Plan.md` §8, `spec/frame.md`) — the host a module mounts into.
+ * The Model Builder frame — the host a module mounts into.
  *
  * The frame runs in one of two **modes** (`frameMode.ts`), and everything else follows from which:
  *
@@ -11,13 +11,13 @@
  *
  * The layout is a row: the **module column** (workflow bar, the slots, the ledger bar) and, beside it, the
  * **steps panel** — a sibling, not a child, so it keeps its full height while the module area shrinks. That
- * also scopes the overlay to the module column, which is what the spec asks for: an overlay must not cover
+ * also scopes the overlay to the module column: an overlay must not cover
  * the chrome you need to get out of it.
  *
  * What the frame owns:
  * - the **workflow bar** and the **ledger bar** (their own components) and the **slots** — `sidebar`, `map`,
  *   `bottom`, `overlay` — composed here, so a module never lays out the page. Each slot is a **bounded box**,
- *   per §4 of the spec: the host gives the box and does *not* scroll a module's content on its behalf. The
+ *   the host gives the box and does *not* scroll a module's content on its behalf. The
  *   module owns its overflow, or its content is clipped — visibly, which is the point: the README calls silent
  *   overflow a bug, and a host that scrolled for the module would be hiding it.
  * - the **session**: one store plus an engine over it, re-seeded whenever the mode changes. Whichever mode it
@@ -34,11 +34,11 @@
  * is what tells it the store moved.
  *
  * The component is split in two, and the split is the point: `BuilderShell` fetches the default workflow and
- * `BuilderFrame` runs it. The flow is a database row now (`plan §6`, Stage 2), so it does not exist when the
+ * `BuilderFrame` runs it. The flow is a database row now, so it does not exist when the
  * frame would first render — the frame must not mount until it has arrived. A failed fetch, a missing default,
  * and a stored document naming an unknown module are all **data conditions**, reported in the frame's own
  * style rather than thrown: `toWorkflow`'s refusal is right for the developer-authored definition it was
- * written against, but a row is user data, and a white screen is not a report (`plan §3`).
+ * written against, but a row is user data, and a white screen is not a report.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -112,7 +112,7 @@ export interface SessionIdentity {
 /** A session over whatever the current mode says the data is: the flow's seed, or a module's test data. */
 function sessionFor(workflow: Workflow, seed: Readonly<ModelData>, identity: SessionIdentity): Session {
   // The store is built **with** the invalidator, once, here — so every seal in this session prunes
-  // what the change affects (T7) without each call site having to remember to. A store built
+  // what the change affects without each call site having to remember to. A store built
   // without it treats every cascade as empty, which is what the core's own tests rely on.
   const store = createStore(
     // The identity is a *fallback* under the seed, not an override: a loaded artefact carries the identity its
@@ -388,7 +388,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   };
 
   /**
-   * The bar's save (`spec/frame.md` §6): Call A (the legacy payload) then Call B (the session artefact), with
+   * The bar's save: Call A (the legacy payload) then Call B (the session artefact), with
    * the status pinned to `incomplete`. *Finishing* a model — the real `model.json`, promoted to `draft` so a
    * run accepts it — belongs to the save **node**, behind its completeness gate, not to this button.
    *
@@ -491,7 +491,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   /**
    * Run an auto node and reflect it in `autoStatus` — `running` while it is in flight, `done` when it lands,
    * `error` (with the message, and the manual re-run the module then offers) when it throws. `auto` is stamped
-   * on the transaction: it is a property of the **node**, not the module (T14).
+   * on the transaction: it is a property of the **node**, not the module.
    */
   const launchAuto = useCallback(
     (nodeId: string, module: BuilderModule["module"]): void => {
@@ -531,7 +531,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   }, [launchAuto, mode.kind, session.store, storeVersion, workflow]);
 
   /**
-   * The fork's own session (`variantSession.ts`, `plan` D2). Committing `modelId` **is** the switch — the frame
+   * The fork's own session (`variantSession.ts`). Committing `modelId` **is** the switch — the frame
    * renders the one store and no page is navigated — but the copy is a model of its own and needs a session row
    * of its own, keyed by its id. The row is a snapshot taken *after* the switch has sealed, which is why the
    * shell writes it here and not from inside `run()`; the module only states what happened (`modelVariant`
@@ -733,7 +733,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
  * component, since a conditional return above a hook is what breaks React.
  *
  * Both outcomes are reported in the frame's own style (a centred message) rather than thrown into a white
- * screen: the flow is user data (`plan §3`).
+ * screen: the flow is user data.
  */
 export const BuilderShell: React.FC = () => {
   const { t } = useTranslation();

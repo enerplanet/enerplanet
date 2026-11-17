@@ -1,10 +1,10 @@
 /**
- * Workflows — the list, the create form, and the editor (plan §9).
+ * Workflows — the list, the create form, and the editor.
  *
- * It lives inside `features/model-builder/` (plan §7) because the editor's palette **is** this feature's
+ * It lives inside `features/model-builder/` because the editor's palette **is** this feature's
  * module catalogue; a separate feature would need the project's first cross-feature import.
  *
- * Stage 1 (plan §6): this surface reads and writes the database, and the running builder still reads its
+ * Stage 1: this surface reads and writes the database, and the running builder still reads its
  * baked-in definition. So nothing here drives a run — it is a list of stored documents plus the editor.
  *
  * A stored flow may name a module the catalogue no longer declares. `toWorkflow` throws on that for the
@@ -138,7 +138,7 @@ const WorkflowsPage: React.FC = () => {
   }, []);
 
   /**
-   * Delete asks first, and **refuses the default rather than doing it silently** (plan §9): the seeded
+   * Delete asks first, and **refuses the default rather than doing it silently**: the seeded
    * default is what a fresh database runs, and removing it would leave nothing runnable without saying so.
    */
   const remove = useCallback(
@@ -238,7 +238,7 @@ const WorkflowsPage: React.FC = () => {
         </div>
       </header>
 
-      {/* New: asks for a label; the id derives from it (plan §9). */}
+      {/* New: asks for a label; the id derives from it. */}
       {showNewForm && (
         <form
           className="flex shrink-0 flex-wrap items-end gap-3 border-b border-border bg-muted/40 px-6 py-3"

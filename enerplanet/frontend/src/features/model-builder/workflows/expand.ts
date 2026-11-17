@@ -1,6 +1,5 @@
 /**
- * The expansion: a workflow document, flattened into the node list the runtime walks (plan §3 of
- * `variant-adjust-subflow`).
+ * The expansion: a workflow document, flattened into the node list the runtime walks.
  *
  * A subflow node references another stored workflow. It is not a module — no ports, no `run()` — so the
  * runtime must never see it: here it is **replaced** by the expansion of the workflow it stands for,

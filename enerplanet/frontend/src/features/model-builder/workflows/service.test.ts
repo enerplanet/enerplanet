@@ -1,5 +1,5 @@
 /**
- * The workflows API client (plan §5). These pin the routes, the method-per-call, and the `{data: …}`
+ * The workflows API client. These pin the routes, the method-per-call, and the `{data: …}`
  * envelope — the contract the backend is built against in parallel, so the client must not drift from it.
  *
  * Written failing first.

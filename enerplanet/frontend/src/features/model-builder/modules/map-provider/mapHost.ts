@@ -8,7 +8,7 @@
  * — no MapLibre, no DOM — is also what makes it testable, since the canvas next door (`mapCanvas.tsx`) needs a
  * browser and is deliberately not unit-tested.
  *
- * This is a **blackbox** (`modules/map-provider.md`): what is inside a layer, and how it is drawn, is the
+ * This is a **blackbox**: what is inside a layer, and how it is drawn, is the
  * provider's business. What crosses the edge is this: layers with features in them, and clicks coming back
  * with the feature that was hit.
  */

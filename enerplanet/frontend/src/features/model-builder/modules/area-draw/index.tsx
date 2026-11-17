@@ -1,16 +1,16 @@
 /**
  * `area-draw` — the model area, drawn on the map.
  *
- * `modules/area-draw.md`: *"Creates one or multiple polygons within the base region that define where the model
+ * *"Creates one or multiple polygons within the base region that define where the model
  * is built."* It is the **first consumer of `requestPolygon`**, and the module that turns a map interaction into
  * a store port: the drawn rings are `coordinates`, which everything downstream is built inside.
  *
- * Two regions, per its spec:
+ * Two regions, on purpose:
  *
  *   map       the draw interaction itself — ask the map for a polygon, show what is drawn
  *   sidebar   the list of drawn polygons, the area summary, and the actions: apply, discard, undo, clear
  *
- * **The area is a draft until it is applied.** The spec asks for a data-loss confirmation before applying,
+ * **The area is a draft until it is applied.** Applying asks for a data-loss confirmation,
  * because changing the area invalidates the whole downstream grid — so the module keeps the draft locally, shows
  * it on the map, and commits only on Apply. Only that commit is a transaction; the drawing itself is transient
  * map interaction state.
@@ -21,7 +21,7 @@
  *
  * `affect` is empty, deliberately: it maps a module's *inputs* to the outputs they change, and nothing feeds
  * this one. The region constrains what may be drawn, it does not change what this module writes. The
- * invalidation the spec describes (`coordinates` → the whole grid) is declared by the modules that *consume*
+ * invalidation (`coordinates` → the whole grid) is declared by the modules that *consume*
  * `coordinates`, through the cascade.
  */
 
@@ -118,8 +118,8 @@ function hasGrid(data: Readonly<ModelData>): boolean {
 /**
  * Whether applying this draft would destroy something.
  *
- * So the UI can ask before it does: applying an area invalidates the whole grid (`modules/area-draw.md`,
- * "Invalidation"), and a user who is only re-applying the area already in the store is not destroying anything,
+ * So the UI can ask before it does: applying an area invalidates the whole grid, and a user who is only
+ * re-applying the area already in the store is not destroying anything,
  * so the confirmation must not cry wolf.
  */
 export function needsConfirmation(data: Readonly<ModelData>, draft: Coordinates): boolean {

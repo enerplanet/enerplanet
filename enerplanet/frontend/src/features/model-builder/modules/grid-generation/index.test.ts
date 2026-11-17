@@ -5,13 +5,13 @@
  *
  * The declaration cases pin what this module *is*: it requires the drawn area and the region it sits in, and
  * produces the whole synthetic grid — five ports at once, because a grid of half a network is not a grid.
- * The `affect` cases pin the broad invalidation the spec asks for: *either* input invalidates the **entire**
+ * The `affect` cases pin the broad invalidation: *either* input invalidates the **entire**
  * output, so the cascade downstream (building-demand → technologies) can never be reached by a partial
- * rewrite. That is the invalidation the spec calls out, and getting it wrong is how stale demand survives a
+ * rewrite. That is the invalidation, and getting it wrong is how stale demand survives a
  * redrawn area.
  *
- * The engine is **injected**, not reached for, and that is not a test convenience: the spec calls the grid
- * engine a provider slot, so swapping it is part of the contract. These cases swap in a fake and assert what
+ * The engine is **injected**, not reached for, and that is not a test convenience: the grid
+ * engine is a provider slot, so swapping it is part of the contract. These cases swap in a fake and assert what
  * the module writes — and, when the engine fails, what it does *not*.
  *
  * (The rules the core enforces — undeclared writes, clobber, the required gate — are demonstrated in the
@@ -191,7 +191,7 @@ describe("grid-generation's run", () => {
     expect(issues.map((issue) => issue.port).sort()).toEqual(["coordinates"]);
   });
 
-  it("reports an empty result as unfinished, not as a grid (T22)", async () => {
+  it("reports an empty result as unfinished, not as a grid", async () => {
     // The module's own half of the completeness rule. It *may* find nothing — an empty FeatureCollection is
     // a fact the store is allowed to hold — but a model built on no buildings is not one this module stands
     // behind. Reported rather than thrown, so the empty grid is still visible on the map and the reason is

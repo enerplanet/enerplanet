@@ -1,7 +1,7 @@
 /**
- * Invalidator — the cascade as *stale ports* (case T7).
+ * Invalidator — the cascade as *stale ports*.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §B. Locks `Plan.md` §5: invalidation is minimal
+ * Invalidation is minimal
  * and influence-aware, derived from each module's declared `affect` map.
  *
  * Written failing first.
@@ -68,7 +68,7 @@ function data(overrides: Partial<ModelData> = {}): ModelData {
   };
 }
 
-describe("T7 — the cascade is the affected closure, minus what it cannot touch", () => {
+describe("the cascade is the affected closure, minus what it cannot touch", () => {
   it("prunes the affected ports that exist and nothing else", () => {
     const cascade = stageCascade({
       changed: ["coordinates"],

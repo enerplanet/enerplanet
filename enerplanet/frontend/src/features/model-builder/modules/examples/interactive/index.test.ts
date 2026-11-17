@@ -57,7 +57,7 @@ describe("the example module's declaration", () => {
   });
 
   it("declares how its work reaches the log: per-commit, because its ports are independent", () => {
-    // One atomic transaction per `commit()` (`spec/core.md` T16). A module whose writes must land together
+    // One atomic transaction per `commit()`. A module whose writes must land together
     // would leave `seal` at the default, `at-completion`, and commit once.
     expect(exampleInteractive.module.seal).toBe("per-commit");
   });

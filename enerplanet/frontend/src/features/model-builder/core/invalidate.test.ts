@@ -1,10 +1,10 @@
 /**
- * The invalidator — T7: *the cascade is the affected closure, minus what it cannot touch*.
+ * The invalidator: *the cascade is the affected closure, minus what it cannot touch*.
  *
  * Written failing first.
  *
  * The cascade is staged from a **primary** diff (what an action changed) and answers one question:
- * which *other* ports does this working model no longer have a right to keep? T7's answer is three
+ * which *other* ports does this working model no longer have a right to keep? The answer is three
  * rules, and each of them is a case below:
  *
  * 1. the port is in the **`affect` closure** of the changed ports (transitively — an edge is
@@ -12,14 +12,14 @@
  * 2. the port is **present** in the projection (nothing to prune otherwise);
  * 3. the port is **not already written by the primary** (the change supersedes it).
  *
- * Two things T7 deliberately does *not* do, and the second case pins each:
+ * Two things it deliberately does *not* do, and the second case pins each:
  *
  * - it never prunes outside the declared closure, however stale something might look;
  * - it does not try to predict what a re-run would produce. An earlier draft wanted to drop a
  *   prune when "re-running would give the same value" — impossible without running it. That finer
  *   minimality belongs at the **re-run** boundary (the no-op-write drop), not here.
  *
- * The prober in `influence.ts` (T8) is what keeps rule 1 honest: an *under*-declared edge would let
+ * The prober in `influence.ts` is what keeps rule 1 honest: an *under*-declared edge would let
  * this function leave a port alone that should have gone, which is silent stale data.
  */
 import { describe, it, expect } from "vitest";
@@ -94,7 +94,7 @@ function primaryRoad(port: PortKey, next: unknown): { op: "replace"; path: strin
   return { op: "replace", path: portPath(port), prev: undefined, next };
 }
 
-describe("T7 — the cascade is the affected closure, minus what it cannot touch", () => {
+describe("the cascade is the affected closure, minus what it cannot touch", () => {
   it("prunes what the changed port affects, and follows the closure transitively", async () => {
     const store = await applied();
     const invalidate = createInvalidator(FLOW, registry);
@@ -127,7 +127,7 @@ describe("T7 — the cascade is the affected closure, minus what it cannot touch
     expect(store.data.buildings).toBeUndefined();
 
     // `buildings` is in the closure of `region`, but it is already gone: a second prune would be a
-    // no-op op in the log, and T7 says the cascade is what *actually* changed.
+    // no-op op in the log, and the cascade is what *actually* changed.
     const cascade = invalidate([primaryRoad("region", ELSEWHERE)], store.data);
 
     expect(cascade.map((op) => op.path)).toEqual([portPath("coordinates")]);

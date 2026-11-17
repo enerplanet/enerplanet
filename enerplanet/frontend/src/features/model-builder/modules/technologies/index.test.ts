@@ -89,7 +89,7 @@ describe("technologies's declaration", () => {
   });
 
   it("renders in the sidebar alone, until a building selection exists", () => {
-    // The spec asks for a `map` region to pick buildings, and `MapService` has no way to ask for a selection.
+    // A `map` region to pick buildings would need a selection API, and `MapService` has no way to ask for one.
     // Assign-to-all is what the panel can honestly offer until it does.
     expect([...technologies.module.layout]).toEqual(["sidebar"]);
   });
@@ -156,7 +156,7 @@ describe("technologies's run", () => {
 
 describe("technologies's gate", () => {
   it("reports buildings with heat demand but no supply", () => {
-    // The completeness the module owns (T22): demand was resolved by something, or the model is not finished.
+    // The completeness the module owns: demand was resolved by something, or the model is not finished.
     expect(issuesFor(ready() as ModelData)).toEqual([
       { port: "technologies", message: "1 building(s) have heat demand but no supply." },
     ]);

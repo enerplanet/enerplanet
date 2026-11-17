@@ -1,5 +1,5 @@
 /**
- * The expansion (plan §3 of `variant-adjust-subflow`). Everything else rests on this piece, so the cases
+ * The expansion. Everything else rests on this piece, so the cases
  * pin the two properties that are correctness rather than tidiness — a subflow's ids are namespaced by its
  * container, and the same subflow twice yields disjoint ids — and the three refusals: a composition cycle, a
  * subflow naming a workflow nobody stores, and a node naming a module nobody declared.

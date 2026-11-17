@@ -1,9 +1,9 @@
 /**
- * The workflow bar — the frame's top band (`spec/frame.md` §2, §3.1; `spec/core.md` §G).
+ * The workflow bar — the frame's top band.
  *
  * Dense by rule: it is chrome, and vertical space belongs to the content.
  *
- * **The bar moves; it does not undo** (`spec/core.md` §G, superseding §3.1's "module movement is undo/redo").
+ * **The bar moves; it does not undo** (superseding the earlier "module movement is undo/redo" framing).
  * Movement is a **pure position move**: a prior click seals a `jump` with an empty cascade, so it rests the
  * session on the node it lands on — leaving that node `done`, not stale — and discards nothing. There is no
  * `undo`/`redo` here — undo would leave a redo tail, and a move must leave none, so the bar offers no history
@@ -18,7 +18,7 @@
  *
  * Jumping to *any* step was deferred while movement meant a discard. It does not any more: a move is a pure
  * position move that discards nothing, so there is no preview to owe, and the steps panel offers the jump
- * (§3.3). The rule that remains is direction — `moveToNode` refuses a forward target, because forward is
+ * The rule that remains is direction — `moveToNode` refuses a forward target, because forward is
  * `Continue` running the node.
  *
  * In **test mode** there is no position to show, so it says so rather than rendering a bar of dashes — a bar
@@ -27,7 +27,7 @@
  *
  * Everything it renders in workflow mode comes from `barState`, so the bar holds no knowledge of history that
  * could fall out of date. Movement is not reimplemented here either — the prior control calls `actions.ts`
- * directly, which is exactly the thinness §3.1 asks for.
+ * directly, which is exactly the thinness the bar wants.
  */
 
 import { Save } from "lucide-react";

@@ -1,5 +1,5 @@
 /**
- * The edit-while-behind prompt (case T19).
+ * The edit-while-behind prompt.
  *
  * The trigger is the seal itself: the **first transaction after an undo** is what raises the
  * question, because sealing is what would silently destroy the discard stack. So `needsPrompt` is
@@ -8,8 +8,8 @@
  * There are exactly three outcomes and no fourth path — the union below is the guarantee, since a
  * switch over it has nothing left to fall through to:
  *
- * - **discard-redo** — drop the tail and continue *here* (T1 semantics: the seal truncates it);
- * - **new-model** — branch (T17) and hand the shell the family link;
+ * - **discard-redo** — drop the tail and continue *here* (the seal truncates it);
+ * - **new-model** — branch and hand the shell the family link;
  * - **cancel** — write nothing, so the shell can re-render the node from the store's own data and
  *   the redo stack keeps working.
  *
@@ -19,8 +19,8 @@
  * link this returns:
  *
  * 1. **tell the user the current model will be saved first** — the model that gets copied is the
- *    one on the server, so the current work is persisted on the way through, and `Plan.md` §8 says
- *    the user must never be surprised by what an action triggers;
+ *    one on the server, so the current work is persisted on the way through, and the user
+ *    must never be surprised by what an action triggers;
  * 2. **save the current model** — `previewOf(store, pending)` is the payload. It must *not* be a
  *    transaction: `POST`/`PUT` straight from the adapter, because sealing here would eat the very
  *    discard stack this prompt exists to protect;
@@ -29,15 +29,15 @@
  *    that names its family (`model_family.go`: *"copies record the root original in
  *    parent_model_id"*, so `parent.modelId` is the root original, not the model copied from);
  * 4. **open the copy in a new tab.** The branch session returned here is what that model's session
- *    persists (T18) once an artefact has a home server-side; until then the copy carries the model
+ *    persists once an artefact has a home server-side; until then the copy carries the model
  *    config and the new tab starts from it.
  *
  * Two consequences worth having in writing:
  *
  * - because steps 2 and 3 leave the session alone, a **failed** save or copy (Nominatim geocoding
  *   can fail) lands the user in exactly the state `cancel` would — nothing sealed, the tail intact,
- *   the pending edit still in hand. That is the spec's "the prompt must survive without losing the
- *   pending change", and it falls out rather than needing care;
+ *   the pending edit still in hand. The prompt survives without losing the
+ *   pending change, and that falls out rather than needing care;
  * - the new tab's session is *not* the branch store returned here unless the shell carries it over.
  *   Opening a tab is a page load; the branch store is the local session for the model that was just
  *   created, and persisting it is what makes the new tab's history match this one's.
@@ -65,7 +65,7 @@ export interface EditRequest {
    * original** in `parentModelId`, not the model the user happened to be in.
    */
   parent?: { modelId?: number; groupId?: number };
-  /** The branch session's own store options — the invalidation seam above all (T17). */
+  /** The branch session's own store options — the invalidation seam above all. */
   options?: StoreOptions;
 }
 
@@ -87,7 +87,7 @@ export function resolveEdit({
 }: EditRequest): EditResolution {
   switch (choice) {
     case "discard-redo": {
-      // Continuing here: the seal truncates the tail itself (T1).
+      // Continuing here: the seal truncates the tail itself.
       store.applyTransaction(pending.primary, pending.cascade ?? [], { node: pending.node });
       return { store, unchanged: false };
     }

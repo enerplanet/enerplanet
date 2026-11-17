@@ -1,5 +1,5 @@
 /**
- * `building-demand`'s full-screen auto state (T15) — in progress, done, or failed with a manual re-run.
+ * `building-demand`'s full-screen auto state — in progress, done, or failed with a manual re-run.
  *
  * This module is the one `auto` node in the dev flow, so it is also the demonstration: it has no button to start
  * with, and the only control anywhere on it is the **manual re-run**, and only after a failure. The states are

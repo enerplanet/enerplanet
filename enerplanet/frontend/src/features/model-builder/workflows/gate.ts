@@ -1,5 +1,5 @@
 /**
- * The gate rule (plan §3): a module may be appended to the chain **iff every `required` port it declares
+ * The gate rule: a module may be appended to the chain **iff every `required` port it declares
  * is produced by a module already in the chain.** "Produced" is read off the declared surface —
  * `module.params` — the ports a module says it may write, and a **subflow node contributes the ports its
  * expansion produces**, read by descending into the workflow it references.
@@ -71,7 +71,7 @@ export function producedPorts(
  * tolerates while the user is mid-edit).
  *
  * A subflow of a workflow nobody stores, and a module the catalogue does not declare, both contribute
- * nothing — data conditions to report, not crashes (plan §3).
+ * nothing — data conditions to report, not crashes.
  */
 function collectProduced(
   nodes: readonly WorkflowNodeDocument[],
@@ -258,7 +258,7 @@ export function moveIsAllowed(
  *
  * Every node module is listed — never hidden — because a greyed entry that names the port it waits for is the
  * guidance the editor exists to give, and a module that vanishes reads as a bug. Showing them all is also
- * what keeps the plan's "the palette never loses a base module" rule true by construction: nothing that can
+ * what keeps "the palette never loses a base module" true by construction: nothing that can
  * be a step is ever filtered out. The modules whose requirements the current chain satisfies are exactly the
  * ones an "Add" is offered for; the rest say which port they are waiting for.
  *

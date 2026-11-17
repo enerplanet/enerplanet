@@ -20,8 +20,7 @@
  *
  * **The redesign is the vector typing.** The legacy keys assignments by a type slug and knows nothing about
  * carriers; here an assignment carries `inputVector`/`outputVector`, so a heat pump is `electricity → heat`
- * rather than a special case. The cost is that the save must merge this port back into `config.buildings`,
- * which is the parity work G2 names.
+ * rather than a special case. The cost is that the save must merge this port back into `config.buildings`.
  */
 
 import { useEffect, useState } from "react";
@@ -116,7 +115,7 @@ export function assign(
 }
 
 /**
- * What this module stands behind (T22): every building with heat demand has a heat supply.
+ * What this module stands behind: every building with heat demand has a heat supply.
  *
  * A building whose heat demand is zero — a garage, or one the demand step found nothing for — is *not* asked
  * for a technology, so this stays silent rather than demanding supplies nobody needs.

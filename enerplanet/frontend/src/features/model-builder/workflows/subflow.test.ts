@@ -1,5 +1,5 @@
 /**
- * The subflow picker's data (plan §9): every stored workflow judged, fragments first.
+ * The subflow picker's data: every stored workflow judged, fragments first.
  *
  * The verdict itself is proven in `gate.test.ts`; these pin the ordering and that the list is exactly the
  * stored workflows — nothing excluded here, so the workflow being edited is judged (`recursive`) rather than

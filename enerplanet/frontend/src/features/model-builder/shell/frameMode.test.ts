@@ -1,5 +1,5 @@
 /**
- * Which module the frame shows, and what its session starts from (`spec/frame.md` §5, step 3b).
+ * Which module the frame shows, and what its session starts from.
  *
  * Two modes, and the difference is not cosmetic. In **workflow** mode the module on screen is the node the
  * session sits on, and its data is the workflow's seed. In **test mode** a module is shown on its own,

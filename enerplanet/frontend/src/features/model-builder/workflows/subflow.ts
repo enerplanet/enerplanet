@@ -1,5 +1,5 @@
 /**
- * The subflow picker's data (plan §9): every stored workflow, judged, and ordered for the list.
+ * The subflow picker's data: every stored workflow, judged, and ordered for the list.
  *
  * A subflow is not a module, so it is not a row in the module palette — its own control opens this instead.
  * Each candidate is exactly a stored document plus `subflowVerdict`'s answer for it, which the UI turns into

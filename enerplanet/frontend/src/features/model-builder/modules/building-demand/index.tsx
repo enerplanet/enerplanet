@@ -1,7 +1,7 @@
 /**
  * The `building-demand` module — per-building demand, one slice per energy vector.
  *
- * **This is a fetch, and a fetch is an auto job** (T23). It reads the buildings the grid node produced, turns
+ * **This is a fetch, and a fetch is an auto job**. It reads the buildings the grid node produced, turns
  * each into a request, and commits what came back. It gathers nothing of its own and holds no cursor: the
  * request is a pure function of the projection, so re-running it after an upstream change re-derives the same
  * calls. It declares `auto: true`, so there is **no button anywhere**: the frame runs it the moment the
@@ -47,7 +47,7 @@ import { estimateYearlyHeatDemand } from "./heat";
  */
 export { setDemandSource } from "./source";
 
-/** The two vectors this module fills. The store's vector set is open (T9) — these are ours, not the limit. */
+/** The two vectors this module fills. The store's vector set is open — these are ours, not the limit. */
 const ELECTRICITY = "electricity";
 const HEAT = "heat";
 
@@ -101,7 +101,7 @@ export function attributesOf(feature: GeoJSON.Feature): BuildingAttributes | und
 }
 
 /**
- * What this module stands behind (T22): every building the grid wrote has demand for both vectors.
+ * What this module stands behind: every building the grid wrote has demand for both vectors.
  *
  * Silence before anything is written — the node is `pending`, not stale. After a run, a building with no
  * params means the estimate was skipped for it (no area) or the flow was interrupted, and either way this
@@ -140,7 +140,7 @@ const module = defineModule({
 
   // Both edges are real. A new grid means these params describe buildings that no longer exist; a different
   // weather dataset means the model's demand basis moved. `technologies` is *not* named here — that edge
-  // belongs to the module that owns it, and T7's closure carries this one onward on its own.
+  // belongs to the module that owns it, and the influence closure carries this one onward on its own.
   affect: { buildings: ["buildingParams"], weatherSelection: ["buildingParams"] },
 
   layout: ["overlay", "sidebar", "bottom"],
@@ -159,7 +159,7 @@ const module = defineModule({
     }
 
     // Read before write, and read for the *merge*: other vectors may already hold params from another module,
-    // and the vector set is open (T9), so replacing the whole port would throw someone else's work away.
+    // and the vector set is open, so replacing the whole port would throw someone else's work away.
     const current = ctx.read("buildingParams") ?? {};
     const electricity: Record<string, BuildingParams> = {};
     const heat: Record<string, BuildingParams> = {};

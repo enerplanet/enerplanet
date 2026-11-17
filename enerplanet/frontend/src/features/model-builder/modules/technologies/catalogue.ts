@@ -8,7 +8,7 @@
  *    injected source, exactly like the grid engine and the demand estimate. This module knows nothing about
  *    the app's HTTP client, and the legacy's own load path (`GET /technologies`, falling back to a bundled
  *    `default_technologies.json`) stays in the shell where the app's client lives.
- * 2. **The vector map.** Which carrier a type converts, and to what. *This is the thesis's redesign* — the
+ * 2. **The vector map.** Which carrier a type converts, and to what. This is a redesign — the
  *    legacy keys assignments by a type slug with no vector typing at all — and it is what makes a heat pump
  *    (`electricity → heat`) a first-class device rather than a special case.
  * 3. **The expected-fit table.** Portable **verbatim** from the legacy's `utils/heatResolution.ts`, because an

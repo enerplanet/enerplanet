@@ -2,14 +2,14 @@
  * The `weather` module — **which** backend weather dataset a model's runs use.
  *
  * It selects; it does not fetch. The config *references* a dataset and the backend retrieves the series at
- * run time (`modules/weather.md`). The one backend call this module makes is listing the archives and years
+ * run time. The one backend call this module makes is listing the archives and years
  * it can choose from (`GET /weather/years` in the legacy) — and even that arrives through a **provider
  * slot**, not an import, so the module knows nothing about the app's HTTP client and every case below runs
  * against a fake.
  *
  * **The shape is the legacy's, on purpose.** Its `WeatherSettings` is `{ provider: string | null; choice }`
  * and its `isScenario(weather)` is `choice !== "year"`. An explicit `mode` field would be a second way to
- * say what the choice already says — the module spec had one, and the legacy is why it does not now.
+ * say what the choice already says — the module used to have one, and the legacy is why it does not now.
  * `provider: null` means "the server's default archive", **not** "unset": that is what makes a save omit the
  * key rather than write a default value, so the default can change server-side without rewriting models.
  *
@@ -20,7 +20,7 @@
  *   module therefore stores no year for a scenario rather than inventing one.
  * - **A recorded year needs a period to come from.** The year is the period's, so it is read from
  *   `fromDate` when the choice is `year`. Until a period exists the choice cannot be finished — and that is
- *   what this module's own gate reports (T22), so the node stays unfinished instead of the flow walking on
+ *   what this module's own gate reports, so the node stays unfinished instead of the flow walking on
  *   with a half-specified dataset.
  */
 
@@ -100,7 +100,7 @@ export function sameSelection(
 export const DEFAULT_SELECTION: WeatherSelection = { provider: null, choice: "p50" };
 
 /**
- * What this module stands behind, asked of any projection so `validate()` and the panel agree (T22).
+ * What this module stands behind, asked of any projection so `validate()` and the panel agree.
  *
  * Silence means either "nothing chosen yet" — the node is `pending`, not stale — or "the choice is usable".
  * An issue means the choice cannot be finished as it stands: a recorded year with no period to take it from.
@@ -131,14 +131,14 @@ const module = defineModule({
   //
   // `buildingParams` is declared without being written: a module must *know* every port it can affect, and
   // declaring one is not a claim to write it (the engine still refuses an undeclared write). This module
-  // never touches it — the cascade removes it (T7).
+  // never touches it — the cascade removes it.
   params: [{ port: "weatherSelection" }, { port: "fromDate", required: true }, { port: "buildingParams" }],
 
-  // The direct edges only; invalidation is transitive (T7), so `building-demand`'s own declaration carries
+  // The direct edges only; invalidation is transitive, so `building-demand`'s own declaration carries
   // the choice onward to `technologies`. Writing that far edge here would be claiming someone else's coupling.
   //
   // `fromDate` is named because the module genuinely reads it: a recorded year *comes from* the period, so
-  // changing the period invalidates the selection this module wrote. The influence prober (T8) is what found
+  // changing the period invalidates the selection this module wrote. The influence prober is what found
   // that, and it is right — without the edge, a period change would leave a stale year behind.
   affect: { weatherSelection: ["buildingParams"], fromDate: ["weatherSelection"] },
 

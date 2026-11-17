@@ -1,5 +1,5 @@
 /**
- * The workflow editor — a linear chain, and the palette that gates what may be appended (plan §9).
+ * The workflow editor — a linear chain, and the palette that gates what may be appended.
  *
  * The chain is the document's `nodes`, in order. Appending offers a module only once every `required` port
  * it declares is produced by the chain so far; the palette lists the whole catalogue and greys what cannot
@@ -684,7 +684,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                 const entry = byId.get(node.moduleId);
                 // Two ways a stored node can name something that is not a step this build can run. Both are
                 // data conditions to report — naming the node and the module — rather than exceptions that
-                // take the surface down (plan §3): a module the catalogue no longer declares, and a host
+                // take the surface down: a module the catalogue no longer declares, and a host
                 // module, which is in the catalogue but was never a node.
                 const problem =
                   entry === undefined

@@ -1,7 +1,7 @@
 /**
- * The edit-while-behind prompt (case T19).
+ * The edit-while-behind prompt.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §F. A pending edit meeting a non-empty discard stack has
+ * A pending edit meeting a non-empty discard stack has
  * exactly three outcomes and no fourth path: drop the tail and continue here, branch to a new model,
  * or cancel and change nothing. The trigger is the seal itself — the first transaction after an undo
  * is what raises the question, which is why `needsPrompt` is just "is there a tail".
@@ -46,9 +46,8 @@ function session(): ReturnType<typeof createStore> {
   return store;
 }
 
-// ── T19 ─────────────────────────────────────────────────────────────────────
 
-describe("T19 — the edit-while-behind prompt", () => {
+describe("the edit-while-behind prompt", () => {
   it("asks only when there is a tail to discard", () => {
     const store = createStore(seed());
     expect(needsPrompt(store)).toBe(false);
@@ -134,7 +133,7 @@ describe("T19 — the edit-while-behind prompt", () => {
   });
 });
 
-describe("T19 — saving before the copy must not seal", () => {
+describe("saving before the copy must not seal", () => {
   it("previews the model as the user sees it, without touching the session", () => {
     const store = session();
     const before = { data: fingerprint(store.data), log: store.log.length, cursor: store.cursor };

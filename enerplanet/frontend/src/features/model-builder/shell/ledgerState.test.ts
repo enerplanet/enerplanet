@@ -1,5 +1,5 @@
 /**
- * The ledger bar's state (`spec/frame.md` §3.2).
+ * The ledger bar's state.
  *
  * The ledger is `store.log` — append-only, and never rewritten even by undo, which is what makes it a ledger
  * rather than a scratch buffer — read together with the cursor, the one thing that says how much of it is

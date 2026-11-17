@@ -1,5 +1,5 @@
 /**
- * The steps panel's state — the whole workflow, in order (`spec/frame.md` §3.3).
+ * The steps panel's state — the whole workflow, in order.
  *
  * The panel asks a different question from the bar: not "where am I" but "what is the state of every step",
  * which is why it derives its own answer instead of reading the bar's wider. Everything comes from

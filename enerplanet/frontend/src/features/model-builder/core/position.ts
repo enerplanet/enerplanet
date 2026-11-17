@@ -1,5 +1,5 @@
 /**
- * Position — the flow's derived state (`Plan.md` §7, case T20).
+ * Position — the flow's derived state.
  *
  * A flow is immutable and the session holds exactly one **position** in it. Nothing stores
  * that position: it is *derived* from `(projection, log, cursor)`, which is what makes undo and
@@ -84,7 +84,7 @@ export function positionReport(
     const written = writtenPortsOf(store.log, node.id, store.cursor) as PortKey[];
     const pruned = written.filter((port) => store.data[port] === undefined);
 
-    // The module's own verdict on the store (T22). Asked here, not only at the save node, because this is
+    // The module's own verdict on the store. Asked here, not only at the save node, because this is
     // what makes "every node is done" mean the model is *whole*: a node that ran without producing work it
     // stands behind is not finished, so the position rests on it instead of walking past it.
     const issues = module?.validate?.({ store: store.data }) ?? [];
@@ -99,7 +99,7 @@ export function positionReport(
      * nothing at all. Held back by this test, such a node could never be done, the position rested on it
      * forever, and its own Continue looked broken while every earlier node advanced.
      *
-     * The gate is the honest verdict on whether a node produced what it stands behind (T22), and it is asked on
+     * The gate is the honest verdict on whether a node produced what it stands behind, and it is asked on
      * the line above. A node that has not run at all is `pending` long before reaching here.
      */
     const state: DerivedState =

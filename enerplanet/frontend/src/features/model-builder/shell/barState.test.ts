@@ -1,5 +1,5 @@
 /**
- * The workflow bar's state — where the session is (`spec/frame.md` §3.1).
+ * The workflow bar's state — where the session is.
  *
  * The bar answers one question, and the answer is *derived* from `(flow, registry, store)`, never stored:
  * prior is the node before the position, current is the node the session sits on, next is the one after.

@@ -1,10 +1,10 @@
 /**
- * The port catalog — the store's typed surface (`Modules.md` §2).
+ * The port catalog — the store's typed surface.
  *
  * A *port* is a typed key in the store. Modules never talk to each other: they read
  * ports and write ports, and every write goes through one reducer. Vector-keyed ports
  * (`buildingParams`, `technologies`) are an **open set** — registering a new energy
- * carrier is adding a vector, never a redesign (`Plan.md` §2.4/§3).
+ * carrier is adding a vector, never a redesign.
  */
 
 /**
@@ -107,11 +107,11 @@ export interface RegionRef {
 export type Coordinates = [number, number][][];
 
 /**
- * The weather a model's runs use (`Modules.md` §5, `modules/weather.md`).
+ * The weather a model's runs use.
  *
  * The shape is the legacy's, deliberately. Its `WeatherSettings` is `{ provider: string | null; choice }`
  * and its `isScenario(weather)` is simply `choice !== "year"` — so an explicit `mode` field would be a
- * second way to say something already said, and the spec's earlier `scenario | year` mode was that
+ * second way to say something already said, and the earlier `scenario | year` mode was that
  * duplication. `WeatherChoice` is the choice itself, `year` meaning the period's recorded weather.
  *
  * `provider: null` means "the server's default archive", not "unset" — which is why a save omits the key
@@ -255,7 +255,7 @@ export interface ModelVariant {
   title?: string;
 }
 
-/** The store's projection: the *current* model state (`Plan.md` §3). */
+/** The store's projection: the *current* model state. */
 export interface ModelData {
   // identity and metadata (model-start)
   modelName?: string;

@@ -10,7 +10,7 @@
  * the module — the same kind of declaration `seal` is, and for the same reason: only the module knows whether
  * there is anything for the user to collect. A drawn-area summary has nothing to collect, so the frame runs it
  * on arrival and puts no forward action on it, and the module behaves the same wherever it is placed. (This
- * was once a property of the flow's node (`spec/core.md` §286), and that was reversed: nothing in the product
+ * was once a property of the flow's node, and that was reversed: nothing in the product
  * could *author* it — the workflow editor has no control for it and the stored document is JSON in a `jsonb`
  * column — while the module already owns its other execution property.)
  *

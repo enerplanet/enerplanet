@@ -1,12 +1,12 @@
 /**
- * The Loader (`Plan.md` §9) — opening a session from the backend.
+ * The Loader — opening a session from the backend.
  *
  * Loading is the mirror of the save: the artefact comes back from its own call, `fromArtefact`
  * rebuilds the session **without replaying** (the stored projection is adopted and its fingerprint
  * checked; replay is only the recovery path), and the flow is then **reattached by reference** — the
  * caller looks the flow up from `workflowId`/`workflowVersion` rather than the artefact carrying a
  * copy of it. Node states and the position re-derive from `(projection, log, cursor)` exactly as they
- * do live, which is what T18 asks for and why this returns them rather than leaving them to the caller
+ * do live, which is why this returns them rather than leaving them to the caller
  * to remember.
  *
  * A model with **no session** is a normal answer, not an error: every legacy model is in that state,

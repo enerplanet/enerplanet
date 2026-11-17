@@ -1,5 +1,5 @@
 /**
- * Folding the store's ports back into the legacy's shape (the audit's G2).
+ * Folding the store's ports back into the legacy's shape.
  *
  * The store keeps demand and technologies as **ports**; the legacy keeps them **on the building features**, in
  * `properties`, and saves `config.buildings` as that same feature collection. Both are true at once, and this
@@ -18,8 +18,8 @@
  * and heat with the `heat_demand_estimated` flag that distinguishes a mirror from a user's own entry.
  *
  * **What this deliberately does not do** is invent keys for the fields the store has no port for — the run
- * mode, the cooking carrier, the prices, the site scope (G6). Those belong to modules that do not exist yet,
- * and a fabricated value would be worse than an absent one. `quill.md` records them.
+ * mode, the cooking carrier, the prices, the site scope. Those belong to modules that do not exist yet,
+ * and a fabricated value would be worse than an absent one.
  */
 
 import type { BuildingParams, ModelData, TechAssignment } from "@model-builder/core";

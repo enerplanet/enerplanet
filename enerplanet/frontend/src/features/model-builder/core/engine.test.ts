@@ -1,8 +1,7 @@
 /**
- * Core contract — store, sealed transaction, write boundary (cases T1–T3).
+ * Core contract — store, sealed transaction, write boundary.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §A. These lock `Plan.md` §2.1/§2.2
- * (single store, one reducer) and §12 (contract-checked writes).
+ * These lock the single store with one reducer, and contract-checked writes.
  *
  * Written failing first, before any implementation exists.
  */
@@ -13,9 +12,8 @@ import { defineModule } from "./module";
 import { MissingRequiredPorts, PortWriteRejected } from "./errors";
 import { building, captureError, fc, seed } from "./fixtures";
 
-// ── T1 ──────────────────────────────────────────────────────────────────────
 
-describe("T1 — one sealed transaction per action", () => {
+describe("one sealed transaction per action", () => {
   const NODE_ID = "grid-generation";
 
   it("seals every write of one run() into a single transaction", async () => {
@@ -75,9 +73,8 @@ describe("T1 — one sealed transaction per action", () => {
   });
 });
 
-// ── T2 ──────────────────────────────────────────────────────────────────────
 
-describe("T2 — undeclared port writes are rejected at the boundary", () => {
+describe("undeclared port writes are rejected at the boundary", () => {
   const MODULE_ID = "declares-buildings-only";
 
   it("rejects a write to a port the module did not declare", async () => {
@@ -105,9 +102,8 @@ describe("T2 — undeclared port writes are rejected at the boundary", () => {
   });
 });
 
-// ── T3 ──────────────────────────────────────────────────────────────────────
 
-describe("T3 — anti-clobber: you may only rewrite what you read", () => {
+describe("anti-clobber: you may only rewrite what you read", () => {
   const BLIND_ID = "blind-overwriter";
 
   it("rejects a blind overwrite of a port the module never read", async () => {
@@ -176,9 +172,8 @@ describe("T3 — anti-clobber: you may only rewrite what you read", () => {
   });
 });
 
-// ── T16 ─────────────────────────────────────────────────────────────────────
 
-describe("T16 — seal granularity is a module declaration", () => {
+describe("seal granularity is a module declaration", () => {
   /** Edits two independent fields — the shape `simulation-settings` really has. */
   function fieldEditor(id: string, seal?: "at-completion" | "per-commit") {
     return defineModule({
@@ -231,9 +226,8 @@ describe("T16 — seal granularity is a module declaration", () => {
   });
 });
 
-// ── T22 ─────────────────────────────────────────────────────────────────────
 
-describe("T22 — a write that carries nothing is refused", () => {
+describe("a write that carries nothing is refused", () => {
   const NODE_ID = "writes-nothing";
 
   /** One write, of whatever the case is about. */
@@ -276,7 +270,7 @@ describe("T22 — a write that carries nothing is refused", () => {
   });
 
   it("rejects undefined: clearing is the invalidator's job, never a module's", async () => {
-    // Only the cascade removes a port (T7), and it does so through a `remove` op carrying the previous
+    // Only the cascade removes a port, and it does so through a `remove` op carrying the previous
     // value. A module that wants a port gone is really saying its work is not finished — which is what
     // `validate()` is for.
     const store = createStore(seed());
@@ -314,7 +308,7 @@ describe("T22 — a write that carries nothing is refused", () => {
   });
 });
 
-describe("T21 — a node runs only when its required ports exist in the store", () => {
+describe("a node runs only when its required ports exist in the store", () => {
   const NODE_ID = "needs-region";
 
   /** Gated on `region`, which the plain seed does not have. */

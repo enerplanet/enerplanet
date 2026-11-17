@@ -1,7 +1,7 @@
 /**
- * History — undo/redo over the append-only log (cases T4–T6).
+ * History — undo/redo over the append-only log.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §A. These lock `Plan.md` §4/§6: undo restores
+ * These lock: undo restores
  * a sealed transaction's pre-values *exactly*, a new edit truncates the redo tail, and redo
  * re-derives the cascade instead of replaying the stored prunes.
  *
@@ -26,7 +26,7 @@ function rename(from: string, to: string): DiffOp {
   return { op: "replace", path: "/modelName", prev: from, next: to };
 }
 
-/** The name `seed()` starts with; T5 renames it repeatedly. */
+/** The name `seed()` starts with. */
 const INITIAL_NAME = "Contract fixture";
 
 // Constants for the values this file keeps quoting: jump node ids and two port paths.
@@ -35,9 +35,8 @@ const TRANSFORMERS_PATH = "/transformers";
 const NODE_GRID = "grid-generation";
 const NODE_SAVE = "model-save";
 
-// ── T4 ──────────────────────────────────────────────────────────────────────
 
-describe("T4 — undo restores pruned downstream edits exactly", () => {
+describe("undo restores pruned downstream edits exactly", () => {
   it("brings back a user-edited downstream port and the primary pre-value", () => {
     const userEdited = fc([building("user-edit")]);
     const priorTransformers = fc([building("t1")]);
@@ -64,9 +63,8 @@ describe("T4 — undo restores pruned downstream edits exactly", () => {
   });
 });
 
-// ── T5 ──────────────────────────────────────────────────────────────────────
 
-describe("T5 — a new edit after undo truncates the redo tail", () => {
+describe("a new edit after undo truncates the redo tail", () => {
   it("drops the abandoned tail, leaves its entries untouched, keeps undo working", () => {
     const store = createStore(seed());
     const first = store.applyTransaction([rename(INITIAL_NAME, "one")]);
@@ -98,15 +96,14 @@ describe("T5 — a new edit after undo truncates the redo tail", () => {
   });
 });
 
-// ── T6 ──────────────────────────────────────────────────────────────────────
 
-describe("T6 — redo recomputes the cascade instead of replaying it", () => {
+describe("redo recomputes the cascade instead of replaying it", () => {
   it("re-derives the cascade from the current projection", () => {
     const staleBuildings = seed().buildings;
     const seen: Array<{ primary: readonly DiffOp[]; data: unknown }> = [];
 
     const store = createStore(seed(), {
-      // The invalidation seam (`Plan.md` §5). A state-dependent invalidator may answer
+      // The invalidation seam. A state-dependent invalidator may answer
       // differently than it did at seal time — redone work must never resurrect stale
       // prunes, so redo asks instead of replaying what the transaction stored.
       deriveCascade: (primary, data) => {
@@ -135,9 +132,8 @@ describe("T6 — redo recomputes the cascade instead of replaying it", () => {
   });
 });
 
-// ── T14 ─────────────────────────────────────────────────────────────────────
 
-describe("T14 — undo skips auto work and lands on the interactive boundary", () => {
+describe("undo skips auto work and lands on the interactive boundary", () => {
   /** node1 → node2 → autonode3 → node4, each writing a distinct port. */
   async function chain(): Promise<{ store: ReturnType<typeof createStore>; engine: ReturnType<typeof createEngine> }> {
     const store = createStore(seed());
@@ -220,9 +216,8 @@ describe("T14 — undo skips auto work and lands on the interactive boundary", (
   });
 });
 
-// ── T15 ─────────────────────────────────────────────────────────────────────
 
-describe("T15 — undo alone never produces writes", () => {
+describe("undo alone never produces writes", () => {
   it("does not re-run the auto node it unwound", async () => {
     const store = createStore(seed());
     const engine = createEngine(store);
@@ -273,7 +268,6 @@ describe("T15 — undo alone never produces writes", () => {
   });
 });
 
-// ── T20a ────────────────────────────────────────────────────────────────────
 
 describe("T20a — a jump is a transaction, and it records what it discarded", () => {
   const DISCARDED = fc([building("b1")]);

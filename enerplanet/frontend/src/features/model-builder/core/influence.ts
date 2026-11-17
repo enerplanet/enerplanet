@@ -1,11 +1,11 @@
 /**
- * The influence-honesty prober — the generated contract test (`Modules.md` §6, case T8).
+ * The influence-honesty prober — the generated contract test.
  *
  * A module *declares* which outputs each input can invalidate (`affect`). This prober verifies
  * the declaration instead of trusting it: perturb one input at a time, run the module against
  * both a baseline and the perturbed store, and compare the fingerprints of its declared ports.
  *
- * **Why the check is asymmetric.** Only *under*-declaration is dangerous: elision (T20) skips a
+ * **Why the check is asymmetric.** Only *under*-declaration is dangerous: elision skips a
  * node whose affecting inputs look unchanged, so an undeclared edge lets a node be skipped that
  * should have re-run — silent stale data. Over-declaration merely prunes more than necessary,
  * which costs work and nothing else. So under-declared fails the module; over-declared is

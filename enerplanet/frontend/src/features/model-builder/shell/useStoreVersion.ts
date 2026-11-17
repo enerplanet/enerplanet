@@ -1,5 +1,5 @@
 /**
- * The frame's subscription to the store (`spec/frame.md` §7).
+ * The frame's subscription to the store.
  *
  * The store announces every applied change — a seal, an undo, a redo — and this hook turns that into a
  * re-render. It reads the store's **change token** (`store.version`) rather than the projection, because

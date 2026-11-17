@@ -1,7 +1,7 @@
 /**
- * Position — derived flow state (case T20, slice B).
+ * Position — derived flow state.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §G. A flow is immutable and the session's position
+ * A flow is immutable and the session's position
  * in it is **derived** from `(projection, log, cursor)`, so undo/redo reposition the flow with
  * no bookkeeping. Two readings come out of it, and keeping them apart is the point: the **frontier**
  * (the first node that is not done, which `moveToNode` refuses to move past) and where the session
@@ -86,7 +86,6 @@ async function runAll(store: ReturnType<typeof createStore>): Promise<void> {
   for (const moduleId of ["start", "draw", "grid", "save"]) await run(store, moduleId);
 }
 
-// ── T20 (position) ──────────────────────────────────────────────────────────
 
 describe("T20b — the position is derived from the log", () => {
   it("sits at the first node that has not run", async () => {
@@ -191,9 +190,8 @@ describe("T20b — the position is derived from the log", () => {
   });
 });
 
-// ── T22 (a node finishes only when its own gate is satisfied) ───────────────
 
-describe("T22 — a node is done only when the module's own gate is satisfied", () => {
+describe("a node is done only when the module's own gate is satisfied", () => {
   const PICKY = "picky-grid";
 
   /**
@@ -280,7 +278,6 @@ describe("T22 — a node is done only when the module's own gate is satisfied", 
   });
 });
 
-// ── T20a (a move is a position move: it marks nothing stale) ────────────────
 
 describe("T20a — a move rests the session on its target without marking it stale", () => {
   it("leaves a node moved back to `done`, and derives the position from the jump", async () => {

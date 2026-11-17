@@ -1,6 +1,5 @@
 /**
- * The invalidator — T7 (`spec/core.md` §B): *the cascade is the affected closure, minus what it
- * cannot touch*.
+ * The invalidator: *the cascade is the affected closure, minus what it cannot touch*.
  *
  * One pure function of `(primary, projection)`: given what a change wrote, which other ports does
  * this model no longer have a right to keep? Three rules, and nothing else:
@@ -22,7 +21,7 @@
  *
  * **Coarseness worth knowing:** the granularity is the *port*, not the nested path. A write under
  * `/buildingParams/gas` prunes the whole `buildingParams` port, so a module reading only
- * `electricity` is recomputed too. Correct, just not minimal — and `influence.ts`'s prober (T8) is
+ * `electricity` is recomputed too. Correct, just not minimal — and `influence.ts`'s prober is
  * what keeps the *declarations* honest, which is the part that would be dangerous if wrong.
  */
 

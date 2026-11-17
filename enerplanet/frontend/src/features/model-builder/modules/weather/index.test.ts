@@ -66,14 +66,14 @@ describe("weather's declaration", () => {
       "fromDate",
     ]);
     // Declaring a port is not claiming to write it: `buildingParams` is here because the cascade can remove it
-    // when the weather changes (T7), and a module must know every port it can affect.
+    // when the weather changes, and a module must know every port it can affect.
   });
 
   it("declares the edges it actually has, leaving transitivity to the module that owns it", () => {
-    // Invalidation is transitive (T7), so `building-demand` declares the step to `technologies`; writing that
+    // Invalidation is transitive, so `building-demand` declares the step to `technologies`; writing that
     // far edge here would claim a coupling that belongs to another module.
     expect([...weather.module.affect[SELECTION]!]).toEqual(["buildingParams"]);
-    // The period edge is real and was found by the influence prober (T8), not by reading: a recorded year
+    // The period edge is real and was found by the influence prober, not by reading: a recorded year
     // comes from the period, so changing the period invalidates the selection.
     expect([...weather.module.affect.fromDate!]).toEqual([SELECTION]);
   });
@@ -144,7 +144,7 @@ describe("weather's run", () => {
 
 describe("weather's gate", () => {
   it("reports a recorded year with no period to take it from", () => {
-    // The module's own completeness claim (T22). The choice was made, but it cannot be finished: the year it
+    // The module's own completeness claim. The choice was made, but it cannot be finished: the year it
     // needs lives on the period. The node stays unfinished, so the flow rests here.
     expect(issuesFor(holding({ provider: null, choice: "year" }))).toEqual([
       { port: SELECTION, message: "Set the model's period before running on a recorded year." },

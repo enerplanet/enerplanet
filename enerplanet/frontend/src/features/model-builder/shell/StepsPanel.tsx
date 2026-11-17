@@ -1,5 +1,5 @@
 /**
- * The steps panel — the frame's right-hand band (`spec/frame.md` §2, §3.3).
+ * The steps panel — the frame's right-hand band.
  *
  * A **sibling of the module frame**, full height, collapsed to a rail by default: its job is to answer "where
  * am I in this workflow" at a glance and then get out of the way. The rail keeps the state legible as a dot
@@ -8,7 +8,7 @@
  * **A step behind the session is a control; nothing else is.** Clicking one **moves** there — a pure position
  * move, the same `moveToNode` the bar's prior control calls, which seals a `jump` with an empty cascade: it
  * rests the session on the node it lands on — leaving that node `done`, not stale — and discards nothing. What
- * goes stale is decided by *influence* when a node actually runs (T7), never by how far the panel moved, so a
+ * goes stale is decided by *influence* when a node actually runs, never by how far the panel moved, so a
  * move cannot invalidate anything by itself.
  *
  * Steps **ahead** of the session are deliberately not clickable, and that is the core's rule rather than a UI

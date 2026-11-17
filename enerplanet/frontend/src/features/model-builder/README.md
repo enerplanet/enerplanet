@@ -5,8 +5,6 @@ Built **beside** the legacy feature and decommissioned only at parity — the le
 modified in the process. Route `/app/modelbuilder`, gated by the `modelbuilder` feature flag
 (Settings → Experimental → *Model Builder*).
 
-Fuller notes and design reasoning live at `.local/ModularThesis/Code/model-builder/`.
-
 ## Hard boundary rule
 
 Everything this feature needs lives in this directory. **Nothing outside `features/model-builder/`

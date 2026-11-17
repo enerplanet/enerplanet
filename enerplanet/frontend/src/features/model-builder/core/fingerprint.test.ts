@@ -70,7 +70,7 @@ describe("fingerprint", () => {
   });
 
   it("changes when the value changes, and not otherwise", () => {
-    // The two jobs T18/T20 give it: notice a difference, and ignore key order while doing so.
+    // Its two jobs: notice a difference, and ignore key order while doing so.
     expect(fingerprint({ a: 1 })).not.toBe(fingerprint({ a: 2 }));
     expect(fingerprint({ a: 1 })).toBe(fingerprint({ a: 1 }));
     expect(fingerprint({ a: 1, b: 2 })).toBe(fingerprint({ b: 2, a: 1 }));

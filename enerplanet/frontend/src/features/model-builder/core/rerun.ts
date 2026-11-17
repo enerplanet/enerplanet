@@ -1,5 +1,5 @@
 /**
- * Re-run and jump mechanics — T20's last slice, which is also T12's loopback.
+ * Re-run and jump mechanics.
  *
  * A jump moves the session back inside the **same** immutable flow; it never appends a node and
  * never mints an instance id. Two things happen, and they are deliberately different in kind:
@@ -11,12 +11,12 @@
  *    genuinely depends on. Who wrote what comes from the log, not from the modules' declarations —
  *    a module may declare a param it never writes.
  * 2. **the jump rests the position on its target** — that is `position.ts`'s job, from the jump's own
- *    entry (T20a), so even a jump that discards nothing (a bare re-save) moves the position. It is not a
+ *    entry, so even a jump that discards nothing (a bare re-save) moves the position. It is not a
  *    mark on the target's *state*: a move writes no data, so nothing goes stale, and the target stays
  *    `done`. What the jump does is leave the session *resting* there, until a newer entry (a run) takes over.
  *
  * Nothing about correctness rests on the prune: when the target does run again, its own
- * transaction carries the influence cascade (T7) that prunes whatever its new value affects. The
+ * transaction carries the influence cascade that prunes whatever its new value affects. The
  * prune is what makes the discarding *visible before it happens*, and what marks the tail stale
  * so the walk below knows where to pick up.
  */
@@ -128,7 +128,7 @@ export interface WalkOptions {
  * each seals its own transaction — so a re-run that re-derives an identical value leaves the
  * nodes behind it done, and they stay elided too.
  *
- * A node whose required inputs are still missing is skipped rather than run: T21 would refuse it,
+ * A node whose required inputs are still missing is skipped rather than run: the engine would refuse it,
  * and running the nodes after it is still meaningful.
  *
  * @returns the node ids that actually ran, in order.

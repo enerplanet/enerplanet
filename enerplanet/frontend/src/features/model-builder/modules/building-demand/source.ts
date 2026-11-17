@@ -11,7 +11,7 @@
  *
  * **No grid and no weather.** The estimate is a function of the building's own attributes, so this request
  * carries no grid ids and no weather selection. Weather belongs to the *run*, not to a per-building figure —
- * a distinction the module spec had to be corrected on twice.
+ * a distinction the module was corrected on twice.
  */
 
 /** The per-building attributes the estimate is computed from — the pylovo feature properties. */

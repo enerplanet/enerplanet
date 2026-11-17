@@ -1,5 +1,5 @@
 /**
- * The ledger bar — the frame's bottom band (`spec/frame.md` §2, §3.2).
+ * The ledger bar — the frame's bottom band.
  *
  * Collapsed by default and dense: the last **applied** transaction as a signed line, and a marker when
  * anything sits beyond the cursor. Expanded it is the whole log, newest first, with the discarded tail drawn

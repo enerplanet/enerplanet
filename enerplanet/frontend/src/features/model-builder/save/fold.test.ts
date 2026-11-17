@@ -1,5 +1,5 @@
 /**
- * Folding the ports back into the legacy's shape — the audit's G2, pinned.
+ * Folding the ports back into the legacy's shape, pinned.
  *
  * The strongest case here is not any single key: it is that a technology assignment ends up as an **array on
  * the feature**, because that is what the legacy's `configFingerprint` counts

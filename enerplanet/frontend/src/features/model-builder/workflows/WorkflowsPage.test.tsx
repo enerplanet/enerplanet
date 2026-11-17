@@ -1,5 +1,5 @@
 /**
- * The workflows header's link to the example modules (plan §9). It is an external link, so what matters is
+ * The workflows header's link to the example modules. It is an external link, so what matters is
  * that it carries the GitHub URL and opens in a new tab.
  *
  * `@spatialhub/i18n` is stubbed to echo the fallback, as `WorkflowEditor.test.tsx` does, so the assertion is

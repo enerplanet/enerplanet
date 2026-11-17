@@ -1,5 +1,5 @@
 /**
- * The workflows API (plan §5). Its own group, isolated from the legacy model routes, and read through the
+ * The workflows API. Its own group, isolated from the legacy model routes, and read through the
  * app-wide CSRF-aware client so writes carry the token like every other feature's.
  *
  * Every response is wrapped `{data: …}`; `unwrap` is the single place that knows it, so a change to the

@@ -1,5 +1,5 @@
 /**
- * Auto-node orchestration (`spec/core.md` T15, T23; `spec/frame.md` §5) — the frame's side of a step that runs
+ * Auto-node orchestration — the frame's side of a step that runs
  * itself. A step is automatic because its **module** declares `auto: true` (`Module.auto`), which is what the
  * frame reads here; the flow node carries no such flag of its own.
  *
@@ -10,7 +10,7 @@
  *
  * - `autoRunFor` answers "is there an auto node at the session's position that should run now, and for which
  *   state of the store?". It reads **staleness as the invalidator sees it** — the node never produced its work,
- *   or an input change pruned the outputs it wrote (T7) — and never anything a *move* leaves behind: a jump
+ *   or an input change pruned the outputs it wrote — and never anything a *move* leaves behind: a jump
  *   changes no data, so coming back to look leaves a node's work in place and there is nothing to re-run. The
  *   node it reads is the session's **resting** node (`position.ts`), not the frontier: a jump can leave the
  *   session *behind* the frontier, and an auto node runs on **arrival** — arrival is where the session rests.
@@ -42,7 +42,7 @@ export interface AutoRunPlan {
  * The auto node the session sits on that should run now, or nothing.
  *
  * Nothing when the position is complete, the module is unknown or interactive, its inputs are not all
- * present (it *cannot* run — T21, `blocked`), or its work is already there and untouched. Whether the step is
+ * present (it *cannot* run — the missing inputs leave it `blocked`), or its work is already there and untouched. Whether the step is
  * automatic is the **module's** declaration (`Module.auto`), read here through `isAutoModule` — not a property
  * of the flow node, which the product has no way to author and which nothing in the frame can own.
  */
@@ -70,7 +70,7 @@ export function autoRunFor(
   if (report.blocked.length > 0) return undefined;
 
   // The invalidator's view, not the position's: a node needs a run when it never produced its work, or that
-  // work was pruned because an input changed (T7). A move changes no data, so it leaves the work in place and
+  // work was pruned because an input changed. A move changes no data, so it leaves the work in place and
   // is *not* a reason to run — that is the trap this function exists to avoid.
   const ran = lastActionOf(store.log, node.id, store.cursor) !== undefined;
   if (ran && report.pruned.length === 0) return undefined;

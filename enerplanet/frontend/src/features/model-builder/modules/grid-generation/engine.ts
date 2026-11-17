@@ -1,8 +1,8 @@
 /**
  * The grid engine — this module's **provider slot**.
  *
- * `modules/grid-generation.md` calls the module a blackbox whose contract is only the GeoJSON it produces, and
- * names its engine a *slot*: `pylovo-grid` by default, "or any engine emitting the identical shape". So the
+ * The module is a blackbox whose contract is only the GeoJSON it produces, and its engine is a *slot*:
+ * `pylovo-grid` by default, "or any engine emitting the identical shape". So the
  * engine is an interface here, `pylovo.ts` is one implementation, and a test — or another host — may supply
  * another. Nothing above this line may know which one it is.
  *

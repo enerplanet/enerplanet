@@ -4,7 +4,7 @@
  * Written failing first.
  *
  * The declaration cases pin what this module *is*: it requires the region (an area is drawn inside one) and
- * produces `coordinates`, and nothing feeds it — so `affect` is empty and the cascade the spec describes
+ * produces `coordinates`, and nothing feeds it — so `affect` is empty and the cascade
  * belongs to the modules that *consume* `coordinates`, not to this one.
  *
  * The behaviour cases pin the two decisions worth arguing about: a gesture **replaces** the area (the module's
@@ -69,7 +69,7 @@ describe("area-draw's declaration", () => {
 
   it("declares no influence, because nothing feeds it", () => {
     // `affect` maps a module's *inputs* to the outputs they change. The region constrains what may be drawn,
-    // it does not change what this module writes — the user redraws. The invalidation the spec describes
+    // it does not change what this module writes — the user redraws. The invalidation
     // (`coordinates` → the whole grid) is declared by the modules that consume `coordinates`, through the
     // cascade, not here.
     expect(areaDraw.module.affect).toEqual({});
@@ -123,7 +123,7 @@ describe("area-draw's behaviour", () => {
 
   it("records the re-apply without changing anything", async () => {
     // The area is already there, so the run proposes nothing — but it still seals its zero-diff trace, which is
-    // what lets a user jump back to this node and leave again without inventing an edit (T20).
+    // what lets a user jump back to this node and leave again without inventing an edit.
     const store = createStore({ region: REGION, coordinates: ONE_RING });
     const engine = createEngine(store);
 

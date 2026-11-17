@@ -1,5 +1,5 @@
 /**
- * The editor's palette, rendered (plan §9). The pure gate is proven in `gate.test.ts`; these pin that the
+ * The editor's palette, rendered. The pure gate is proven in `gate.test.ts`; these pin that the
  * *rendered* palette reflects it — an unavailable module is greyed and names the port it waits for, and it
  * becomes addable once the chain produces that port. A host module is not offered at all, and a stored node
  * naming one — or naming an unknown module — is reported rather than fatal.

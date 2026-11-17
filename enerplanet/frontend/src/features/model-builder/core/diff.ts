@@ -1,5 +1,5 @@
 /**
- * Reversible diffs and sealed transactions (`Plan.md` §4–§6).
+ * Reversible diffs and sealed transactions.
  *
  * A transaction is pure data: `primary` is what the action changed, `cascade` is what
  * invalidation pruned. Because every op carries `prev` *and* `next`, undo/redo/replay are
@@ -16,7 +16,7 @@ export type DiffOp =
 export type TransactionKind =
   /** A change to the model, produced by running a module. */
   | "action"
-  /** A position move inside the immutable flow (`Plan.md` §7) — the target's outputs are
+  /** A position move inside the immutable flow — the target's outputs are
    *  pruned structurally, and everything it discarded rides in `cascade`. */
   | "jump";
 
@@ -39,10 +39,10 @@ export interface Transaction {
   /** Workflow node that produced it, when known. */
   readonly nodeId?: string;
   /**
-   * The workflow node that produced it was an **auto** node (`Plan.md` §7).
+   * The workflow node that produced it was an **auto** node.
    *
    * Stamped at seal time so history never has to consult the workflow to know which
-   * transactions it may skip when undoing (T14).
+   * transactions it may skip when undoing.
    */
   readonly auto?: boolean;
   /**
@@ -135,11 +135,11 @@ export function applyDiffs(data: ModelData, ops: readonly DiffOp[]): ModelData {
 }
 
 /**
- * Reverse a diff. Applied in reverse order so multi-op diffs restore correctly
- * (`Plan.md` §4: undo restores the transaction's pre-values exactly).
+ * Reverse a diff. Applied in reverse order so multi-op diffs restore correctly:
+ * undo restores a transaction's pre-values exactly.
  *
  * Inverting a `remove` therefore restores the value it dropped — the first bug this
- * function had, caught by T4.
+ * function had.
  */
 export function invertDiffs(ops: readonly DiffOp[]): DiffOp[] {
   return [...ops].reverse().map((op) =>

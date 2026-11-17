@@ -1,9 +1,9 @@
 /**
- * The auto-run decision and its guard (`spec/core.md` T15) — written failing first.
+ * The auto-run decision and its guard — written failing first.
  *
  * The rule this file pins is the whole point of the change: an auto node runs **on arrival** and **once**,
  * and it must not run again for a re-render or for a bare move — only for a genuine input change
- * (the invalidator's staleness, T7), or the first time it is ever seen. `autoRunFor` is the decision and
+ * (the invalidator's staleness), or the first time it is ever seen. `autoRunFor` is the decision and
  * `createAutoGuard` is the idempotency, so both are exercised here without a frame.
  */
 
@@ -132,7 +132,7 @@ describe("the auto-run decision (autoRunFor)", () => {
     expect(autoRunFor(FLOW, REGISTRY, store)).toBeUndefined();
   });
 
-  it("waits, rather than erroring, when a required input is missing (T21)", () => {
+  it("waits, rather than erroring, when a required input is missing", () => {
     // The only node is the auto one, and its required input is absent: it *cannot* run.
     const flow: Flow = [{ id: "auto", moduleId: "auto-node" }];
     const store = createStore({}, { deriveCascade: createInvalidator(flow, REGISTRY) });
@@ -165,7 +165,7 @@ describe("the auto-run decision (autoRunFor)", () => {
     await runNode(store, "a", "producer");
     await runNode(store, "auto", "auto-node", true);
 
-    // An input change: the invalidator prunes what that input affects (T7). `coordinates` affects `buildings`,
+    // An input change: the invalidator prunes what that input affects. `coordinates` affects `buildings`,
     // so the auto node's output is gone and it is genuinely stale — not merely re-armed.
     store.applyTransaction([replace(COORDINATES, AREA_0, AREA_1)], undefined, { node: { id: "a" } });
 

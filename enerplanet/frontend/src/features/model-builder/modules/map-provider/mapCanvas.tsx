@@ -2,7 +2,7 @@
  * The provider's canvas: MapLibre, and the translation between the host's layer stack and a MapLibre style.
  *
  * **This is the only file that knows which engine is underneath**, which is the entire point of the provider
- * (`modules/map-provider.md`, "blackbox"): swapping MapLibre for another engine means replacing this file, and
+ * — it is a **blackbox**: swapping MapLibre for another engine means replacing this file, and
  * nothing outside it — not the frame, not a module — has to change.
  *
  * Deliberately **not unit-tested**: it needs a browser, WebGL and vector tiles. What it *decides* lives in

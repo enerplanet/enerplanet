@@ -82,7 +82,7 @@ describe("building-configurator's declaration", () => {
     expect([...buildingConfiguratorModule.module.affect.buildingParams!]).toEqual(["technologies"]);
   });
 
-  it("takes all four regions the spec gives it", () => {
+  it("takes all four regions it declares", () => {
     expect([...buildingConfiguratorModule.module.layout]).toEqual(["map", "overlay", "sidebar", "bottom"]);
   });
 });

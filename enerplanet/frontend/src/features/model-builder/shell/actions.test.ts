@@ -1,15 +1,15 @@
 /**
- * The bar's actions (`spec/frame.md` §3.1, §6; `spec/core.md` §G) — written failing first.
+ * The bar's actions — written failing first.
  *
- * §G's mapping is deliberately thin: the bar calls operations the core already has, so what is worth testing
+ * The mapping is deliberately thin: the bar calls operations the core already has, so what is worth testing
  * here is the two places the bar must *not* be thin —
  *
  * 1. **movement is a pure position move, not an undo.** A prior click seals a `jump` with an **empty
  *    cascade**: it rests the session on the node it lands on and **discards nothing**, so no redo tail is ever
  *    produced. The cases below pin that a move prunes not a single port *and marks nothing stale* —
- *    invalidation is by *influence* (T7) when a node runs, never by how far the bar moved — and that it refuses
+ *    invalidation is by *influence* when a node runs, never by how far the bar moved — and that it refuses
  *    to move *forward*, because forward is `Continue` running the node.
- * 2. **the bar's save is always `incomplete` (§6).** Finishing a model — writing the real `model.json` and
+ * 2. **the bar's save is always `incomplete`.** Finishing a model — writing the real `model.json` and
  *    promoting to `draft` — is the save *node*'s job, behind its completeness gate. So the bar's save pins the
  *    status rather than letting completeness derive it, which is exactly the case below that a complete flow
  *    would otherwise get wrong.
@@ -153,7 +153,7 @@ describe("moving back a node at a time", () => {
 });
 
 /**
- * The worked case from `spec/core.md` §G, at the shell's boundary: `A → B → C → D` with B requiring A and D
+ * The worked case, at the shell's boundary: `A → B → C → D` with B requiring A and D
  * requiring B, and C writing a port nothing reads. A move discards nothing; a *change* invalidates by
  * influence. So changing A leaves B and D stale while **C is untouched** — the closure never reaches C — and
  * that must survive the movement change, which is the reason these cases exist.
@@ -166,7 +166,7 @@ describe("a move discards nothing; a change invalidates by influence", () => {
 
   /**
    * One node's module: an entry that writes its port and requires nothing, or a link that requires an input
-   * and declares the honest `affect` edge (`input → output`). The edge is what T7's closure walks, so it is
+   * and declares the honest `affect` edge (`input → output`). The edge is what the closure walks, so it is
    * what makes B and D reachable from A and C not.
    */
   function influenceModule(id: string, writes: PortKey, reads?: PortKey): BuilderModule {
@@ -206,7 +206,7 @@ describe("a move discards nothing; a change invalidates by influence", () => {
     ],
   };
 
-  /** A session over the chain, with the real invalidator wired in — a seal's cascade is influence (T7). */
+  /** A session over the chain, with the real invalidator wired in — a seal's cascade is influence. */
   function chainSession(): { workflow: Workflow; store: Store; flow: Flow; registry: ModuleRegistry } {
     const workflow = toWorkflow(CHAIN_DEFINITION, CHAIN, noSubflows, { coordinates: AREA_0 });
     const store = createStore(workflow.initial, {
@@ -259,7 +259,7 @@ describe("a move discards nothing; a change invalidates by influence", () => {
   const BUILDINGS_1 = { type: "FeatureCollection", features: [] };
   const BUILDINGS_2 = { type: "FeatureCollection", features: [{ id: "b1" }] };
 
-  /** A six-node session with the real invalidator wired in, so a seal's cascade is influence (T7). */
+  /** A six-node session with the real invalidator wired in, so a seal's cascade is influence. */
   function sixSession(): { store: Store; flow: Flow; registry: ModuleRegistry } {
     const workflow = toWorkflow(SIX_DEFINITION, SIX, noSubflows, { coordinates: AREA_0 });
     const store = createStore(workflow.initial, {
@@ -346,7 +346,7 @@ describe("a move discards nothing; a change invalidates by influence", () => {
     const { store, flow, registry } = chainSession();
     runChain(store);
 
-    // A change, not a move: the cascade is *omitted*, so T7 derives it from A's `affect` closure — coordinates
+    // A change, not a move: the cascade is *omitted*, so it derives from A's `affect` closure — coordinates
     // reaches buildings (B's edge) and technologies (D's edge), but never advancedParams, because nothing
     // declares an edge to it.
     store.applyTransaction([replace("coordinates", AREA_1, AREA_2)], undefined, { node: { id: "a" } });

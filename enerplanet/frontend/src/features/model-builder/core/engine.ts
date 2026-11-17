@@ -1,10 +1,10 @@
 /**
- * The engine — runs a module and seals what it wrote as one transaction (`Plan.md` §6).
+ * The engine — runs a module and seals what it wrote as one transaction.
  *
  * Responsibilities kept deliberately narrow: build the module context, enforce
  * the write boundary (declared ports, anti-clobber), and hand the collected writes to the
  * store as a single sealed transaction — **omitting the cascade**, so the store's invalidator
- * derives what the change affects (T7). Gating already happens here; history lives in the store.
+ * derives what the change affects. Gating already happens here; history lives in the store.
  *
  * The transaction only exists *after* `run()` returns, which is what makes an action
  * atomic: a module sees the pre-state for the whole run, and any rejection means nothing
@@ -18,7 +18,7 @@ import type { ModelData, PortKey } from "./ports";
 import type { Store } from "./store";
 
 /**
- * Does this value carry nothing? (T22)
+ * Does this value carry nothing?
  *
  * Deliberately strict about *absences* and deliberately silent about *collections*: an empty string, `null`
  * and `undefined` are a module declining to say anything, while `[]`, `{}` and a GeoJSON collection with no
@@ -39,7 +39,7 @@ export interface Engine {
    *
    * @param node the workflow node this run belongs to. `auto` records whether the run was an automatic
    *             step's — sourced from the module's own `auto` flag (`Module.auto`) — and is stamped on the
-   *             transaction so history can skip it (T14).
+   *             transaction so history can skip it.
    * @returns the last sealed transaction, or `undefined` when the run changed nothing.
    * @throws {PortWriteRejected} when the module writes outside its declared surface, or
    * blind-overwrites a port it never read.
@@ -50,7 +50,7 @@ export interface Engine {
 export function createEngine(store: Store): Engine {
   return {
     async runModule(module, node) {
-      // The store is the runtime truth (T21): the available-set the palette used may have been
+      // The store is the runtime truth: the available-set the palette used may have been
       // optimistic, so never let a node run against a position the flow never satisfied.
       const missing = requiredPorts(module).filter((port) => store.data[port] === undefined);
       if (missing.length > 0) throw new MissingRequiredPorts(module.id, missing);
@@ -64,7 +64,7 @@ export function createEngine(store: Store): Engine {
        * Turn the buffered writes into one sealed transaction.
        *
        * **A run always leaves a trace** — one transaction, even when nothing changed. It has to: a jump re-arms
-       * its target (T20a) and the re-arm clears on a *newer transaction*, so a node the user jumped back to
+       * its target and the re-arm clears on a *newer transaction*, so a node the user jumped back to
        * would otherwise read `stale` forever unless they invented an edit. Going back to look at something is
        * not an edit, and pressing the forward action has to be enough to leave.
        *
@@ -88,8 +88,8 @@ export function createEngine(store: Store): Engine {
           );
         }
         pending = new Map();
-        // No cascade passed: the store derives it from this change through the invalidator
-        // (T7), so the transaction's prunes are the change's real consequences.
+        // No cascade passed: the store derives it from this change through the invalidator,
+        // so the transaction's prunes are the change's real consequences.
         sealed = store.applyTransaction(primary, undefined, { node });
       };
 
@@ -107,7 +107,7 @@ export function createEngine(store: Store): Engine {
           for (const [port, next] of Object.entries(changes) as [PortKey, unknown][]) {
             if (!declared.has(port)) throw new PortWriteRejected(module.id, port, "undeclared");
 
-            // A module must not finish with an output it has not filled (T22). Refused here, at the
+            // A module must not finish with an output it has not filled. Refused here, at the
             // boundary, so a module cannot store a hollow value and then claim `validate()` is satisfied.
             if (carriesNothing(next)) throw new PortWriteRejected(module.id, port, "empty");
 

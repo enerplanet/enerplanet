@@ -1,6 +1,5 @@
 /**
- * The default workflow the frame runs — a backend resource now, not a baked-in import (`spec/frame.md` §5;
- * plan `workflow-builder.md` §6, Stage 2).
+ * The default workflow the frame runs — a backend resource now, not a baked-in import.
  *
  * A workflow is an ordered list of nodes, and every part of the frame reads it: the workflow bar shows
  * where the session is, the steps panel shows every step's state, and `position.ts` derives both from
@@ -112,7 +111,7 @@ export function toWorkflow(
 
   // A version that is present must be a real one: silently reading a `0` or a string as "v1" would record a
   // reference to a workflow that never existed. Absent means 1, because v1 is the only version there is until
-  // flows become distributable (`spec/frame.md` §5).
+  // flows become distributable.
   const rawVersion = raw.version;
   if (rawVersion !== undefined && (!Number.isInteger(rawVersion) || (rawVersion as number) < 1)) {
     throw new Error(`[model-builder] workflow "${id}" has an invalid version: ${String(rawVersion)}`);
@@ -152,8 +151,8 @@ export function toWorkflow(
  * arrive, and no second request and no per-subflow fetch is made. A subflow's target that is not in the list
  * stays unresolved, and `toWorkflow` refuses it through `expand`.
  *
- * A `requestedId` names the workflow to run — the seam the picker will drive (`Plan.md`'s pathways: a
- * pathway is a different load, so the builder is handed which flow to open). The request is matched against
+ * A `requestedId` names the workflow to run — the seam the picker will drive (a pathway is a
+ * different load, so the builder is handed which flow to open). The request is matched against
  * the document's own id, the id a session references and a subflow resolves through, not the row's serial.
  * When it is absent the `is_default` row is the one loaded.
  *
@@ -161,7 +160,7 @@ export function toWorkflow(
  * stored workflow carries. A *data condition* the shell reports (naming the fix), not an exception. The `list`
  * call can reject, and `toWorkflow` can refuse a document that is a fragment, names an unknown module, or
  * composes into a cycle or an unresolvable subflow; both throw, and the shell catches them, because a stored
- * row is user data and a white screen is not a report (plan §3). Only a developer-authored definition earned
+ * row is user data and a white screen is not a report. Only a developer-authored definition earned
  * the throw the frame used to take for granted.
  */
 export async function loadDefaultWorkflow(requestedId?: string): Promise<Workflow | undefined> {

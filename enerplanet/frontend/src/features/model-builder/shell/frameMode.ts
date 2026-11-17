@@ -1,5 +1,5 @@
 /**
- * Which module the frame shows, and what its session starts from (`spec/frame.md` §5, step 3b).
+ * Which module the frame shows, and what its session starts from.
  *
  * Two modes:
  *

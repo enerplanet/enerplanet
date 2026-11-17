@@ -1,5 +1,5 @@
 /**
- * `run-meme-pypsa`'s full-screen auto state (T15) — in progress, done, or failed with a manual re-run.
+ * `run-meme-pypsa`'s full-screen auto state — in progress, done, or failed with a manual re-run.
  *
  * The structure is `run-meme-calliope`'s: no control at all while the leg is in progress or done, and on
  * failure the message plus the **manual re-run** — the one affordance an auto node has. The states are rendered

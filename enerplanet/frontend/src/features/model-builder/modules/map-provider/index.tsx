@@ -1,5 +1,5 @@
 /**
- * `map-provider` — the always-loaded basemap host (`modules/map-provider.md`).
+ * `map-provider` — the always-loaded basemap host.
  *
  * *"required · always loaded · not a workflow node · blackbox"*. It renders nothing of its own and writes
  * nothing to the store: the frame loads it once, mounts the canvas it hands over into the `map` slot, and gives
@@ -20,7 +20,7 @@ const module = defineModule({
   name: "Map provider",
 
   // It writes nothing, and that is not an omission: the map is a transient interaction service, and this
-  // module exists to *provide* it, not to fill the store (`Modules.md` §2, the swap rule).
+  // module exists to *provide* it, not to fill the store (the swap rule).
   params: [],
   affect: {},
 

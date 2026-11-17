@@ -1,5 +1,5 @@
 /**
- * The shell's front door to the contracts it works with (`Plan.md` §8).
+ * The shell's front door to the contracts it works with.
  *
  * The types themselves now live in the core — `core/view.ts` holds what a host hands a module
  * (`BuilderModule`, `ModuleViewProps`, `MapService`), and `core/module.ts` holds the regions — because a

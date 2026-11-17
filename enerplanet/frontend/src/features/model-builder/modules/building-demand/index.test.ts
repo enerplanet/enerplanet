@@ -92,7 +92,7 @@ describe("building-demand's declaration", () => {
   it("declares both edges it actually has, and leaves transitivity to the module that owns it", () => {
     expect([...buildingDemand.module.affect.buildings!]).toEqual(["buildingParams"]);
     expect([...buildingDemand.module.affect.weatherSelection!]).toEqual(["buildingParams"]);
-    // The step to `technologies` belongs to that module's own declaration (T7 carries it onward).
+    // The step to `technologies` belongs to that module's own declaration (it carries it onward).
     expect(buildingDemand.module.affect.buildingParams).toBeUndefined();
   });
 });
@@ -153,7 +153,7 @@ describe("building-demand's run", () => {
       mock: { ...withBuildings(building("b1")), buildingParams: existing },
     });
 
-    // The vector set is open (T9): replacing the whole port would throw someone else's work away.
+    // The vector set is open: replacing the whole port would throw someone else's work away.
     expect(store.data.buildingParams?.gas?.b1?.yearlyKwh).toBe(500);
   });
 

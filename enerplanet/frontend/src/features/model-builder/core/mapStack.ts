@@ -1,5 +1,5 @@
 /**
- * The pure half of the map host (`Plan.md` §8, `spec/frame.md` §5).
+ * The pure half of the map host.
  *
  * Which layers exist, in what order, which one takes clicks, and what is on each — as plain data with no
  * renderer behind it. That is deliberate: the rules G and H describe (a module names its own layer, the order

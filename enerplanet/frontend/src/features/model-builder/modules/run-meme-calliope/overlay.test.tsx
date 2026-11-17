@@ -1,5 +1,5 @@
 /**
- * `run-meme-calliope`'s full-screen auto state (T15) — in progress, done, or failed with a manual re-run.
+ * `run-meme-calliope`'s full-screen auto state — in progress, done, or failed with a manual re-run.
  *
  * The structure is `building-demand`'s: no control at all while the run is in progress or done, and on failure
  * the message plus the **manual re-run** — the one affordance an auto node has. The states are rendered to a

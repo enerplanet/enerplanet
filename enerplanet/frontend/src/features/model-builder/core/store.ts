@@ -1,6 +1,5 @@
 /**
- * The store — the current model projection plus the append-only transaction log
- * (`Plan.md` §3/§4).
+ * The store — the current model projection plus the append-only transaction log.
  *
  * The store is dumb on purpose: it holds `data`, the `log` and a `cursor` into it. Three mutators reach
  * the projection — sealing (`applyTransaction`), `undo`, `redo` — and all three end at the single
@@ -26,7 +25,7 @@ import { ReentrantStoreWrite } from "./errors";
 import type { NodeRef } from "./module";
 import type { ModelData } from "./ports";
 
-/** What one undo/redo step moved over (T14). */
+/** What one undo/redo step moved over. */
 export interface UndoReport {
   /** How many transactions the step passed over. */
   transactions: number;
@@ -46,7 +45,7 @@ export interface SealOptions {
 
 export interface StoreOptions {
   /**
-   * The invalidation seam (`Plan.md` §5, T7). Consulted at **two moments**, and the symmetry is
+   * The invalidation seam. Consulted at **two moments**, and the symmetry is
    * the point: at **seal**, when a caller omits the cascade, so a module's change prunes exactly
    * what it affects; and at **redo**, re-derived against the *current* projection rather than
    * replaying the prunes the transaction stored, so redone work can never resurrect values the
@@ -57,7 +56,7 @@ export interface StoreOptions {
    */
   deriveCascade?: (primary: readonly DiffOp[], data: Readonly<ModelData>) => DiffOp[];
   /**
-   * Open an existing session instead of a fresh one (T18): the projection at `cursor` together
+   * Open an existing session instead of a fresh one: the projection at `cursor` together
    * with the log it came from, taken on faith.
    *
    * This is the artefact's **fast path** — the projection is used as given, with no replay, which
@@ -98,7 +97,7 @@ export interface Store {
    * This exists at the `install` chokepoint rather than on the transaction path for a specific reason:
    * `undo()` and `redo()` change the projection *without sealing anything* (they invert and re-apply
    * transactions already in the log), so a listener wired to the seal would stay silent exactly while the
-   * user navigates history — which is when the frame most needs to hear (`spec/frame.md` §7).
+   * user navigates history — which is when the frame most needs to hear.
    *
    * A listener re-reads; it must never write.
    */
@@ -108,7 +107,7 @@ export interface Store {
    * log, and move the cursor onto it.
    *
    * **Omitting `cascade` derives it** through the invalidator seam below — that is how a change's
-   * consequences are pruned (T7). **Passing one uses it as given**, including `[]`, which is how a
+   * consequences are pruned. **Passing one uses it as given**, including `[]`, which is how a
    * pure position move opts out: a jump changes nothing, so it may discard nothing.
    *
    * This is the engine's write path — modules reach the store only through a `ModuleCtx`.
@@ -119,13 +118,13 @@ export interface Store {
     options?: SealOptions,
   ): Transaction;
   /**
-   * Step back to the previous **interactive boundary** (T14): over the trailing step, and
+   * Step back to the previous **interactive boundary**: over the trailing step, and
    * over any auto node's work below it, restoring every transaction's pre-values exactly.
    *
    * @returns what it unwound, or `undefined` when there is nothing to undo.
    */
   undo(): UndoReport | undefined;
-  /** The exact inverse of `undo` — forward to the next interactive boundary (T14). */
+  /** The exact inverse of `undo` — forward to the next interactive boundary. */
   redo(): UndoReport | undefined;
 }
 
@@ -142,7 +141,7 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
 
   /**
    * The **one** place the applied projection moves: `data` and `cursor` are assigned nowhere else, so
-   * "no change without a notification" is structural rather than a convention (`spec/frame.md` §7).
+   * "no change without a notification" is structural rather than a convention.
    * Every mutator — seal, undo, redo — ends here, and a multi-step undo notifies once, because one
    * gesture is one change.
    */
@@ -205,7 +204,7 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
     applyTransaction(primary, cascade, options = {}): Transaction {
       // An action is only valid from the current revision: editing after an undo abandons
       // the redo tail. The dropped entries leave the log untouched — they simply stop
-      // being part of it (`Plan.md` §4).
+      // being part of it.
       if (cursor < log.length) log.length = cursor;
 
       const revision = log.length + 1;
@@ -213,7 +212,7 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
       let nextData = data;
       if (primary.length > 0) nextData = applyDiffs(nextData, primary);
 
-      // Omitted ⇒ ask the invalidator what this change affects (T7). Passed ⇒ use it as given:
+      // Omitted ⇒ ask the invalidator what this change affects. Passed ⇒ use it as given:
       // `[]` is a caller saying "this discards nothing", which is what a position move means.
       const pruned = cascade ?? deriveCascade(primary, nextData);
       if (pruned.length > 0) nextData = applyDiffs(nextData, pruned);
@@ -244,7 +243,7 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
 
       // One step back, then keep going while the cursor would rest on (or immediately
       // after) an auto node's work — the cursor only ever rests on an interactive
-      // boundary (T14).
+      // boundary.
       do {
         const transaction = log[nextCursor - 1];
         // One combined inverse, reverse-ordered: the cascade is undone before the primary

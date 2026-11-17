@@ -1,11 +1,11 @@
 /**
- * Branching — "New Model" at the prompt (case T17).
+ * Branching — "New Model" at the prompt.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §F. A branch is **full duplex**: it carries a copy of
+ * A branch is **full duplex**: it carries a copy of
  * the projection at the cursor, a copy of the log *prefix*, the pending change as its own first
  * transaction, and an empty discard stack — while the source session is left bit-identical, log,
  * cursor and redo tail intact. Nothing is shared, so a branch replays its own diffs and needs no
- * parent to load (`Plan.md` §9).
+ * parent to load.
  *
  * Written failing first.
  */
@@ -43,9 +43,8 @@ const REQUEST = {
   pending: { primary: [PENDING], node: { id: "user-edit" } },
 } as const;
 
-// ── T17 ─────────────────────────────────────────────────────────────────────
 
-describe("T17 — branch = state + prefix + the pending change", () => {
+describe("branch = state + prefix + the pending change", () => {
   it("starts where the source sits, plus the pending change, with no discard stack", () => {
     const store = session();
 

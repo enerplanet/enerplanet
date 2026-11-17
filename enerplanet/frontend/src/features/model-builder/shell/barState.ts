@@ -1,5 +1,5 @@
 /**
- * The workflow bar's state — where the session is (`spec/frame.md` §3.1).
+ * The workflow bar's state — where the session is.
  *
  * The bar answers one question and the answer is *derived* from `(flow, registry, store)`. Nothing stores
  * a position, which is what makes undo, redo and jumps reposition the bar for free:
@@ -14,7 +14,7 @@
  * every step's state, the bar wants the three that frame the session.
  *
  * Where the session sits is `position()`'s `restingIndex`, not its `index`: a move is a **pure position
- * move** (`spec/core.md` §G), so a node the session jumped back to stays `done` and the frontier can be
+ * move**, so a node the session jumped back to stays `done` and the frontier can be
  * ahead of the session — `index` is the frontier, `restingIndex` is the jump's target.
  */
 

@@ -1,5 +1,5 @@
 /**
- * Flow gating — the palette and the validator (`Plan.md` §7, cases T10/T11).
+ * Flow gating — the palette and the validator.
  *
  * A **flow** is an immutable, ordered list of nodes; a **node** is one module placed at a
  * position. Gating is one predicate applied twice:
@@ -12,10 +12,10 @@
  * cannot be invalid — validity is enforced by construction, not checked afterwards.
  *
  * The available-set grows as the flow is walked: each placed node contributes its whole store
- * surface (`Modules.md` §1 — a module may write any param it declares). A node never satisfies
+ * surface (a module may write any param it declares). A node never satisfies
  * its own requirement, which is why the walk checks *before* contributing.
  *
- * Not modelled here yet: **one writer per port** (`Plan.md` §7) — the contract has no
+ * Not modelled here yet: **one writer per port** — the contract has no
  * readable/writable distinction on `Param`, so two modules that merely read the same port are
  * indistinguishable from two that write it. That needs `Param` to say which.
  */
@@ -34,7 +34,7 @@ export interface FlowNode {
 /** Immutable: a re-run moves the session's *position*, it never changes the flow. */
 export type Flow = readonly FlowNode[];
 
-/** Module id → module. The register (`Modules.md` §7) is this map. */
+/** Module id → module. The register is this map. */
 export type ModuleRegistry = Readonly<Record<string, Module>>;
 
 /** Ports that exist before any node runs — `model-start`'s outputs and static base data. */

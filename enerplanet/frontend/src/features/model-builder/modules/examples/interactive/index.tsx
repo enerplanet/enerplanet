@@ -137,7 +137,7 @@ const module = defineModule({
   // module: the influence-honesty prober (`core/influence.ts`) fails one that understates it.
   affect: {},
 
-  // How often this module's work reaches the log (`spec/core.md` T16, `Plan.md` §5). `per-commit` seals one
+  // How often this module's work reaches the log. `per-commit` seals one
   // **atomic** transaction per `commit()`; the default `at-completion` seals one for the whole `run()`.
   //
   // `per-commit` is right here because the three ports are independent fields: nothing is derived from anything

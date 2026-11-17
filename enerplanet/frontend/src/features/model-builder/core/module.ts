@@ -1,5 +1,5 @@
 /**
- * The module contract (`Modules.md` §1).
+ * The module contract.
  *
  * One module = one job, one data slice, one UI concern. A module declares its whole
  * store surface as `params`; it reads those ports, mutates them, and hands the result
@@ -8,7 +8,7 @@
 
 import type { ModelData, PortKey } from "./ports";
 
-/** Layout regions a module's UI may mount into (`Plan.md` §8). */
+/** Layout regions a module's UI may mount into. */
 export type Region = "sidebar" | "bottom" | "overlay" | "map";
 
 /**
@@ -20,7 +20,7 @@ export type Region = "sidebar" | "bottom" | "overlay" | "map";
  */
 export const REGIONS: readonly Region[] = ["sidebar", "map", "bottom", "overlay"];
 
-/** Lifecycle of one workflow node (`Plan.md` §7). */
+/** Lifecycle of one workflow node. */
 export type NodeState = "pending" | "ready" | "active" | "done" | "skipped" | "stale" | "error";
 
 /**
@@ -41,7 +41,7 @@ export interface NodeRef {
   id: string;
   /**
    * Whether the run was an **automatic** step's — the module's own flag (`Module.auto`), carried here so the
-   * engine can stamp it on the transaction and history can skip it (T14). A different fact from the node's
+   * engine can stamp it on the transaction and history can skip it. A different fact from the node's
    * identity: the id names a position, `auto` says the work ran with no forward action.
    */
   auto?: boolean;
@@ -98,13 +98,13 @@ export interface Module {
   name?: string;
   /** The module's whole store surface: what it may read and write. */
   params: readonly Param[];
-  /** Declared influence: which outputs an input can invalidate (`Plan.md` §5). */
+  /** Declared influence: which outputs an input can invalidate. */
   affect: Partial<Record<PortKey, readonly PortKey[]>>;
   /** Where its Component mounts when the node is active. */
   layout: readonly Region[];
   /**
    * How often the node's work is sealed into the log. Defaults to `"at-completion"`.
-   * Only declare `"per-commit"` when the module's writes are independent (T16).
+   * Only declare `"per-commit"` when the module's writes are independent.
    */
   seal?: SealGranularity;
   /**
@@ -120,7 +120,7 @@ export interface Module {
   /** Headless execution — how auto nodes run without rendering anything. */
   run?(ctx: ModuleCtx): void | Promise<void>;
   /**
-   * The module's own completeness gate: **is the work finished, judged by the module itself** (T22).
+   * The module's own completeness gate: **is the work finished, judged by the module itself**.
    *
    * Two callers, and they are why this is not optional boilerplate:
    *
@@ -157,7 +157,7 @@ export function requiredPorts(module: Module): PortKey[] {
 /**
  * Is this a **host module** — one that renders no UI at all?
  *
- * A host module is not a workflow node and has no place in a flow (`Plan.md` §8, `core/view.ts`): the frame
+ * A host module is not a workflow node and has no place in a flow: the frame
  * mounts it once, because the service it provides is always there, and hands that service to every module
  * that declared the region it fills. `map-provider` is the standing example — it writes nothing, declares no
  * region, and the frame mounts its canvas itself.

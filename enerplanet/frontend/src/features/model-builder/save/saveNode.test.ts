@@ -1,5 +1,5 @@
 /**
- * The `model-save` node (case T13) — what it seals, what it refuses, and the status it earns.
+ * The `model-save` node — what it seals, what it refuses, and the status it earns.
  *
  * Written failing first.
  *
@@ -292,7 +292,7 @@ describe("the completeness gate", () => {
   });
 
   it("is a verdict, not a veto: an unfinished model still saves, as incomplete", async () => {
-    // §6's split, pinned. The legacy refusal (no name, no period, no area) is what stops a save outright;
+    // The split, pinned. The legacy refusal (no name, no period, no area) is what stops a save outright;
     // a missing *grid* is reported so the user knows what is left, while the model round-trips as `incomplete`.
     const payloads: LegacyModelPayload[] = [];
     const store = createStore(seed({ coordinates: [RING] }));

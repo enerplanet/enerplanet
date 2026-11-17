@@ -1,5 +1,5 @@
 /**
- * Store notification — the frame's prerequisite (`spec/frame.md` §7).
+ * Store notification — the frame's prerequisite.
  *
  * The frame reads the store in four places and history moves from three controls, so every *applied*
  * change must announce itself. The point of these cases is the one a seal-only hook gets wrong: `undo`
@@ -82,7 +82,7 @@ describe("notification fires after every applied change", () => {
   });
 
   it("notifies even when the projection is identical, because the position moved", () => {
-    // The zero-diff jump (`spec/frame.md` §3.1): a bare re-save discards nothing, so `data` comes out
+    // The zero-diff jump: a bare re-save discards nothing, so `data` comes out
     // referentially equal — yet the session *is* back at that node and the frame must redraw. This is
     // why a host subscribes to a change token rather than to the projection's identity.
     const store = createStore(seed());

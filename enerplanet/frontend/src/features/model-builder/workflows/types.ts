@@ -1,5 +1,5 @@
 /**
- * The workflow document, and the shape the API hands back (plan §4).
+ * The workflow document, and the shape the API hands back.
  *
  * The document is exactly the one `shell/workflow.ts`'s `toWorkflow` consumes — `{id, version, label,
  * seed, nodes}` — and the editor edits this and nothing else. Nothing here reshapes it: the stored
@@ -85,7 +85,7 @@ export interface WorkflowDocument {
  * One row of `GET /workflows`: the thin scalar surface the table queries on, plus the whole document.
  *
  * The scalar fields mirror the definition's own — `workflow_id` is the definition's `id` — because a
- * session references a workflow by that id, not by the row's serial (plan §4). `description` and
+ * session references a workflow by that id, not by the row's serial. `description` and
  * `is_subflow` mirror the document's optional `description`/`isSubflow` for the same reason.
  */
 export interface WorkflowSummary {

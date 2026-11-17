@@ -1,7 +1,7 @@
 /**
- * The artefact — persisting a session (case T18).
+ * The artefact — persisting a session.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §F. On load the stored projection is used directly
+ * On load the stored projection is used directly
  * (**no replay**) so a session opens instantly, undo/redo work at once from `cursor`, and the flow
  * is reattached by *reference* — it is immutable, so it is never copied. The fingerprint guards the
  * cache: when it disagrees with the stored projection, the loader replays the log instead and says
@@ -84,9 +84,8 @@ async function runAll(store: ReturnType<typeof createStore>): Promise<void> {
   }
 }
 
-// ── T18 ─────────────────────────────────────────────────────────────────────
 
-describe("T18 — the artefact carries the state, and the log can rebuild it", () => {
+describe("the artefact carries the state, and the log can rebuild it", () => {
   it("round-trips a session, and undo/redo work immediately from the cursor", async () => {
     const store = createStore(seed());
     await runAll(store);

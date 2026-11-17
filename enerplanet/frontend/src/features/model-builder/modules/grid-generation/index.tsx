@@ -81,7 +81,7 @@ function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
     issues.push({ port: "region", message: "Choose the region the model sits in." });
   }
 
-  // The result, not only the inputs — this is the half of the completeness rule the module owns (T22). An
+  // The result, not only the inputs — this is the half of the completeness rule the module owns. An
   // area can legitimately yield no buildings, and an empty FeatureCollection is a fact the store is allowed
   // to hold; what this module may not do is call that a *finished* grid, because everything downstream
   // builds on buildings that are not there. Reported rather than thrown on purpose: the empty grid stays
@@ -99,7 +99,7 @@ function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
  *
  * Two losses, and the second is the one a user cannot see from the button: replacing the grid itself, and
  * invalidating everything built on it — the demand parameters and technology assignments downstream. The
- * cascade the spec describes is exactly this, so the warning names it.
+ * cascade is exactly this, so the warning names it.
  */
 export function needsConfirmation(data: Readonly<ModelData>): boolean {
   const hasGrid = PRODUCED.some((port) => data[port] !== undefined);
@@ -137,7 +137,7 @@ const module = defineModule({
     { port: "grids" },
   ],
 
-  // The spec's broad invalidation, declared honestly: redrawing the area or moving the model to another region
+  // The broad invalidation, declared honestly: redrawing the area or moving the model to another region
   // means the *entire* grid is gone, not part of it. A narrower claim here would let stale demand survive a
   // redraw — and the influence prober (`core/influence.ts`) would fail this module for understating it anyway.
   affect: {

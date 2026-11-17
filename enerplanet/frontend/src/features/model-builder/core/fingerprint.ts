@@ -6,8 +6,8 @@
  *   save path needed a workaround for exactly this),
  * - **array order does** — a list of features is ordered.
  *
- * This is the comparison elision uses to decide "nothing changed" (T20) and the artefact
- * check uses to notice that a stored projection and its log disagree (T18).
+ * This is the comparison elision uses to decide "nothing changed" and the artefact
+ * check uses to notice that a stored projection and its log disagree.
  *
  * **The result is a fixed-width digest, not the canonical string.** The canonical string is
  * built first and then hashed, because an artefact stores its fingerprint in a `varchar(255)`

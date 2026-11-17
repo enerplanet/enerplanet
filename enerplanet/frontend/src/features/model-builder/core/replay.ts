@@ -1,13 +1,13 @@
 /**
  * Replay — rebuild a projection from the log.
  *
- * The log is self-contained *materialized* diffs (`Plan.md` §9), so replaying it needs no
+ * The log is self-contained *materialized* diffs, so replaying it needs no
  * module and no backend. That gives this primitive three jobs:
  *
  * - the **recovery path** for the artefact: if a stored projection disagrees with its log, the
- *   log wins (T18);
+ *   log wins;
  * - the **history side of elision**: was any of a node's affecting inputs different the last
- *   time it ran? (`rerun.ts`, T20);
+ *   time it ran? (`rerun.ts`);
  * - a pure way to inspect what the model looked like at any revision.
  */
 

@@ -1,7 +1,7 @@
 /**
- * The gateway — the backend seam this feature owns (`Plan.md` §11, "Adapters").
+ * The gateway — the backend seam this feature owns ("Adapters").
  *
- * The save is a **two-call split** (settled 2026-11, `Plan.md` §11):
+ * The save is a **two-call split** (settled 2026-11):
  *
  * - **Call A** writes the *legacy* model payload (`model.json` / `config`) through the endpoints that
  *   already exist, unchanged in shape, because parity with the legacy editor is the point;

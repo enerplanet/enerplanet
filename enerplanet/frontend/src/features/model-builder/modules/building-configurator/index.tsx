@@ -3,7 +3,7 @@
  *
  * **This module is the deliberate counter-example to "one module, one job".** It writes two ports — a
  * building's demand parameters and its technologies — which `building-demand` and `technologies` also write.
- * The overlap is the point (`modules/building-configurator-npm.md`): the all-in-one view is the legacy's only
+ * The overlap is the point: the all-in-one view is the legacy's only
  * building-configuration path, and `simple-building-editor` + `simple-technology-editor` exist as the clean
  * split it could be replaced by.
  *
@@ -39,7 +39,7 @@ const NODE = "building-configurator";
 /**
  * The buildings layer's id.
  *
- * **A shared convention, and the answer to the spec's open decision:** a module names a layer *after the port*
+ * **A shared convention:** a module names a layer *after the port*
  * it holds, so `grid-generation`'s buildings layer is `buildings` and not `grid-generation-buildings`. The
  * alternative — a `setInteractiveLayer(port)` form — would put a port⇄layer map inside the map service; this
  * keeps the service addressing ids and makes them predictable instead.
@@ -187,7 +187,7 @@ function applyEdit(
 }
 
 /**
- * This module's completeness (T22): **nothing.**
+ * This module's completeness: **nothing.**
  *
  * It is optional editing, and it cannot be incomplete — a node that refuses to be done until every building has a
  * technology would block the flow on a rule that is simply wrong: not every building has solar, and one that does

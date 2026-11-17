@@ -1,7 +1,7 @@
 /**
- * Flow gating — the palette and the validator (cases T10, T11).
+ * Flow gating — the palette and the validator.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §D. Locks `Plan.md` §7: a module is placeable iff
+ * A module is placeable iff
  * every one of its `required` ports already exists, so a build can only ever produce a workflow
  * that runs, and the builder and the validator are the same predicate.
  *
@@ -106,9 +106,8 @@ const SEEDS = [MODEL_NAME, "fromDate", "toDate", RESOLUTION, REGION] as const;
 
 const node = (id: string, moduleId: string): Flow[number] => ({ id, moduleId });
 
-// ── T10 ─────────────────────────────────────────────────────────────────────
 
-describe("T10 — a module is placeable iff every required port exists", () => {
+describe("a module is placeable iff every required port exists", () => {
   it("offers only what the available-set already satisfies", () => {
     const available = availablePorts([], registry, SEEDS);
 
@@ -157,9 +156,8 @@ describe("T10 — a module is placeable iff every required port exists", () => {
   });
 });
 
-// ── T11 ─────────────────────────────────────────────────────────────────────
 
-describe("T11 — the builder and the validator are the same predicate", () => {
+describe("the builder and the validator are the same predicate", () => {
   /** Grow a flow the only way the UI can: take whatever the palette offers, in order. */
   function buildGreedily(): Flow {
     // `Flow` is readonly by design — a builder assembles a mutable list and hands it over once.

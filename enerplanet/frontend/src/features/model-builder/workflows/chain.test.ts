@@ -1,5 +1,5 @@
 /**
- * Chain operations (plan §9). The one that matters: removing an entry drops it **and everything after it**,
+ * Chain operations. The one that matters: removing an entry drops it **and everything after it**,
  * because a linear chain cannot have a hole.
  *
  * Written failing first.

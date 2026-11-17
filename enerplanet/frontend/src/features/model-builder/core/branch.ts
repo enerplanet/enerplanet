@@ -1,10 +1,10 @@
 /**
- * Branching — the "New Model" choice at the prompt (case T17).
+ * Branching — the "New Model" choice at the prompt.
  *
  * A branch is **full duplex**: it carries a copy of the projection at the cursor, a copy of the log
  * *prefix* that produced it, and the pending change as its own first transaction — while the source
  * session is left bit-identical. Nothing is shared and nothing is referenced, so the branch replays
- * its own diffs and loads without its parent (`Plan.md` §9).
+ * its own diffs and loads without its parent.
  *
  * What does *not* come along is the source's redo tail. A branch has no discard stack: the tail is
  * the source's business, and carrying it would let a branch undo work it never did.
@@ -22,7 +22,7 @@ import { createStore, type Store, type StoreOptions } from "./store";
 export interface PendingEdit {
   /** What the user changed. */
   primary: readonly DiffOp[];
-  /** Downstream values it invalidates, when the caller has staged it (T7). */
+  /** Downstream values it invalidates, when the caller has staged it. */
   cascade?: readonly DiffOp[];
   /** The node that produced the edit, when it came from one. */
   node?: NodeRef;
@@ -60,7 +60,7 @@ export function branch({ store, parent, pending, options }: BranchRequest): Bran
   // produced it. Both are copied — a branch shares nothing with the session it came from.
   //
   // Slicing at the cursor is intent, not the guard: `applyTransaction` below truncates any tail
-  // itself (T1), so passing the whole log would land in the same place. Saying "the prefix" here
+  // itself, so passing the whole log would land in the same place. Saying "the prefix" here
   // means the branch does not depend on that happening.
   const prefix = store.log.slice(0, store.cursor);
   const session = createStore(structuredClone(store.initial), {

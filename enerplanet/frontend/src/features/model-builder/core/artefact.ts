@@ -1,5 +1,5 @@
 /**
- * The artefact — what persists a session (`Plan.md` §9, case T18).
+ * The artefact — what persists a session.
  *
  * A session is `(projection, log, cursor)`. Persisting it naively would mean replaying the log on
  * every load; persisting it as the projection alone would mean losing undo and redo. So the

@@ -1,9 +1,8 @@
 /**
- * The save node's logic (case T13).
+ * The save node's logic.
  *
  * The payload assertions are **oracle tests**: the expected values are copied from
- * `saveService.ts` in `.local/ModularThesis/prototypes/sk-node-workflow/integration/`, which is a
- * verbatim extraction of the legacy `saveAreaData`. Parity is the reason this code exists, so the
+ * the legacy `saveAreaData`'s own output. Parity is the reason this code exists, so the
  * shape is pinned against the legacy original rather than described.
  *
  * Written failing first.
@@ -116,7 +115,7 @@ function request(store: ReturnType<typeof createStore>, extra: Partial<SaveReque
 
 // ── the legacy payload (oracle) ─────────────────────────────────────────────
 
-describe("T13 — the Call A payload is the legacy payload", () => {
+describe("the Call A payload is the legacy payload", () => {
   it("wraps the drawn rings into a MultiPolygon and defaults resolution to 60", () => {
     const ring: [number, number][] = [[8.6, 49.4], [8.7, 49.4], [8.7, 49.5], [8.6, 49.4]];
     const data: ModelData = { modelName: "  Demo  ", fromDate: FROM_DATE, toDate: TO_DATE, coordinates: [ring] };
@@ -208,7 +207,7 @@ describe("T13 — the Call A payload is the legacy payload", () => {
 
 // ── Call A then Call B ──────────────────────────────────────────────────────
 
-describe("T13 — the save is two calls, A first", () => {
+describe("the save is two calls, A first", () => {
   it("creates the model as draft and hands its id to the session call", async () => {
     const store = await completeStore();
     expect(position(FLOW, registry, store).complete).toBe(true);
@@ -222,7 +221,7 @@ describe("T13 — the save is two calls, A first", () => {
     expect(outcome).toEqual({ ok: true, modelId: 77, created: true, status: "draft", historySaved: true });
   });
 
-  it("sends the T18 artefact to Call B, not the payload again", async () => {
+  it("sends the session artefact to Call B, not the payload again", async () => {
     const store = await completeStore();
     const { gateway, recorded } = recorder();
 
@@ -253,7 +252,7 @@ describe("T13 — the save is two calls, A first", () => {
 
 // ── the unfinished model ────────────────────────────────────────────────────
 
-describe("T13 — an unfinished flow saves as incomplete, with an empty config", () => {
+describe("an unfinished flow saves as incomplete, with an empty config", () => {
   it("marks it incomplete and infills an empty config while keeping what is known", async () => {
     const store = createStore(seed({ coordinates: [[[8.6, 49.4], [8.7, 49.4]]] }));
     const { gateway, recorded } = recorder();
@@ -288,7 +287,7 @@ describe("T13 — an unfinished flow saves as incomplete, with an empty config",
 
 // ── the partial save ────────────────────────────────────────────────────────
 
-describe("T13 — a session that fails to persist does not lose the model", () => {
+describe("a session that fails to persist does not lose the model", () => {
   it("reports the partial save and still returns the model id", async () => {
     const store = await completeStore();
     const { gateway } = recorder({ nextModelId: 9, failSession: "session store is down" });

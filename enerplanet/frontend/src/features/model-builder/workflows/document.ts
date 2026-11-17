@@ -1,5 +1,5 @@
 /**
- * The workflow document: its slug, how one is built from a chain, and how it is copied out (plan §6, §9).
+ * The workflow document: its slug, how one is built from a chain, and how it is copied out.
  *
  * The copy button is one side of a pair whose other side is the backend's `default_workflow.json`: a
  * developer copies a workflow out of the app and pastes it into that file, which the seed inserts verbatim.

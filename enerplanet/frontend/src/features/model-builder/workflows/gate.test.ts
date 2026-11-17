@@ -1,5 +1,5 @@
 /**
- * The gate rule (plan §3). These are the cases the editor's whole promise rests on: a module becomes
+ * The gate rule. These are the cases the editor's whole promise rests on: a module becomes
  * addable exactly when its `required` ports are produced by the chain, and stays unavailable otherwise —
  * with the port it is waiting for named, never hidden. The one thing not offered at all is a host module,
  * which cannot be a step: it declares no region to render.

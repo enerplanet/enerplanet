@@ -1,6 +1,5 @@
 /**
- * The default-workflow loader — how the definition reaches the frame now that it is a database row
- * (`spec/frame.md` §5; plan `workflow-builder.md` §6, Stage 2).
+ * The default-workflow loader — how the definition reaches the frame now that it is a database row.
  *
  * The loader's job is to turn untrusted configuration into exactly what the core already takes: a `Flow`,
  * a `ModuleRegistry`, and the seed ports that exist before any node runs. `toWorkflow` is deliberately pure

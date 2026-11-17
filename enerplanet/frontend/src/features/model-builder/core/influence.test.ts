@@ -1,7 +1,7 @@
 /**
- * Influence honesty — the generated contract test (case T8).
+ * Influence honesty — the generated contract test.
  *
- * Spec: `.local/ModularThesis/spec/core.md` §B. A module declares which outputs each input
+ * A module declares which outputs each input
  * can invalidate (`affect`); this prober *verifies* that declaration instead of trusting it.
  *
  * Written failing first.
@@ -76,9 +76,8 @@ const sneaky = defineModule({
 
 const COORDINATES: [number, number][][] = [[[8.6, 49.4]]];
 
-// ── T8 ──────────────────────────────────────────────────────────────────────
 
-describe("T8 — influence honesty is verified, not trusted", () => {
+describe("influence honesty is verified, not trusted", () => {
   it("reports nothing for a module whose declaration matches what it does", async () => {
     const report = await deriveInfluence(honest, { samples: { coordinates: COORDINATES } });
 
