@@ -1,0 +1,40 @@
+{
+  "id": "variant-flow",
+  "version": 1,
+  "label": "Variant exploration",
+  "description": "Explore a variant of the model: save it, fork a copy, adjust the copy's buildings and technologies through the adjustment fragment, run Calliope and PyPSA on the copy, then compare it against the original.",
+  "nodes": [
+    {
+      "id": "model-save",
+      "moduleId": "model-save",
+      "label": "Save model"
+    },
+    {
+      "id": "model-variant",
+      "moduleId": "model-variant",
+      "label": "Make a variant"
+    },
+    {
+      "id": "adjust",
+      "workflows": [
+        "adjust-model"
+      ],
+      "label": "Adjust the variant"
+    },
+    {
+      "id": "run-calliope-variant",
+      "moduleId": "run-meme-calliope",
+      "label": "Run the variant (Calliope)"
+    },
+    {
+      "id": "run-pypsa-variant",
+      "moduleId": "run-meme-pypsa",
+      "label": "Run the variant (PyPSA)"
+    },
+    {
+      "id": "compare-variant",
+      "moduleId": "compare-variant",
+      "label": "Compare with the original"
+    }
+  ]
+}

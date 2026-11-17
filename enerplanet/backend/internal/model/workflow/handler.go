@@ -101,10 +101,12 @@ func (h *Handler) CreateWorkflow(c *gin.Context) {
 	}
 
 	row := &appModels.Workflow{
-		WorkflowID: fields.ID,
-		Version:    fields.Version,
-		Label:      fields.Label,
-		Definition: datatypes.JSON(raw),
+		WorkflowID:  fields.ID,
+		Version:     fields.Version,
+		Label:       fields.Label,
+		Description: fields.Description,
+		IsSubflow:   fields.IsSubflow,
+		Definition:  datatypes.JSON(raw),
 	}
 
 	if err := h.store.Create(row); err != nil {
@@ -138,10 +140,12 @@ func (h *Handler) UpdateWorkflow(c *gin.Context) {
 	}
 
 	found, err := h.store.Update(&appModels.Workflow{
-		WorkflowID: id,
-		Version:    fields.Version,
-		Label:      fields.Label,
-		Definition: datatypes.JSON(raw),
+		WorkflowID:  id,
+		Version:     fields.Version,
+		Label:       fields.Label,
+		Description: fields.Description,
+		IsSubflow:   fields.IsSubflow,
+		Definition:  datatypes.JSON(raw),
 	})
 	if err != nil {
 		httputil.InternalError(c, "Failed to save the workflow")
@@ -202,9 +206,11 @@ func (h *Handler) readDocument(c *gin.Context) ([]byte, documentFields, bool) {
 // documentFields are the scalars the server promotes out of the document; the document itself is
 // stored untouched, so nothing here is ever written back over it.
 type documentFields struct {
-	ID      string
-	Version int
-	Label   string
+	ID          string
+	Version     int
+	Label       string
+	Description string
+	IsSubflow   bool
 }
 
 // validateDocument checks the document's SHAPE only — the module catalogue that would give its
@@ -239,11 +245,22 @@ func validateDocument(raw []byte) (documentFields, error) {
 		return documentFields{}, err
 	}
 
+	// description and isSubflow are optional: a document may omit them, but when present a wrong type
+	// is a rejection, the same rigour label and version get.
+	description, err := optionalString("description", object["description"])
+	if err != nil {
+		return documentFields{}, err
+	}
+	isSubflow, err := optionalBool("isSubflow", object["isSubflow"])
+	if err != nil {
+		return documentFields{}, err
+	}
+
 	if err := requireNodes(object["nodes"]); err != nil {
 		return documentFields{}, err
 	}
 
-	return documentFields{ID: id, Version: version, Label: label}, nil
+	return documentFields{ID: id, Version: version, Label: label, Description: description, IsSubflow: isSubflow}, nil
 }
 
 // requireNodes checks that nodes is an array of objects, each carrying a non-empty string id and
@@ -291,14 +308,42 @@ func requireString(field string, raw json.RawMessage, nonEmpty bool) (string, er
 	return value, nil
 }
 
+// optionalString unmarshals a field that is absent or a string; a present non-string is a rejection.
+func optionalString(field string, raw json.RawMessage) (string, error) {
+	if raw == nil {
+		return "", nil
+	}
+
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "", fmt.Errorf("%s must be a string", field)
+	}
+	return value, nil
+}
+
+// optionalBool unmarshals a field that is absent or a boolean; a present non-boolean is a rejection.
+func optionalBool(field string, raw json.RawMessage) (bool, error) {
+	if raw == nil {
+		return false, nil
+	}
+
+	var value bool
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return false, fmt.Errorf("%s must be a boolean", field)
+	}
+	return value, nil
+}
+
 type workflowResponse struct {
-	WorkflowID string          `json:"workflow_id"`
-	Version    int             `json:"version"`
-	Label      string          `json:"label"`
-	IsDefault  bool            `json:"is_default"`
-	Definition json.RawMessage `json:"definition"`
-	CreatedAt  string          `json:"created_at"`
-	UpdatedAt  string          `json:"updated_at"`
+	WorkflowID  string          `json:"workflow_id"`
+	Version     int             `json:"version"`
+	Label       string          `json:"label"`
+	Description string          `json:"description"`
+	IsDefault   bool            `json:"is_default"`
+	IsSubflow   bool            `json:"is_subflow"`
+	Definition  json.RawMessage `json:"definition"`
+	CreatedAt   string          `json:"created_at"`
+	UpdatedAt   string          `json:"updated_at"`
 }
 
 // toResponse hands the stored definition back as the bytes it arrived as. json.RawMessage is a
@@ -308,13 +353,15 @@ type workflowResponse struct {
 // is stored.)
 func toResponse(row *appModels.Workflow) workflowResponse {
 	return workflowResponse{
-		WorkflowID: row.WorkflowID,
-		Version:    row.Version,
-		Label:      row.Label,
-		IsDefault:  row.IsDefault,
-		Definition: json.RawMessage(row.Definition),
-		CreatedAt:  row.CreatedAt.Format(timeLayout),
-		UpdatedAt:  row.UpdatedAt.Format(timeLayout),
+		WorkflowID:  row.WorkflowID,
+		Version:     row.Version,
+		Label:       row.Label,
+		Description: row.Description,
+		IsDefault:   row.IsDefault,
+		IsSubflow:   row.IsSubflow,
+		Definition:  json.RawMessage(row.Definition),
+		CreatedAt:   row.CreatedAt.Format(timeLayout),
+		UpdatedAt:   row.UpdatedAt.Format(timeLayout),
 	}
 }
 

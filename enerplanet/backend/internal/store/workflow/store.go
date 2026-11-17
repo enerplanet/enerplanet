@@ -77,10 +77,12 @@ func (s *Store) Update(row *models.Workflow) (bool, error) {
 	result := s.db.Model(&models.Workflow{}).
 		Where("workflow_id = ?", row.WorkflowID).
 		Updates(map[string]any{
-			"version":    row.Version,
-			"label":      row.Label,
-			"definition": row.Definition,
-			"updated_at": gorm.Expr("CURRENT_TIMESTAMP"),
+			"version":     row.Version,
+			"label":       row.Label,
+			"description": row.Description,
+			"is_subflow":  row.IsSubflow,
+			"definition":  row.Definition,
+			"updated_at":  gorm.Expr("CURRENT_TIMESTAMP"),
 		})
 	if result.Error != nil {
 		return false, result.Error

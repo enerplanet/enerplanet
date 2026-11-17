@@ -1,0 +1,19 @@
+{
+  "id": "adjust-model",
+  "version": 1,
+  "label": "Adjust model",
+  "description": "Adjust a model variant: configure the buildings in detail, then assign the technologies each one is supplied by.",
+  "isSubflow": true,
+  "nodes": [
+    {
+      "id": "building-configurator",
+      "moduleId": "building-configurator",
+      "label": "Building configurator"
+    },
+    {
+      "id": "technologies",
+      "moduleId": "technologies",
+      "label": "Technologies"
+    }
+  ]
+}
