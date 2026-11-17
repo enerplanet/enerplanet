@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import type { Module, Param } from "../core/module";
 import type { BuilderModule } from "../shell/contract";
-import { appendModule, appendSubflow, chooseSubflowWorkflow, nodeIdFor, removeFrom, removedCount } from "./chain";
+import { appendModule, appendSubflow, chooseSubflowWorkflow, moveNode, nodeIdFor, removeFrom, removedCount } from "./chain";
 import type { WorkflowNodeDocument } from "./types";
 
 function entry(id: string, name?: string, params: Param[] = []): BuilderModule {
@@ -102,5 +102,37 @@ describe("removing an entry drops it and everything after it", () => {
   it("reports how many entries a cut removes, for the confirm", () => {
     expect(removedCount(chain, 1)).toBe(2);
     expect(removedCount(chain, 2)).toBe(1);
+  });
+});
+
+describe("moving an entry one position", () => {
+  it("moves an entry up by swapping it with the one before it, and nothing else", () => {
+    expect(moveNode(chain, 2, "up").map((n) => n.id)).toEqual(["a", "c", "b"]);
+  });
+
+  it("moves an entry down by swapping it with the one after it", () => {
+    expect(moveNode(chain, 0, "down").map((n) => n.id)).toEqual(["b", "a", "c"]);
+  });
+
+  it("leaves the first entry where it is when asked to move up — it has no neighbour to trade with", () => {
+    expect(moveNode(chain, 0, "up").map((n) => n.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("leaves the last entry where it is when asked to move down", () => {
+    expect(moveNode(chain, 2, "down").map((n) => n.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("moves a subflow entry like any other node", () => {
+    const mixed: WorkflowNodeDocument[] = [
+      { id: "a", moduleId: "a" },
+      { id: "grid", workflows: ["grid"] },
+    ];
+    expect(moveNode(mixed, 1, "up").map((n) => n.id)).toEqual(["grid", "a"]);
+  });
+
+  it("returns a new list and never mutates the one it was given", () => {
+    const next = moveNode(chain, 0, "down");
+    expect(chain.map((n) => n.id)).toEqual(["a", "b", "c"]);
+    expect(next).not.toBe(chain);
   });
 });

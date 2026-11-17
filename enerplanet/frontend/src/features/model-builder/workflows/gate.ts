@@ -17,6 +17,7 @@ import type { FlowNode, ModuleRegistry } from "../core/flow";
 import type { PortKey } from "../core/ports";
 import type { BuilderModule } from "../shell/contract";
 import { expand, expansionCycle, type WorkflowLookup } from "./expand";
+import { moveNode, type MoveDirection } from "./chain";
 import type { WorkflowDocument, WorkflowNodeDocument } from "./types";
 import { isSubflowNode } from "./types";
 
@@ -154,6 +155,101 @@ export function fragmentRequiredPorts(
   registry: ModuleRegistry,
 ): PortKey[] {
   return unmetRequiredPorts(expand(document, lookup, registry), new Set(), registry);
+}
+
+/**
+ * The ports a document's own chain leaves unmet, read with an empty prefix — or `undefined` when the
+ * document cannot be flattened at all (`expand` throwing: a cycle, a subflow nobody stores, a module the
+ * registry does not declare). Absence and emptiness are different facts, and the two callers below depend on
+ * the difference: empty is a flow that satisfies itself, absent is a flow whose requirements cannot be read.
+ */
+function ownUnmetPorts(
+  document: WorkflowDocument,
+  lookup: WorkflowLookup,
+  registry: ModuleRegistry,
+): Set<PortKey> | undefined {
+  let flow: FlowNode[];
+  try {
+    flow = expand(document, lookup, registry);
+  } catch {
+    return undefined;
+  }
+  return new Set(unmetRequiredPorts(flow, new Set(), registry));
+}
+
+/** The verdict on a single order: self-satisfying, missing named ports, or not flattenable. */
+export type OrderVerdict =
+  | { ok: true }
+  | { ok: false; reason: "unresolved" }
+  | { ok: false; reason: "missing"; missing: readonly PortKey[] };
+
+/**
+ * Whether a document's chain, **in the order it stands**, satisfies itself — needs nothing from a flow around
+ * it.
+ *
+ * For a flow — a document spliced nowhere — the prefix is empty, and its requirements can only be met by the
+ * walk itself: a module's `required` port is unmet exactly when neither that (empty) prefix nor a module
+ * *earlier in the same chain* has produced it. There is no other source a flow's requirements could come
+ * from, so `unmetRequiredPorts(expansion, new Set(), registry)` being empty **is** the whole test — no second
+ * condition is needed. (A fragment is not judged this way; its requirements are read at the insertion site —
+ * `fragmentRequiredPorts`.)
+ *
+ * A document that cannot be flattened has no expansion, so no requirements to read off one: `expand` throwing
+ * (a cycle, a subflow nobody stores, a module the registry does not declare) is refused as `unresolved`
+ * rather than reported as a port problem.
+ */
+export function orderIsValid(
+  document: WorkflowDocument,
+  lookup: WorkflowLookup,
+  registry: ModuleRegistry,
+): OrderVerdict {
+  const unmet = ownUnmetPorts(document, lookup, registry);
+  if (unmet === undefined) return { ok: false, reason: "unresolved" };
+  return unmet.size === 0 ? { ok: true } : { ok: false, reason: "missing", missing: [...unmet] };
+}
+
+/** Why a move is refused: the ports it would leave unmet that the current order did not. */
+export type MoveVerdict =
+  | { ok: true }
+  | { ok: false; reason: "missing"; missing: readonly PortKey[] };
+
+/**
+ * Whether moving the entry at `index` one position `direction` "must not break" — the rule the editor's
+ * up/down controls are offered under.
+ *
+ * The test is **not** "the move leaves a valid order" but "the move introduces no **new** unmet requirement":
+ * compare the ports the order leaves unmet before and after, and allow unless the set grew. A stored flow can
+ * already be unsatisfiable — the gate is editor guidance, not a core invariant, so a chain with an unmet port
+ * can exist on disk — and refusing every move in such a flow would freeze the editor with no way to reorder
+ * toward a fix. So a move that leaves the set the same, or shrinks it, is allowed even though the resulting
+ * order is not itself valid; only a move that adds an unmet port is refused. "Allowed although invalid" is
+ * therefore deliberate: it is the difference between a move that breaks something and a move that does not.
+ *
+ * Resolution is order-independent: a move reorders the same references, and whether a composition is cyclic
+ * or a subflow resolves is a property of those references, not of their order. So a flow that cannot be
+ * flattened before cannot be flattened after — there is no positional requirement to compare, the per-node
+ * defect the chain reports is unchanged, and the move is allowed.
+ */
+export function moveIsAllowed(
+  document: WorkflowDocument,
+  index: number,
+  direction: MoveDirection,
+  lookup: WorkflowLookup,
+  registry: ModuleRegistry,
+): MoveVerdict {
+  const before = ownUnmetPorts(document, lookup, registry);
+  // No flattening means no positional requirement to enlarge; the chain reports the defect per node, and
+  // reordering neither causes nor fixes it.
+  if (before === undefined) return { ok: true };
+
+  const moved = moveNode(document.nodes, index, direction);
+  // `moveNode` is pure and returns the same order for a move with nowhere to go, so a boundary move reads as
+  // "nothing changed" — `after` equals `before`, nothing is introduced, and it is allowed. `?? before` covers
+  // the impossible mismatch (resolution is order-independent): it would leave nothing introduced.
+  const after = ownUnmetPorts({ ...document, nodes: moved }, lookup, registry) ?? before;
+
+  const introduced = [...after].filter((port) => !before.has(port));
+  return introduced.length === 0 ? { ok: true } : { ok: false, reason: "missing", missing: introduced };
 }
 
 /**

@@ -5,10 +5,17 @@
  * a middle cut would either leave a gap or silently promote a module whose requirements the new tail no
  * longer satisfies, and both are worse than the honest answer that the tail is gone. The editor's confirm
  * states that consequence.
+ *
+ * A **move** reorders the same entries by one position — a swap with a neighbour, nothing added or dropped.
+ * Whether the resulting order is allowed is not this file's business (`gate.moveIsAllowed` judges it against
+ * the data flow); here a move is just the reordering.
  */
 
 import type { BuilderModule } from "../shell/contract";
 import { isSubflowNode, type WorkflowNodeDocument } from "./types";
+
+/** Which way a node moves within the chain: toward the start, or toward the end. */
+export type MoveDirection = "up" | "down";
 
 /** A node id not already taken, so `toWorkflow`'s uniqueness rule always holds for what we author. */
 export function nodeIdFor(moduleId: string, chain: readonly WorkflowNodeDocument[]): string {
@@ -57,6 +64,26 @@ export function chooseSubflowWorkflow(
   return chain.map((node, at) =>
     at === index && isSubflowNode(node) ? { ...node, workflows: [workflowId] } : node,
   );
+}
+
+/**
+ * Move the entry at `index` one position toward the start (`up`) or the end (`down`) — a swap with its
+ * neighbour, and nothing else. The list is returned new, never mutated.
+ *
+ * The ends have no neighbour to trade with, and an out-of-range index names no entry, so those are returned
+ * unchanged rather than throwing: the editor disables such a control, and a pure function that quietly
+ * ignores a move with nowhere to go is simpler than one callers must guard.
+ */
+export function moveNode(
+  chain: readonly WorkflowNodeDocument[],
+  index: number,
+  direction: MoveDirection,
+): WorkflowNodeDocument[] {
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || index >= chain.length || target < 0 || target >= chain.length) return [...chain];
+  const next = [...chain];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
 }
 
 /**

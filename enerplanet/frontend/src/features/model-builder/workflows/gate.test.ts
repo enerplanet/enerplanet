@@ -13,6 +13,8 @@ import type { BuilderModule } from "../shell/contract";
 import {
   fragmentRequiredPorts,
   missingPorts,
+  moveIsAllowed,
+  orderIsValid,
   paletteFor,
   producedPorts,
   subflowVerdict,
@@ -341,5 +343,73 @@ describe("a fragment's own unmet inputs — what the flow that inserts it must h
       "coordinates",
       "buildings",
     ]);
+  });
+});
+
+/** A pure producer of `buildings` — what a `consumer` upstream of it can be satisfied by. */
+const PRODUCER = entry("producer", [{ port: "buildings" }]);
+
+describe("whether an order is self-satisfying", () => {
+  const REGISTRY = registryFrom(...CATALOGUE, PRODUCER);
+
+  it("accepts an order whose requirements are all met within itself", () => {
+    const flow = doc("flow", [node("p", "producer"), node("c", "consumer")]);
+    expect(orderIsValid(flow, noLookup, REGISTRY)).toEqual({ ok: true });
+  });
+
+  it("refuses an order that leaves a requirement unmet, naming the port", () => {
+    // `consumer` needs `buildings`; `producer` (which produces it) sits after it, so in execution order the
+    // port is not there yet.
+    const flow = doc("flow", [node("c", "consumer"), node("p", "producer")]);
+    expect(orderIsValid(flow, noLookup, REGISTRY)).toEqual({
+      ok: false,
+      reason: "missing",
+      missing: ["buildings"],
+    });
+  });
+
+  it("refuses a document that cannot be flattened at all", () => {
+    const broken = doc("flow", [node("x", "undeclared")]);
+    expect(orderIsValid(broken, noLookup, REGISTRY)).toEqual({ ok: false, reason: "unresolved" });
+  });
+});
+
+describe("the rule a move is offered under — it must not add an unmet requirement", () => {
+  const REGISTRY = registryFrom(...CATALOGUE, PRODUCER);
+
+  it("refuses a move that would add an unmet requirement, naming the port", () => {
+    // `[producer, consumer]` is valid; moving `producer` down yields `[consumer, producer]`, where `buildings`
+    // is read before it is produced — a new unmet port, so the move is refused.
+    const flow = doc("flow", [node("p", "producer"), node("c", "consumer")]);
+    expect(moveIsAllowed(flow, 0, "down", noLookup, REGISTRY)).toEqual({
+      ok: false,
+      reason: "missing",
+      missing: ["buildings"],
+    });
+  });
+
+  it("allows a move that introduces no new unmet requirement", () => {
+    // The same two nodes on the other side of the swap: moving `producer` up from the broken order reaches the
+    // valid one, so the unmet set shrinks to nothing — allowed.
+    const flow = doc("flow", [node("c", "consumer"), node("p", "producer")]);
+    expect(moveIsAllowed(flow, 1, "up", noLookup, REGISTRY)).toEqual({ ok: true });
+  });
+
+  it("allows a move that keeps a valid order valid", () => {
+    const flow = doc("flow", [node("b", "base"), node("p", "producer"), node("c", "consumer")]);
+    expect(moveIsAllowed(flow, 0, "down", noLookup, REGISTRY)).toEqual({ ok: true });
+  });
+
+  it("allows a move that leaves an already-unmet requirement unchanged — the editor is not frozen", () => {
+    // Two consumers of `buildings` and nothing producing it: the order is unsatisfiable either way, and the
+    // move does not enlarge the unmet set. Refusing it would freeze an editor whose flow is already broken and
+    // leave no way to reorder toward a fix.
+    const flow = doc("flow", [node("c1", "consumer"), node("c2", "consumer")]);
+    expect(moveIsAllowed(flow, 1, "up", noLookup, REGISTRY)).toEqual({ ok: true });
+  });
+
+  it("allows a move in a document that cannot be flattened — resolution is not a matter of order", () => {
+    const broken = doc("flow", [node("x", "undeclared"), node("b", "base")]);
+    expect(moveIsAllowed(broken, 1, "up", noLookup, REGISTRY)).toEqual({ ok: true });
   });
 });

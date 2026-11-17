@@ -234,3 +234,74 @@ describe("a subflow node", () => {
     expect(html).toContain("This workflow cannot be expanded here.");
   });
 });
+
+describe("reordering a chain", () => {
+  /** How many buttons render disabled — the boolean attribute, not the `disabled:` class. */
+  const disabledCount = (html: string): number => (html.match(/disabled=""/g) ?? []).length;
+
+  // A valid three-node flow: `producer` produces `buildings`, `base` nothing, `consumer` reads `buildings`.
+  const valid: WorkflowDocument = {
+    id: "x",
+    version: 1,
+    label: "X",
+    nodes: [
+      { id: "p", moduleId: "producer" },
+      { id: "b", moduleId: "base" },
+      { id: "c", moduleId: "consumer" },
+    ],
+  };
+
+  it("offers an up and a down control on every chain row", () => {
+    const html = render(valid);
+
+    expect(html).toContain("Move up");
+    expect(html).toContain("Move down");
+  });
+
+  it("disables only the boundary controls when every move is safe", () => {
+    // The first row cannot move up and the last cannot move down; the four interior directions are all safe,
+    // so exactly two controls are disabled and no refusal is shown.
+    const html = render(valid);
+
+    expect(disabledCount(html)).toBe(2);
+    expect(html).not.toContain("unmet");
+  });
+
+  it("refuses a move that would break the data flow, naming the port it would leave unmet", () => {
+    // `[producer, consumer]` is valid; moving either across the other reads `buildings` before it is produced.
+    const flow: WorkflowDocument = {
+      id: "x",
+      version: 1,
+      label: "X",
+      nodes: [
+        { id: "p", moduleId: "producer" },
+        { id: "c", moduleId: "consumer" },
+      ],
+    };
+    const html = render(flow);
+
+    expect(html).toContain("unmet"); // the refusal is present...
+    expect(html).toContain("buildings"); // ...and names the port it would leave unmet
+    expect(disabledCount(html)).toBe(4); // both moves are refused, and both boundaries are disabled
+  });
+
+  it("allows every move in a fragment, showing no refusal", () => {
+    // The same breaking order, but a fragment is judged where it is inserted, so the data-flow check is off:
+    // only the two boundaries are disabled, and no refusal appears.
+    const fragment: WorkflowDocument = {
+      id: "x",
+      version: 1,
+      label: "X",
+      isSubflow: true,
+      nodes: [
+        { id: "p", moduleId: "producer" },
+        { id: "c", moduleId: "consumer" },
+      ],
+    };
+    const html = render(fragment);
+
+    expect(html).toContain("Move up");
+    expect(html).not.toContain("unmet");
+    expect(disabledCount(html)).toBe(2);
+  });
+});

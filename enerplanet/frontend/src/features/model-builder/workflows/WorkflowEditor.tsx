@@ -21,7 +21,7 @@
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
-import { ArrowLeft, Layers, Plus, Repeat, Save, Trash2, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Layers, Plus, Repeat, Save, Trash2, TriangleAlert } from "lucide-react";
 import type { FlowNode, ModuleRegistry } from "../core/flow";
 import { declaredPorts, isHostModule } from "../core/module";
 import type { PortKey } from "../core/ports";
@@ -30,11 +30,20 @@ import {
   appendModule,
   appendSubflow,
   chooseSubflowWorkflow,
+  moveNode,
   removeFrom,
   removedCount,
+  type MoveDirection,
 } from "./chain";
 import { expand, type WorkflowLookup } from "./expand";
-import { fragmentRequiredPorts, paletteFor, producedPorts, type PaletteEntry } from "./gate";
+import {
+  fragmentRequiredPorts,
+  moveIsAllowed,
+  paletteFor,
+  producedPorts,
+  type MoveVerdict,
+  type PaletteEntry,
+} from "./gate";
 import { subflowCandidates, type SubflowCandidate } from "./subflow";
 import type { SubflowNodeDocument, WorkflowDocument, WorkflowNodeDocument } from "./types";
 import { isSubflowNode } from "./types";
@@ -123,6 +132,73 @@ const PaletteRow: React.FC<{ entry: PaletteEntry; onAdd: () => void }> = ({ entr
         </span>
       </button>
     </li>
+  );
+};
+
+/**
+ * The up/down controls for one chain entry, with the reason a direction is refused.
+ *
+ * Movement is buttons rather than drag: the editor is rendered and tested in a **node** environment with no
+ * DOM, so a drag could not be exercised here. A direction that cannot take effect — the ends have no
+ * neighbour, or the move would add an unmet requirement — is rendered **disabled**, never hidden: a control
+ * that vanishes reads as a bug, and the palette already states its refusals in place. A boundary needs no
+ * explanation; a move the data flow refuses names the ports it would leave unmet, because that is the fact
+ * the user can act on.
+ *
+ * `children` is the row's other controls (the remove button), so the three sit in one cluster exactly as the
+ * remove control did alone.
+ */
+const MoveControls: React.FC<{
+  index: number;
+  first: boolean;
+  last: boolean;
+  up: MoveVerdict;
+  down: MoveVerdict;
+  onMove: (index: number, direction: MoveDirection) => void;
+  children?: React.ReactNode;
+}> = ({ index, first, last, up, down, onMove, children }) => {
+  const { t } = useTranslation();
+  const buttonClass =
+    "shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30";
+
+  /** The refusal for a direction that is blocked by the data flow, not merely by the chain's end. */
+  const refusal = (verdict: MoveVerdict): React.ReactNode =>
+    verdict.ok ? null : (
+      <p className="flex flex-wrap items-center justify-end gap-1 text-[11px] text-amber-700 dark:text-amber-400">
+        <span>{t("modelBuilder.workflows.editor.moveBlocked", "this move would leave these ports unmet:")}</span>
+        {verdict.missing.map((port) => (
+          <PortChip key={port} port={port} missing />
+        ))}
+      </p>
+    );
+
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-1">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onMove(index, "up")}
+          disabled={first || !up.ok}
+          className={buttonClass}
+          aria-label={t("modelBuilder.workflows.editor.moveUp", "Move up")}
+        >
+          <ArrowUp className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onMove(index, "down")}
+          disabled={last || !down.ok}
+          className={buttonClass}
+          aria-label={t("modelBuilder.workflows.editor.moveDown", "Move down")}
+        >
+          <ArrowDown className="h-4 w-4" />
+        </button>
+        {children}
+      </div>
+      {/* A boundary is disabled by position, not by the data flow, so it shows no port refusal. */}
+      {!first && refusal(up)}
+      {!last && refusal(down)}
+    </div>
   );
 };
 
@@ -390,6 +466,17 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     else setPendingRemove(index);
   };
 
+  /**
+   * The verdict for moving one entry a direction. A fragment is judged where it is inserted, so no move can
+   * break its own (empty-prefix) flow: the check is skipped entirely here — the same relaxation the palette
+   * has for a fragment (`GateOptions`), applied to movement.
+   */
+  const moveVerdict = (index: number, direction: MoveDirection): MoveVerdict =>
+    fragment ? { ok: true } : moveIsAllowed(document, index, direction, lookup, registry);
+
+  const move = (index: number, direction: MoveDirection): void =>
+    onChange(moveNode(document.nodes, index, direction));
+
   const choose = (workflowId: string): void => {
     if (picker === null) return;
     onChange(
@@ -438,14 +525,23 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             {t("modelBuilder.workflows.editor.changeWorkflow", "Change workflow")}
           </button>
 
-          <button
-            type="button"
-            onClick={() => askRemove(index)}
-            className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-            aria-label={t(REMOVE_KEY, "Remove")}
+          <MoveControls
+            index={index}
+            first={index === 0}
+            last={index === document.nodes.length - 1}
+            up={moveVerdict(index, "up")}
+            down={moveVerdict(index, "down")}
+            onMove={move}
           >
-            <Trash2 className="h-4 w-4" />
-          </button>
+            <button
+              type="button"
+              onClick={() => askRemove(index)}
+              className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+              aria-label={t(REMOVE_KEY, "Remove")}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </MoveControls>
         </div>
 
         {/* The bracket proper: the nodes this workflow contributes, marked as belonging to it and read-only
@@ -633,14 +729,23 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                       )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => askRemove(index)}
-                      className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-                      aria-label={t(REMOVE_KEY, "Remove")}
+                    <MoveControls
+                      index={index}
+                      first={index === 0}
+                      last={index === document.nodes.length - 1}
+                      up={moveVerdict(index, "up")}
+                      down={moveVerdict(index, "down")}
+                      onMove={move}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => askRemove(index)}
+                        className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                        aria-label={t(REMOVE_KEY, "Remove")}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </MoveControls>
                   </li>
                 );
               })}
