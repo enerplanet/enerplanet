@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import * as maplibregl from 'maplibre-gl';
 
+import { TECH_ICON_RING, techIconSrc } from '@/features/interactive-map/utils/mapStyleUtils';
+
 import type { TechMarker } from './techMarkers';
+import type { TechMark } from './techMarksStore';
 import type { Lod2Surface } from './useLod2Surfaces';
 
 export const LOD2_LAYER_ID = 'lod2-buildings';
@@ -11,11 +14,29 @@ const WALL_COLOR = 0xe6e0d6;
 const EDGE_COLOR = 0x4b4b4b;
 const HOVER_COLOR = 0x3b82f6;
 export const PV_COLOR = 0x1f3a5f;
-export const MARKER_COLOR: Record<TechMarker, number> = { heat: 0xea580c, storage: 0x7c3aed };
-// Metres: the stem above the roof, the ball on it, and the gap between two balls.
-const MARKER_STEM = 4;
-const MARKER_RADIUS = 2;
-const MARKER_GAP = 5;
+/** Metres above a building's highest point where its badges sit. */
+const MARKER_LIFT = 1;
+
+/** One building's badges, and the roof point they stand on in the local frame. */
+interface Badge { el: HTMLDivElement; at: THREE.Vector3 }
+
+/** The 2D map's technology icons, side by side; the layer moves them onto the roof each frame. */
+function badgeElement(markers: TechMarker[]): HTMLDivElement {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:absolute;left:0;top:0;display:flex;gap:3px;will-change:transform';
+  for (const { icon, mark } of markers) {
+    const badge = document.createElement('span');
+    if (mark) badge.dataset.mark = mark;
+    badge.style.cssText = `display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:9999px;background:#fff;border:1.5px solid ${TECH_ICON_RING};box-shadow:0 1px 2px rgba(0,0,0,.35)`;
+    const img = document.createElement('img');
+    img.src = techIconSrc(icon);
+    img.alt = '';
+    img.style.cssText = 'width:16px;height:16px';
+    badge.append(img);
+    el.append(badge);
+  }
+  return el;
+}
 
 /** A point in the layer's frame: metres east, north and up from the origin. */
 type Local = [number, number, number];
@@ -79,6 +100,10 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
   private readonly raycaster = new THREE.Raycaster();
   private highlight: THREE.Mesh | null = null;
   private hovered: string | null = null;
+  private panels: THREE.Mesh | null = null;
+  private readonly badges: Badge[] = [];
+  private badgeLayer: HTMLDivElement | null = null;
+  private shown: Record<TechMark, boolean> = { pv: true, storage: true, heat: true };
 
   constructor() {
     this.scene.add(new THREE.AmbientLight(0xffffff, 1.6));
@@ -92,18 +117,40 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     this.map = map;
     this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true });
     this.renderer.autoClear = false;
+    this.badgeLayer = document.createElement('div');
+    this.badgeLayer.style.cssText = 'position:absolute;inset:0;overflow:hidden;pointer-events:none';
+    map.getCanvasContainer().append(this.badgeLayer);
   }
 
   onRemove(): void {
     this.clear();
+    this.badgeLayer?.remove();
+    this.badgeLayer = null;
     this.renderer = null;
     this.map = null;
+  }
+
+  /** Shows or hides the PV panels (drawn as roof when hidden) and the technology badges of each legend group. */
+  setShown(shown: Record<TechMark, boolean>): void {
+    this.shown = shown;
+    this.applyShown();
+    this.map?.triggerRepaint();
+  }
+
+  private applyShown(): void {
+    (this.panels?.material as THREE.MeshLambertMaterial | undefined)?.color.setHex(this.shown.pv ? PV_COLOR : ROOF_COLOR);
+    for (const { el } of this.badges) {
+      for (const icon of el.children as HTMLCollectionOf<HTMLElement>) {
+        const mark = icon.dataset.mark as TechMark | undefined;
+        icon.style.display = !mark || this.shown[mark] ? 'flex' : 'none';
+      }
+    }
   }
 
   /**
    * Replaces the drawn buildings with these, by osm_id; the surfaces in
    * pvByOsmId are drawn as PV panels, and markersByOsmId puts a marker above
-   * the roof for each kind of technology.
+   * the roof for each technology.
    */
   setBuildings(
     byOsmId: Map<string, Lod2Surface[]>,
@@ -144,7 +191,8 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     }
     this.addMesh(roofs, ROOF_COLOR);
     this.addMesh(walls, WALL_COLOR);
-    this.addMesh(panels, PV_COLOR);
+    this.panels = this.addMesh(panels, PV_COLOR);
+    this.applyShown();
     this.showHighlight();
     this.map?.triggerRepaint();
   }
@@ -158,9 +206,23 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     this.camera.projectionMatrix = new THREE.Matrix4()
       .fromArray(args.defaultProjectionData.mainMatrix as unknown as number[])
       .multiply(toMercator);
+    this.placeBadges();
     if (!this.renderer || this.buildings.children.length === 0) return;
     this.renderer.resetState();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Moves each building's badges to where its roof point is drawn, hidden when it is behind the camera. */
+  private placeBadges(): void {
+    const canvas = this.map?.getCanvas();
+    if (!canvas) return;
+    for (const { el, at } of this.badges) {
+      const clip = new THREE.Vector4(at.x, at.y, at.z, 1).applyMatrix4(this.camera.projectionMatrix);
+      el.style.visibility = clip.w > 0 ? 'visible' : 'hidden';
+      const x = ((clip.x / clip.w + 1) / 2) * canvas.clientWidth;
+      const y = ((1 - clip.y / clip.w) / 2) * canvas.clientHeight;
+      el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+    }
   }
 
   /**
@@ -206,8 +268,8 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     this.buildings.add(this.highlight);
   }
 
-  private addMesh(buffer: MeshBuffer, color: number): void {
-    if (buffer.positions.length === 0) return;
+  private addMesh(buffer: MeshBuffer, color: number): THREE.Mesh | null {
+    if (buffer.positions.length === 0) return null;
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(buffer.positions, 3));
     geometry.computeVertexNormals();
@@ -216,30 +278,26 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     this.meshes.push(mesh);
     this.buildings.add(mesh);
     this.buildings.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 20), new THREE.LineBasicMaterial({ color: EDGE_COLOR })));
+    return mesh;
   }
 
-  /** One stem and ball per marker above the highest point of a building, side by side over its centre. */
+  /** The building's badges, over its centre just above its highest point. */
   private addMarkers(points: Local[], markers: TechMarker[]): void {
     const x = points.reduce((sum, p) => sum + p[0], 0) / points.length;
     const y = points.reduce((sum, p) => sum + p[1], 0) / points.length;
     const top = Math.max(...points.map((p) => p[2]));
-    markers.forEach((marker, i) => {
-      const material = new THREE.MeshLambertMaterial({ color: MARKER_COLOR[marker] });
-      const offset = (i - (markers.length - 1) / 2) * MARKER_GAP;
-      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, MARKER_STEM), material);
-      // Cylinders stand along y; the local frame's up is z.
-      stem.rotation.x = Math.PI / 2;
-      stem.position.set(x + offset, y, top + MARKER_STEM / 2);
-      const ball = new THREE.Mesh(new THREE.SphereGeometry(MARKER_RADIUS, 16, 12), material.clone());
-      ball.position.set(x + offset, y, top + MARKER_STEM + MARKER_RADIUS);
-      this.buildings.add(stem, ball);
-    });
+    const el = badgeElement(markers);
+    this.badgeLayer?.append(el);
+    this.badges.push({ el, at: new THREE.Vector3(x, y, top + MARKER_LIFT) });
   }
 
   private clear(): void {
     this.triangles.clear();
     this.meshes.length = 0;
     this.highlight = null;
+    this.panels = null;
+    for (const { el } of this.badges) el.remove();
+    this.badges.length = 0;
     for (const child of [...this.buildings.children]) {
       this.buildings.remove(child);
       const object = child as THREE.Mesh | THREE.LineSegments;

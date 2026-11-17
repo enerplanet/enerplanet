@@ -252,8 +252,13 @@ function sharedTechIconStyle(key: string, make: () => Style): Style {
 /** Rounds a zoom-dependent size to a step, so nearby zoom levels share styles. */
 const step = (value: number, size: number) => Math.round(value / size) * size;
 
+/** A technology's icon, by the icon name it carries; the 2D and 3D maps and the 3D legend draw it the same way. */
+export const techIconSrc = (icon?: string): string => `/images/tech-icons/${icon || 'default'}.svg`;
+/** The ring round a technology icon's white circle. */
+export const TECH_ICON_RING = '#1a1a2e';
+
 /** The technologies to draw an icon for: PV placed on no surface is left out, as it runs as no PV. */
-export const iconTechKeys = (techs: Record<string, { arrays?: unknown[] } | undefined>): string[] =>
+export const iconTechKeys = (techs: Record<string, { arrays?: unknown[] | null } | undefined>): string[] =>
     Object.keys(techs).filter((key) => !(key === 'pv_supply' && techs[key]?.arrays?.length === 0));
 
 // Helper to add tech indicator icons to a feature's styles
@@ -261,7 +266,7 @@ function addTechIconStyles(
     styles: Style[],
     feature: Feature<Geometry>,
     resolution: number | undefined,
-    strokeColor: string = '#1a1a2e',
+    strokeColor: string = TECH_ICON_RING,
     baseZIndex: number = 1001
 ): void {
     const techs = feature.get('techs');
@@ -283,8 +288,7 @@ function addTechIconStyles(
 
     techKeys.forEach((key, index) => {
         const tech = techs[key];
-        const techIcon = tech?.icon || 'default';
-        const iconPath = `/images/tech-icons/${techIcon}.svg`;
+        const iconPath = techIconSrc(tech?.icon);
         const offsetX = startOffset + (index * iconSpacing);
         const zIndex = baseZIndex + index;
 
@@ -503,7 +507,7 @@ function buildingSimpleStyleFunction(
     }
 
     // Add tech indicator icons if building has technologies
-    addTechIconStyles(styles, feature, resolution, '#1a1a2e', 1001);
+    addTechIconStyles(styles, feature, resolution, TECH_ICON_RING, 1001);
 
     return styles;
 }
