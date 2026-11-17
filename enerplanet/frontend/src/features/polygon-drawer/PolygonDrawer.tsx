@@ -6,6 +6,7 @@ import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
 import { toLonLat, fromLonLat } from "ol/proj";
 import type { Coordinate } from "ol/coordinate";
+import { containsExtent, getHeight, getWidth, type Extent } from "ol/extent";
 import type Polygon from "ol/geom/Polygon";
 import type Map from "ol/Map";
 import { Style, Fill, Stroke, Circle as CircleStyle, Text } from "ol/style";
@@ -212,7 +213,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
       const fitToExtent = () => {
         if (!vectorSourceRef.current) return;
         const extent = vectorSourceRef.current.getExtent();
-        if (extent && extent[0] !== Infinity) {
+        if (extent && extent[0] !== Infinity && !inClearView(map, extent)) {
           map.getView().fit(extent, {
             padding: [50, 50, 50, 50],
             duration: 1500,
@@ -839,6 +840,19 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
 const sketchVertexCount = (geom: Polygon): number => Math.max(0, geom.getCoordinates()[0].length - 2);
 
 /** The source's polygons as lon/lat rings, without the repeated closing vertex. */
+// The polygons load again after a save (and on opening the saved model), which keeps the view
+// when the area is in it at this share of its width or height or more.
+const CLEAR_VIEW_SHARE = 0.1;
+
+/** True when the map shows the whole extent, not as a speck, so zooming to it would only move the view. */
+const inClearView = (map: Map, extent: Extent): boolean => {
+  const size = map.getSize();
+  if (!size) return false;
+  const view = map.getView().calculateExtent(size);
+  return containsExtent(view, extent)
+    && (getWidth(extent) >= CLEAR_VIEW_SHARE * getWidth(view) || getHeight(extent) >= CLEAR_VIEW_SHARE * getHeight(view));
+};
+
 const polygonsFromSource = (source: VectorSource): [number, number][][] => {
   const polygons: [number, number][][] = [];
   for (const feature of source.getFeatures()) {
