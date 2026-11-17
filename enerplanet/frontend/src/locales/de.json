@@ -1625,7 +1625,6 @@
       "storeys": "Geschosse (3D-Geometrie)",
       "floorArea": "Nutzfläche",
       "roomHeight": "Raumhöhe",
-      "envelope": "Hüllen-Referenz (TABULA)",
       "useType": {
         "SFH": "Einfamilienhaus",
         "TH": "Reihenhaus",

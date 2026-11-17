@@ -1365,7 +1365,6 @@
       "storeys": "Bouwlagen (3D-geometrie)",
       "floorArea": "Vloeroppervlak",
       "roomHeight": "Verdiepingshoogte",
-      "envelope": "Referentie-schil (TABULA)",
       "useType": {
         "SFH": "Vrijstaande woning",
         "TH": "Rijwoning",

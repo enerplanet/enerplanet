@@ -1625,7 +1625,6 @@
       "storeys": "Storeys (3D geometry)",
       "floorArea": "Floor area",
       "roomHeight": "Room height",
-      "envelope": "Envelope reference (TABULA)",
       "useType": {
         "SFH": "Single-family house",
         "TH": "Terraced house",

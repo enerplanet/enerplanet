@@ -165,7 +165,6 @@ const TooltipModelledBuilding: FC<{ profile: StoredDemandProfile }> = ({ profile
         [t("simulation.mapOverlay.storeys"), profile.n_storeys?.toString()],
         [t("simulation.mapOverlay.floorArea"), profile.a_ref_m2 == null ? undefined : `${formatNumber(profile.a_ref_m2)} m²`],
         [t("simulation.mapOverlay.roomHeight"), profile.h_room_m == null ? undefined : `${formatNumber(profile.h_room_m, 1)} m`],
-        [t("simulation.mapOverlay.envelope"), profile.tabula_variant_code],
     ];
     return (
         <div className="mt-2 pt-2 border-t border-border space-y-0.5 text-[10px]">
