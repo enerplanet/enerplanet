@@ -135,6 +135,47 @@ export interface WeatherSelection {
   year?: number;
 }
 
+/**
+ * A MEME run dispatched for a model — `run-meme-calliope`'s **record of the run, not its results**.
+ *
+ * Written by the `run-meme-calliope` node alone. It says where the run stands and, when it failed, why; the
+ * results themselves are fetched by the nodes that read them (a later results-overview or compare node), each
+ * of which declares this port `required` to place *after* the run that produced them.
+ *
+ * The status strings are the backend's own (`models.MemeRunStatus*`, the `model_meme_runs.status` column) —
+ * carried verbatim rather than reinvented, so nothing here disagrees with what the server records.
+ *
+ * A port rather than a bag entry because it is a first-class fact about the model, and because it is the
+ * ordering the flow rests on: `run-meme-pypsa`, the results overview and the compare node all depend on the
+ * run having happened, and declaring this port `required` is what puts them after this node by construction.
+ */
+export interface MemeRun {
+  /** Which framework leg this run is. Fixed to the Calliope default (`run-meme-calliope`). Kind to the pypsa leg's own record. */
+  framework: "calliope";
+  /**
+   * The TentaCron job id, when the host learned one.
+   *
+   * Absent in practice: the backend keeps the id server-side (`model_meme_runs.run_id`) and no frontend-facing
+   * response carries it, so the shell's gateway cannot fill this. Optional for exactly that reason.
+   */
+  runId?: string;
+  /**
+   * The run's state, in the backend's own run vocabulary (`models.MemeRunStatus*`): `pending` and `running`
+   * while it is in flight, `completed` and `failed` terminal.
+   *
+   * The port carries the vocabulary; the **host derives the value**, reading the model's lifecycle the way the
+   * model dashboard does (`shell/memeRunGateway.ts` names the sets it copies). The run's own row in
+   * `model_meme_runs` is server-side and on no frontend response, so nothing here reads it directly.
+   */
+  status: "pending" | "running" | "completed" | "failed";
+  /**
+   * Why it failed, when it did — composed by the host from the model's own failure fields
+   * (`results.failed_service` and `results.failed_stage`, which is what the dashboard's failed badge reads),
+   * falling back to `results.error`, and naming the model's status when nothing recorded a failure at all.
+   */
+  error?: string;
+}
+
 /** The store's projection: the *current* model state (`Plan.md` §3). */
 export interface ModelData {
   // identity and metadata (model-start)
@@ -180,6 +221,9 @@ export interface ModelData {
   modelId?: number;
   draftId?: string;
   saveResult?: { modelId: number; created: boolean };
+
+  // run record (run-meme-calliope)
+  memeRun?: MemeRun;
 }
 
 /** Every legal port key. */

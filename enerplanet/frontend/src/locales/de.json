@@ -3232,6 +3232,19 @@
         "unknownModule": "Unbekanntes Modul \"{{moduleId}}\" am Knoten \"{{nodeId}}\" - es ist nicht im Katalog dieses Builds.",
         "notANode": "\"{{moduleId}}\" am Knoten \"{{nodeId}}\" ist kein Knoten - es ist ein Host-Modul, das einen Dienst bereitstellt, statt einen Schritt darzustellen."
       }
+    },
+    "run-meme-calliope": {
+      "running": "Modell wird berechnet…",
+      "runningHint": "Das dauert einige Minuten. Du kannst diese Seite verlassen und zurückkehren — die Berechnung läuft auf dem Server weiter, und dieser Schritt setzt dort fort.",
+      "done": "Modellberechnung abgeschlossen",
+      "failed": "Die Modellberechnung ist fehlgeschlagen",
+      "retry": "Erneut ausführen",
+      "bottom": {
+        "notRun": "noch nicht berechnet",
+        "running": "läuft…",
+        "completed": "abgeschlossen",
+        "failed": "fehlgeschlagen"
+      }
     }
   }
 }

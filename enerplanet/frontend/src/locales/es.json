@@ -3229,6 +3229,19 @@
         "unknownModule": "Módulo desconocido \"{{moduleId}}\" en el nodo \"{{nodeId}}\" - no está en el catálogo de esta compilación.",
         "notANode": "\"{{moduleId}}\" en el nodo \"{{nodeId}}\" no es un nodo: es un módulo anfitrión que presta un servicio en lugar de representar un paso."
       }
+    },
+    "run-meme-calliope": {
+      "running": "Ejecutando el modelo…",
+      "runningHint": "Esto tarda unos minutos. Puedes salir de esta página y volver: la ejecución continúa en el servidor y este paso se reanuda donde quedó.",
+      "done": "Ejecución del modelo finalizada",
+      "failed": "La ejecución del modelo falló",
+      "retry": "Ejecutar de nuevo",
+      "bottom": {
+        "notRun": "aún no ejecutado",
+        "running": "en ejecución…",
+        "completed": "completado",
+        "failed": "falló"
+      }
     }
   }
 }

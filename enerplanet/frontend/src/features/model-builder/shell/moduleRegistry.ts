@@ -28,6 +28,8 @@ import buildingDemand from "../modules/building-demand";
 import buildingConfigurator from "../modules/building-configurator";
 import technologies from "../modules/technologies";
 
+import runMemeCalliope from "../modules/run-meme-calliope";
+
 export const MODULES: readonly BuilderModule[] = [
   modelStart,
   mapProvider,
@@ -38,6 +40,7 @@ export const MODULES: readonly BuilderModule[] = [
   buildingDemand,
   buildingConfigurator,
   technologies,
+  runMemeCalliope,
 ];
 
 /**

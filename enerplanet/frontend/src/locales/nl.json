@@ -3228,6 +3228,19 @@
         "unknownModule": "Onbekende module \"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" - deze staat niet in de catalogus van deze build.",
         "notANode": "\"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" is geen knooppunt - het is een hostmodule die een dienst levert in plaats van een stap te tonen."
       }
+    },
+    "run-meme-calliope": {
+      "running": "Model wordt doorgerekend…",
+      "runningHint": "Dit duurt een paar minuten. Je kunt deze pagina verlaten en terugkomen — de run gaat door op de server en deze stap gaat verder waar hij gebleven was.",
+      "done": "Modelrun voltooid",
+      "failed": "De modelrun is mislukt",
+      "retry": "Opnieuw uitvoeren",
+      "bottom": {
+        "notRun": "nog niet gedraaid",
+        "running": "loopt…",
+        "completed": "voltooid",
+        "failed": "mislukt"
+      }
     }
   }
 }

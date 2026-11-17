@@ -52,6 +52,7 @@ import { setDemandSource } from "../modules/building-demand";
 import { useWorkspaceStore } from "@/components/workspace/store/workspace-store";
 import { useAuthStore } from "@/store/auth-store";
 import { BuildingPreparation, installBuildingConfigurator } from "./buildingConfigurator";
+import { installMemeRunGateway } from "./memeRunGateway";
 import { setCatalogueSource } from "../modules/technologies";
 import { pylovoGridEngine } from "./gridEngine";
 import { backendWeatherSource } from "./weatherSource";
@@ -169,6 +170,9 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     // through the module's slot.
     installBuildingConfigurator();
     setCatalogueSource(backendCatalogueSource);
+    // The MEME-run gateway: the run dispatches to the backend's own model endpoints, which a module may not
+    // reach, so the shell supplies it through the module's slot.
+    installMemeRunGateway();
   }, []);
   const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });

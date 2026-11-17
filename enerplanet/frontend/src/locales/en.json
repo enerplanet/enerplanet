@@ -3232,6 +3232,19 @@
         "unknownModule": "Unknown module \"{{moduleId}}\" at node \"{{nodeId}}\" - it is not in this build's catalogue.",
         "notANode": "\"{{moduleId}}\" at node \"{{nodeId}}\" is not a node - it is a host module, which provides a service rather than rendering a step."
       }
+    },
+    "run-meme-calliope": {
+      "running": "Running the model…",
+      "runningHint": "This takes a few minutes. You can leave this page and come back — the run continues on the server, and this step resumes where it left off.",
+      "done": "Model run finished",
+      "failed": "The model run failed",
+      "retry": "Run again",
+      "bottom": {
+        "notRun": "not run yet",
+        "running": "running…",
+        "completed": "completed",
+        "failed": "failed"
+      }
     }
   }
 }
