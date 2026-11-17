@@ -3241,6 +3241,54 @@
         "completed": "voltooid",
         "failed": "mislukt"
       }
+    },
+    "run-meme-pypsa": {
+      "running": "Powerflow wordt berekend…",
+      "runningHint": "Dit duurt een paar minuten. Je kunt deze pagina verlaten en terugkomen — de powerflow gaat door op de server en deze stap gaat verder waar hij gebleven was.",
+      "done": "Powerflow voltooid",
+      "failed": "De powerflow is mislukt",
+      "retry": "Opnieuw uitvoeren",
+      "bottom": {
+        "notRun": "nog niet gedraaid",
+        "running": "loopt…",
+        "completed": "voltooid",
+        "failed": "mislukt"
+      }
+    },
+    "result-overview": {
+      "title": "Resultatenoverzicht",
+      "description": "Een samenvatting van de resultaten van de modelrun. De volledige resultatenpagina bevat de details.",
+      "loading": "Resultaten worden geladen…",
+      "failed": "De resultaten konden niet worden geladen.",
+      "noGateway": "Geen resultatengateway: een host installeert er een met setResultOverviewGateway() (shell/resultOverviewGateway.ts).",
+      "production": "Productie (kWh)",
+      "consumption": "Verbruik (kWh)",
+      "peakDemand": "Piekvraag (kW)",
+      "timesteps": "Tijdstappen",
+      "locations": "Resultaatlocaties",
+      "carriers": "Energiedragers",
+      "link": "Volledige resultatenpagina openen",
+      "continue": "Doorgaan",
+      "bottom": {
+        "loading": "laden…",
+        "noGateway": "geen resultatengateway",
+        "failed": "niet beschikbaar",
+        "ready": "{{count}} energiedrager(s)"
+      }
+    },
+    "model-variant": {
+      "title": "Modelvariant",
+      "description": "Maakt een familiekopie van dit model. De variant wordt een eigen opgeslagen model, geversioneerd binnen de familie.",
+      "create": "Variant aanmaken",
+      "continue": "Doorgaan",
+      "made": "Variant aangemaakt",
+      "titleLabel": "Titel",
+      "idLabel": "Variant-id",
+      "open": "Variant openen in de builder",
+      "bottom": {
+        "notSet": "nog geen variant",
+        "ready": "variant {{id}}"
+      }
     }
   }
 }

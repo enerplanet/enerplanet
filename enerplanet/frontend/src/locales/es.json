@@ -3242,6 +3242,54 @@
         "completed": "completado",
         "failed": "falló"
       }
+    },
+    "run-meme-pypsa": {
+      "running": "Ejecutando el flujo de potencia…",
+      "runningHint": "Esto tarda unos minutos. Puedes salir de esta página y volver: el flujo de potencia continúa en el servidor y este paso se reanuda donde quedó.",
+      "done": "Flujo de potencia finalizado",
+      "failed": "El flujo de potencia falló",
+      "retry": "Ejecutar de nuevo",
+      "bottom": {
+        "notRun": "aún no ejecutado",
+        "running": "en ejecución…",
+        "completed": "completado",
+        "failed": "falló"
+      }
+    },
+    "result-overview": {
+      "title": "Resumen de resultados",
+      "description": "Un resumen de los resultados de la ejecución del modelo. La página de resultados completa contiene los detalles.",
+      "loading": "Cargando los resultados…",
+      "failed": "No se pudieron cargar los resultados.",
+      "noGateway": "Sin pasarela de resultados: un host instala una con setResultOverviewGateway() (shell/resultOverviewGateway.ts).",
+      "production": "Producción (kWh)",
+      "consumption": "Consumo (kWh)",
+      "peakDemand": "Demanda máxima (kW)",
+      "timesteps": "Pasos de tiempo",
+      "locations": "Ubicaciones de resultados",
+      "carriers": "Portadores",
+      "link": "Abrir la página completa de resultados",
+      "continue": "Continuar",
+      "bottom": {
+        "loading": "cargando…",
+        "noGateway": "sin pasarela de resultados",
+        "failed": "no disponible",
+        "ready": "{{count}} portador(es)"
+      }
+    },
+    "model-variant": {
+      "title": "Variante del modelo",
+      "description": "Crea una copia familiar de este modelo. La variante se convierte en un modelo guardado propio, versionado dentro de la familia.",
+      "create": "Crear variante",
+      "continue": "Continuar",
+      "made": "Variante creada",
+      "titleLabel": "Título",
+      "idLabel": "ID de la variante",
+      "open": "Abrir la variante en el builder",
+      "bottom": {
+        "notSet": "aún sin variante",
+        "ready": "variante {{id}}"
+      }
     }
   }
 }

@@ -176,6 +176,85 @@ export interface MemeRun {
   error?: string;
 }
 
+/**
+ * A model's isolated PyPSA **power-flow leg** — `run-meme-pypsa`'s **record of the leg, not its results**.
+ *
+ * Written by the `run-meme-pypsa` node alone. It is the second run leg: the backend's
+ * `POST /models/:id/run-meme-pypsa` derives a MEME `meme-pypsa` job from a **completed Calliope run** and keeps
+ * its own leg-keyed row (`model_meme_runs` where `leg = pypsa`). Like `MemeRun`, it says where the leg stands
+ * and, when it failed, why; the power-flow results themselves are read by the nodes that consume them.
+ *
+ * **This leg is the one the backend actually exposes.** `GET /models/:id` carries the leg's own status as
+ * `pypsa_leg_status`, filled from the leg's `model_meme_runs` row by the handler, so the host reads it
+ * **directly** — no mapping of the model's lifecycle, which is what the host must do for `MemeRun`'s Calliope
+ * run (whose row is server-side and on no frontend response). That directness is also why the model dashboard
+ * keeps a separate `PYPSA_LEG_RUNNING` set: the isolated leg never touches the model's own `status`.
+ *
+ * The status strings are the backend's own (`models.MemeRunStatus*`, the `model_meme_runs.status` column) —
+ * carried verbatim rather than reinvented, so nothing here disagrees with what the server records.
+ *
+ * A port rather than a bag entry for the same reason `MemeRun` is one: it is a first-class fact about the
+ * model, and because the leg is *derived*, the `run-meme-pypsa` node declares **`memeRun` required** beside
+ * it — which is what places the leg *after* the Calliope run that must complete first, the backend refusing
+ * the leg without one.
+ */
+export interface MemePypsaLeg {
+  /** Which framework leg this is. Fixed to `pypsa` (`run-meme-pypsa`). */
+  framework: "pypsa";
+  /**
+   * The TentaCron job id, when the host learned one.
+   *
+   * Absent in practice, as for `MemeRun`: the backend keeps the id on the leg's own row
+   * (`model_meme_runs.run_id`) while `pypsa_leg_status` carries the status alone, so the shell's gateway
+   * cannot fill this. Optional for exactly that reason.
+   */
+  runId?: string;
+  /**
+   * The leg's state, in the backend's own run vocabulary (`models.MemeRunStatus*`): `pending` and `running`
+   * while it is in flight, `completed` and `failed` terminal.
+   *
+   * The port carries the vocabulary; unlike `MemeRun`, the **host reads the value directly** — off the leg's
+   * own status field (`pypsa_leg_status`) rather than by mapping the model's lifecycle.
+   */
+  status: "pending" | "running" | "completed" | "failed";
+  /**
+   * Why it failed, when it did.
+   *
+   * A limitation shared with `runId`: the backend records the leg's failure on the leg's own row
+   * (`model_meme_runs.error`) but exposes only `pypsa_leg_status` to the frontend, so the host has no message
+   * to put here. Kept in the shape for parity with `MemeRun`, and unset in practice.
+   */
+  error?: string;
+}
+
+/**
+ * A **family copy** of a saved model — `model-variant`'s **record of the copy it made**.
+ *
+ * Written by the `model-variant` node alone. It names the two models a family comparison needs: the copy this
+ * node created, and the family's own original — the baseline a comparison is made against.
+ *
+ * A **port rather than an `advancedParams` entry** because it is a first-class fact about the model, and
+ * because it is the ordering the flow rests on: the compare node that reads it declares this port `required`,
+ * which is what places the comparison *after* the variant by construction — the same reason `MemeRun` and
+ * `MemePypsaLeg` are ports.
+ *
+ * **Both ids come from the created model, as the backend recorded it.** The copy's own `id` is `variantModelId`;
+ * its `parent_model_id` is `rootModelId`, since the backend's family rule has every copy of a line record the
+ * root original in `parent_model_id` (`backend/internal/model/handler/model_family.go`), and the variant node's
+ * gateway copies the dashboard's `duplicateModel`
+ * (`features/model-dashboard/services/modelService.ts`) — which sets `parent_model_id` to the original's own
+ * `parent_model_id` when it has one (a copy of a variant) and to the original's `id` otherwise (a copy of a
+ * root). Either way `rootModelId` is the family's head, which is what a comparison is made against.
+ */
+export interface ModelVariant {
+  /** The copy this node made. */
+  variantModelId: number;
+  /** The family's own original — the baseline a comparison is made against. */
+  rootModelId: number;
+  /** The copy's title, as the backend recorded it (the ` v<n>` versioning). */
+  title?: string;
+}
+
 /** The store's projection: the *current* model state (`Plan.md` §3). */
 export interface ModelData {
   // identity and metadata (model-start)
@@ -222,8 +301,12 @@ export interface ModelData {
   draftId?: string;
   saveResult?: { modelId: number; created: boolean };
 
-  // run record (run-meme-calliope)
+  // run records (run-meme-calliope, run-meme-pypsa)
   memeRun?: MemeRun;
+  memePypsaLeg?: MemePypsaLeg;
+
+  // family copy (model-variant)
+  modelVariant?: ModelVariant;
 }
 
 /** Every legal port key. */

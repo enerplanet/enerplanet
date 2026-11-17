@@ -3245,6 +3245,54 @@
         "completed": "completed",
         "failed": "failed"
       }
+    },
+    "run-meme-pypsa": {
+      "running": "Running the power flow…",
+      "runningHint": "This takes a few minutes. You can leave this page and come back — the power flow continues on the server, and this step resumes where it left off.",
+      "done": "Power flow finished",
+      "failed": "The power flow failed",
+      "retry": "Run again",
+      "bottom": {
+        "notRun": "not run yet",
+        "running": "running…",
+        "completed": "completed",
+        "failed": "failed"
+      }
+    },
+    "result-overview": {
+      "title": "Result overview",
+      "description": "A summary of what the model run produced. Open the full results page for the details.",
+      "loading": "Loading the results…",
+      "failed": "The results could not be loaded.",
+      "noGateway": "No results gateway: a host installs one with setResultOverviewGateway() (shell/resultOverviewGateway.ts).",
+      "production": "Production (kWh)",
+      "consumption": "Consumption (kWh)",
+      "peakDemand": "Peak demand (kW)",
+      "timesteps": "Timesteps",
+      "locations": "Result locations",
+      "carriers": "Carriers",
+      "link": "Open the full results page",
+      "continue": "Continue",
+      "bottom": {
+        "loading": "loading…",
+        "noGateway": "no results gateway",
+        "failed": "unavailable",
+        "ready": "{{count}} carrier(s)"
+      }
+    },
+    "model-variant": {
+      "title": "Model variant",
+      "description": "Make a family copy of this model. The variant becomes its own saved model, versioned within the family.",
+      "create": "Create variant",
+      "continue": "Continue",
+      "made": "Variant created",
+      "titleLabel": "Title",
+      "idLabel": "Variant id",
+      "open": "Open the variant in the builder",
+      "bottom": {
+        "notSet": "no variant yet",
+        "ready": "variant {{id}}"
+      }
     }
   }
 }

@@ -30,6 +30,12 @@ import technologies from "../modules/technologies";
 
 import runMemeCalliope from "../modules/run-meme-calliope";
 
+import runMemePypsa from "../modules/run-meme-pypsa";
+
+import resultOverview from "../modules/result-overview";
+
+import modelVariant from "../modules/model-variant";
+
 export const MODULES: readonly BuilderModule[] = [
   modelStart,
   mapProvider,
@@ -41,6 +47,9 @@ export const MODULES: readonly BuilderModule[] = [
   buildingConfigurator,
   technologies,
   runMemeCalliope,
+  runMemePypsa,
+  resultOverview,
+  modelVariant,
 ];
 
 /**

@@ -53,6 +53,9 @@ import { useWorkspaceStore } from "@/components/workspace/store/workspace-store"
 import { useAuthStore } from "@/store/auth-store";
 import { BuildingPreparation, installBuildingConfigurator } from "./buildingConfigurator";
 import { installMemeRunGateway } from "./memeRunGateway";
+import { installMemePypsaLegGateway } from "./memePypsaLegGateway";
+import { installResultOverviewGateway } from "./resultOverviewGateway";
+import { installModelVariantGateway } from "./modelVariantGateway";
 import { setCatalogueSource } from "../modules/technologies";
 import { pylovoGridEngine } from "./gridEngine";
 import { backendWeatherSource } from "./weatherSource";
@@ -173,6 +176,15 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     // The MEME-run gateway: the run dispatches to the backend's own model endpoints, which a module may not
     // reach, so the shell supplies it through the module's slot.
     installMemeRunGateway();
+    // The PyPSA-leg gateway: the power flow dispatches to the backend's own model endpoints, which a module
+    // may not reach, so the shell supplies it through the module's slot.
+    installMemePypsaLegGateway();
+    // The results-overview gateway: the results summary reads the backend's structured-results endpoint,
+    // which a module may not reach, so the shell supplies it through the module's slot.
+    installResultOverviewGateway();
+    // The model-variant gateway: the family copy is created through the backend's own model endpoints, which
+    // a module may not reach, so the shell supplies it through the module's slot.
+    installModelVariantGateway();
   }, []);
   const map = host.service;
   const [mode, setMode] = useState<FrameMode>({ kind: "workflow" });
