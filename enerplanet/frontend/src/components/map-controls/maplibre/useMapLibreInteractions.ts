@@ -3,6 +3,7 @@ import type * as maplibregl from 'maplibre-gl';
 import type { Map as OlMap } from 'ol';
 import { INTERACTIVE_LAYERS } from './maplibre-styles';
 import type { Lod2Layer } from './maplibre-lod2';
+import { buildingPicker3D } from './buildingPicker3D';
 import type { AreaSketch3D } from './useAreaSketch3D';
 
 export interface InteractionCallbacks {
@@ -202,8 +203,16 @@ export function useMapLibreInteractions(
 
     olMap.on('click', handleClick);
     olMap.on('pointermove', handlePointerMove);
+    buildingPicker3D.current = {
+      buildingAt: (pixel) => {
+        const f = queryFeatures(pixel);
+        return f?.layer.id.startsWith('buildings-3d') && f.properties?.osm_id != null ? String(f.properties.osm_id) : null;
+      },
+      highlight: (osmId) => setHovered(osmId === null ? null : { osm_id: osmId }),
+    };
 
     return () => {
+      buildingPicker3D.current = null;
       if (throttleTimeout !== null) clearTimeout(throttleTimeout);
       setConnectedBuildingsFilter(null);
       setHovered(null);
