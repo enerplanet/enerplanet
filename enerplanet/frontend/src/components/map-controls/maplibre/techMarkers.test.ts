@@ -8,19 +8,21 @@ const building = (osmId: string, techs: Record<string, unknown>) => ({
   properties: { osm_id: osmId, techs },
 });
 
+const PV = 'solar-panel';
+
 describe('techMarkersOf', () => {
-  it('marks storage and heat once each, and leaves PV and supply to other drawing', () => {
+  it('gives each technology the 2D map draws its icon and legend group', () => {
     const markers = techMarkersOf({
       type: 'FeatureCollection',
       features: [
-        building('1', { pv_supply: {}, battery_storage: {}, gas_boiler: {}, air_source_heat_pump: {} }),
-        building('2', { pv_supply: {}, gas_supply: {} }),
-        building('3', { electric_boilers: {} }),
+        building('1', { pv_supply: { icon: PV }, battery_storage: { icon: 'battery' }, gas_boiler: { icon: 'flame' } }),
+        building('2', { gas_supply: { icon: 'flame' } }),
+        building('3', { pv_supply: { icon: PV, arrays: [] } }),
       ],
     });
     expect([...markers]).toEqual([
-      ['1', ['heat', 'storage']],
-      ['3', ['heat']],
+      ['1', [{ icon: PV, mark: 'pv' }, { icon: 'battery', mark: 'storage' }, { icon: 'flame', mark: 'heat' }]],
+      ['2', [{ icon: 'flame', mark: undefined }]],
     ]);
   });
 });

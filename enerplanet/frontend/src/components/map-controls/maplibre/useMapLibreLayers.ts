@@ -18,6 +18,7 @@ import { LOD2_LAYER_ID, Lod2Layer } from './maplibre-lod2';
 import { useLod2Surfaces } from './useLod2Surfaces';
 import { usePvSurfaceIds, type TechsFor } from './usePvSurfaceIds';
 import { techMarkersOf, type TechMarker } from './techMarkers';
+import { useTechMarksStore } from './techMarksStore';
 
 export interface LayerData {
   buildingsGeoJSON?: any;
@@ -149,11 +150,15 @@ export function useMapLibreLayers(
         // Under the area's corner handles, which are dragged in 3D too.
         map.addLayer(lod2LayerRef.current, map.getLayer('user-polygon-corner') ? 'user-polygon-corner' : undefined);
       }
+      lod2LayerRef.current.setShown(useTechMarksStore.getState().shown);
       lod2LayerRef.current.setBuildings(lod2, pvSurfaceIds, techMarkers);
     };
     if (map.isStyleLoaded()) apply();
     else map.once('idle', apply);
   }, [mapRef, mapReady, lod2, pvSurfaceIds, techMarkers]);
+
+  const shownMarks = useTechMarksStore((s) => s.shown);
+  useEffect(() => { lod2LayerRef.current?.setShown(shownMarks); }, [shownMarks]);
 
   // Interactions setup
   useEffect(() => {
