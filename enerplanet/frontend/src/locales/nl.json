@@ -3190,6 +3190,7 @@
       "title": "Workflows",
       "subtitle": "Stel de stromen samen die de Model Builder uitvoert",
       "new": "Nieuwe workflow",
+      "newSubflow": "Nieuwe subflow",
       "buildYourOwn": "Bouw je eigen module",
       "loading": "Workflows laden...",
       "loadError": "De workflows konden niet worden geladen: {{reason}}",
@@ -3209,7 +3210,8 @@
         "label": "Label",
         "id": "id: {{id}}",
         "create": "Aanmaken",
-        "cancel": "Annuleren"
+        "cancel": "Annuleren",
+        "subflowNote": "Een subflow is een fragment: hij wordt in een andere workflow ingevoegd en gevalideerd waar hij wordt ingevoegd, niet op zichzelf."
       },
       "editor": {
         "back": "Terug naar de lijst",
@@ -3226,6 +3228,9 @@
         "needs": "heeft nodig",
         "produces": "produceert",
         "gateHint": "Een module kan worden toegevoegd zodra de keten elke vereiste poort al produceert.",
+        "fragmentWarning": "Validatie is uitgeschakeld bij het bewerken van een fragment: de vereisten worden gelezen waar het wordt ingevoegd, dus de modules worden hier niet gecontroleerd.",
+        "fragmentInputs": "Heeft nodig van de workflow die het invoegt:",
+        "fragmentInputsNone": "Dit fragment heeft niets nodig van de omringende workflow.",
         "removeConfirm": "Het verwijderen van deze stap verwijdert ook alles erna - een lineaire keten mag geen gat hebben. {{count}} stap(pen) verwijderen?",
         "unknownModule": "Onbekende module \"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" - deze staat niet in de catalogus van deze build.",
         "notANode": "\"{{moduleId}}\" bij knooppunt \"{{nodeId}}\" is geen knooppunt - het is een hostmodule die een dienst levert in plaats van een stap te tonen.",

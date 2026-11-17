@@ -3194,6 +3194,7 @@
       "title": "Workflows",
       "subtitle": "Author the flows the Model Builder runs",
       "new": "New workflow",
+      "newSubflow": "New subflow",
       "buildYourOwn": "Build your own module",
       "loading": "Loading workflows...",
       "loadError": "The workflows could not be loaded: {{reason}}",
@@ -3213,7 +3214,8 @@
         "label": "Label",
         "id": "id: {{id}}",
         "create": "Create",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "subflowNote": "A subflow is a fragment: it is spliced into another workflow and validated where it is inserted, not on its own."
       },
       "editor": {
         "back": "Back to the list",
@@ -3230,6 +3232,9 @@
         "needs": "needs",
         "produces": "produces",
         "gateHint": "A module can be added once the chain already produces every port it requires.",
+        "fragmentWarning": "Validation is off while editing a fragment: its requirements are read where it is inserted, so its modules are not gated here.",
+        "fragmentInputs": "Needs from the flow that inserts it:",
+        "fragmentInputsNone": "This fragment needs nothing from the flow around it.",
         "removeConfirm": "Removing this step also removes everything after it - a linear chain cannot have a hole. Remove {{count}} step(s)?",
         "unknownModule": "Unknown module \"{{moduleId}}\" at node \"{{nodeId}}\" - it is not in this build's catalogue.",
         "notANode": "\"{{moduleId}}\" at node \"{{nodeId}}\" is not a node - it is a host module, which provides a service rather than rendering a step.",

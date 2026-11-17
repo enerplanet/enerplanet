@@ -7,10 +7,17 @@
  * Written failing first.
  */
 import { describe, expect, it } from "vitest";
-import type { ModuleRegistry } from "../core/flow";
+import type { FlowNode, ModuleRegistry } from "../core/flow";
 import type { Module, Param } from "../core/module";
 import type { BuilderModule } from "../shell/contract";
-import { missingPorts, paletteFor, producedPorts, subflowVerdict } from "./gate";
+import {
+  fragmentRequiredPorts,
+  missingPorts,
+  paletteFor,
+  producedPorts,
+  subflowVerdict,
+  unmetRequiredPorts,
+} from "./gate";
 import type { WorkflowDocument, WorkflowNodeDocument } from "./types";
 
 /**
@@ -239,5 +246,100 @@ describe("the candidate verdict a subflow picker renders", () => {
       ok: false,
       reason: "unresolved",
     });
+  });
+});
+
+describe("a fragment skips the position-dependent gate", () => {
+  const REGISTRY = registryFrom(...CATALOGUE);
+
+  it("offers every module available, still naming the ports it requires", () => {
+    const consumer = paletteFor(CATALOGUE, [], noLookup, { fragment: true }).find(
+      (p) => p.module.module.id === "consumer",
+    );
+    // The requirement is still reported — it is what the insertion site has to satisfy — but it is not a bar.
+    expect(consumer?.requires).toEqual(["buildings"]);
+    expect(consumer?.available).toBe(true);
+    expect(consumer?.missing).toEqual([]);
+  });
+
+  it("still withholds a host module — it is never placeable in a flow of any kind", () => {
+    expect(
+      paletteFor([...CATALOGUE, HOST], [], noLookup, { fragment: true }).map((p) => p.module.module.id),
+    ).toEqual(["base", "consumer", "second", "third"]);
+  });
+
+  it("accepts a candidate whose expansion needs ports its own prefix does not produce", () => {
+    const candidate = doc("cand", [node("c", "consumer")]); // needs `buildings`, not produced here
+    expect(
+      subflowVerdict(candidate, new Set(), REGISTRY, lookupFrom(candidate), "editing", { fragment: true }),
+    ).toEqual({ ok: true });
+  });
+
+  it("still refuses a candidate whose expansion would contain the edited fragment — recursive is positional", () => {
+    const editing = doc("editing", []);
+    const candidate = doc("cand", [{ id: "c", workflows: ["editing"] }]);
+    expect(
+      subflowVerdict(candidate, new Set(), REGISTRY, lookupFrom(candidate, editing), "editing", {
+        fragment: true,
+      }),
+    ).toEqual({ ok: false, reason: "recursive" });
+  });
+
+  it("still refuses a candidate that cannot be flattened — unresolved is positional", () => {
+    const candidate = doc("cand", [node("c", "undeclared")]);
+    expect(
+      subflowVerdict(candidate, new Set(), REGISTRY, lookupFrom(candidate), "editing", { fragment: true }),
+    ).toEqual({ ok: false, reason: "unresolved" });
+  });
+});
+
+describe("the positional unmet-required walk, on its own", () => {
+  const REGISTRY = registryFrom(...CATALOGUE);
+  const flowNode = (id: string, moduleId: string): FlowNode => ({ id, moduleId });
+
+  it("reports the union of unmet required ports, in first-seen order", () => {
+    // `consumer` needs `buildings`, `third` needs `coordinates`; nothing before the flow produces either.
+    const flow = [flowNode("c", "consumer"), flowNode("t", "third")];
+    expect(unmetRequiredPorts(flow, new Set(), REGISTRY)).toEqual(["buildings", "coordinates"]);
+  });
+
+  it("does not let a later module satisfy an earlier reader", () => {
+    // `third` needs `coordinates`; `second` (which produces it) sits *after* third, so it is unmet — the walk
+    // is in execution order. `buildings` is supplied so `second`'s own requirement does not muddy the case.
+    const flow = [flowNode("t", "third"), flowNode("s", "second")];
+    expect(unmetRequiredPorts(flow, new Set(["buildings"]), REGISTRY)).toEqual(["coordinates"]);
+  });
+
+  it("counts a port an earlier module in the flow produces", () => {
+    const flow = [flowNode("s", "second"), flowNode("t", "third")];
+    expect(unmetRequiredPorts(flow, new Set(["buildings"]), REGISTRY)).toEqual([]);
+  });
+});
+
+describe("a fragment's own unmet inputs — what the flow that inserts it must have produced", () => {
+  const REGISTRY = registryFrom(...CATALOGUE);
+
+  it("is the union its own expansion leaves unmet, read with an empty prefix", () => {
+    const fragment = doc("frag", [node("c", "consumer"), node("t", "third")]);
+    expect(fragmentRequiredPorts(fragment, lookupFrom(fragment), REGISTRY)).toEqual([
+      "buildings",
+      "coordinates",
+    ]);
+  });
+
+  it("is empty when the fragment needs nothing from the flow around it", () => {
+    const fragment = doc("frag", [node("b", "base")]);
+    expect(fragmentRequiredPorts(fragment, lookupFrom(fragment), REGISTRY)).toEqual([]);
+  });
+
+  it("reads a later module in the same fragment as unable to satisfy an earlier reader", () => {
+    // `third` needs `coordinates`; `second` (which produces it) sits *after* third in the fragment. With an
+    // empty prefix nothing before produces it, so `coordinates` stays unmet — the walk is in execution order.
+    // `second`'s own `buildings` requirement is unmet too, for the same reason (nothing precedes it either).
+    const fragment = doc("frag", [node("t", "third"), node("s", "second")]);
+    expect(fragmentRequiredPorts(fragment, lookupFrom(fragment), REGISTRY)).toEqual([
+      "coordinates",
+      "buildings",
+    ]);
   });
 });

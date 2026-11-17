@@ -29,6 +29,16 @@ describe("a new document", () => {
       nodes: [],
     });
   });
+
+  it("authors a fragment the same way — marked isSubflow, still version 1 and no nodes", () => {
+    expect(newDocument("Adjust model", true)).toEqual({
+      id: "adjust-model",
+      version: 1,
+      label: "Adjust model",
+      isSubflow: true,
+      nodes: [],
+    });
+  });
 });
 
 describe("the copy payload", () => {

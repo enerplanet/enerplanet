@@ -3191,6 +3191,7 @@
       "title": "Flujos de trabajo",
       "subtitle": "Redacta los flujos que ejecuta el Model Builder",
       "new": "Nuevo flujo",
+      "newSubflow": "Nuevo subflujo",
       "buildYourOwn": "Crea tu propio módulo",
       "loading": "Cargando flujos...",
       "loadError": "No se pudieron cargar los flujos: {{reason}}",
@@ -3210,7 +3211,8 @@
         "label": "Etiqueta",
         "id": "id: {{id}}",
         "create": "Crear",
-        "cancel": "Cancelar"
+        "cancel": "Cancelar",
+        "subflowNote": "Un subflujo es un fragmento: se inserta en otro flujo de trabajo y se valida donde se inserta, no por sí solo."
       },
       "editor": {
         "back": "Volver a la lista",
@@ -3227,6 +3229,9 @@
         "needs": "necesita",
         "produces": "produce",
         "gateHint": "Se puede añadir un módulo cuando la cadena ya produce todos los puertos que requiere.",
+        "fragmentWarning": "La validación está desactivada al editar un fragmento: sus requisitos se leen donde se inserta, por lo que sus módulos no se validan aquí.",
+        "fragmentInputs": "Necesita del flujo que lo inserta:",
+        "fragmentInputsNone": "Este fragmento no necesita nada del flujo que lo rodea.",
         "removeConfirm": "Quitar este paso también quita todo lo que viene después - una cadena lineal no puede tener un hueco. ¿Quitar {{count}} paso(s)?",
         "unknownModule": "Módulo desconocido \"{{moduleId}}\" en el nodo \"{{nodeId}}\" - no está en el catálogo de esta compilación.",
         "notANode": "\"{{moduleId}}\" en el nodo \"{{nodeId}}\" no es un nodo: es un módulo anfitrión que presta un servicio en lugar de representar un paso.",

@@ -3194,6 +3194,7 @@
       "title": "Workflows",
       "subtitle": "Die Abläufe verfassen, die der Model Builder ausführt",
       "new": "Neuer Workflow",
+      "newSubflow": "Neuer Subflow",
       "buildYourOwn": "Eigenes Modul entwickeln",
       "loading": "Workflows werden geladen...",
       "loadError": "Die Workflows konnten nicht geladen werden: {{reason}}",
@@ -3213,7 +3214,8 @@
         "label": "Bezeichnung",
         "id": "id: {{id}}",
         "create": "Anlegen",
-        "cancel": "Abbrechen"
+        "cancel": "Abbrechen",
+        "subflowNote": "Ein Subflow ist ein Fragment: Er wird in einen anderen Workflow eingefügt und dort validiert, wo er eingesetzt wird, nicht für sich allein."
       },
       "editor": {
         "back": "Zurück zur Liste",
@@ -3230,6 +3232,9 @@
         "needs": "braucht",
         "produces": "erzeugt",
         "gateHint": "Ein Modul kann hinzugefügt werden, sobald die Kette bereits jeden benötigten Port erzeugt.",
+        "fragmentWarning": "Die Validierung ist beim Bearbeiten eines Fragments deaktiviert: Seine Anforderungen werden dort gelesen, wo es eingefügt wird, daher werden seine Module hier nicht geprüft.",
+        "fragmentInputs": "Benötigt von dem Workflow, der es einfügt:",
+        "fragmentInputsNone": "Dieses Fragment benötigt nichts von dem umgebenden Workflow.",
         "removeConfirm": "Das Entfernen dieses Schritts entfernt auch alles danach - eine lineare Kette darf keine Lücke haben. {{count}} Schritt(e) entfernen?",
         "unknownModule": "Unbekanntes Modul \"{{moduleId}}\" am Knoten \"{{nodeId}}\" - es ist nicht im Katalog dieses Builds.",
         "notANode": "\"{{moduleId}}\" am Knoten \"{{nodeId}}\" ist kein Knoten - es ist ein Host-Modul, das einen Dienst bereitstellt, statt einen Schritt darzustellen.",

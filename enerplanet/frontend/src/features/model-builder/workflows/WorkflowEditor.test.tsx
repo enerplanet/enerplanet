@@ -86,6 +86,64 @@ describe("the palette reflects the gate", () => {
   });
 });
 
+describe("a fragment", () => {
+  // A fragment is authored to be spliced into another flow, so the editor must not gate it on its own
+  // prefix. `render` passes no workflows, so the only signal read here is `isSubflow` on the document.
+  const label = "Fragment flow";
+  const fragment: WorkflowDocument = { id: "frag", version: 1, label, isSubflow: true, nodes: [] };
+
+  it("badges that a fragment is being edited, not a flow", () => {
+    // Precise: the warning also contains the word "fragment", so the assertion targets the badge element.
+    expect(render(fragment)).toContain(">fragment</span>");
+  });
+
+  it("warns that validation is off, and why — its requirements are read where it is inserted", () => {
+    const html = render(fragment);
+
+    // A clear warning panel, not the muted palette hint it replaced.
+    expect(html).toContain("Validation is off");
+    expect(html).toContain("read where it is inserted");
+  });
+
+  it("offers every module without gating", () => {
+    const html = render(fragment);
+
+    // The same Consumer the flow test greys and marks `needs` is addable here — the palette's refusal marker
+    // (`>needs<`) is absent, and nothing is greyed.
+    expect(html).toContain("Consumer");
+    expect(html).not.toContain(">needs<");
+  });
+
+  it("lists the ports the fragment needs from the flow that inserts it", () => {
+    const needsInput: WorkflowDocument = {
+      id: "frag",
+      version: 1,
+      label,
+      isSubflow: true,
+      nodes: [{ id: "c", moduleId: "consumer" }], // needs `buildings`, unproduced within the fragment
+    };
+    const html = render(needsInput);
+
+    expect(html).toContain("Needs from the flow that inserts it:");
+    expect(html).toContain("buildings"); // the unmet required port, named by the section
+    expect(html).not.toContain("This fragment needs nothing from the flow around it.");
+  });
+
+  it("says plainly when the fragment needs nothing from around it", () => {
+    const selfContained: WorkflowDocument = {
+      id: "frag",
+      version: 1,
+      label,
+      isSubflow: true,
+      nodes: [{ id: "b", moduleId: "base" }], // requires nothing
+    };
+    const html = render(selfContained);
+
+    expect(html).toContain("This fragment needs nothing from the flow around it.");
+    expect(html).not.toContain("Needs from the flow that inserts it:");
+  });
+});
+
 describe("a stored node naming an unknown module", () => {
   it("is reported by node and module rather than taking the surface down", () => {
     const broken: WorkflowDocument = {

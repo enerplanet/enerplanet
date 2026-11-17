@@ -21,9 +21,10 @@
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
-import { ArrowLeft, Layers, Plus, Repeat, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Layers, Plus, Repeat, Save, Trash2, TriangleAlert } from "lucide-react";
 import type { FlowNode, ModuleRegistry } from "../core/flow";
 import { declaredPorts, isHostModule } from "../core/module";
+import type { PortKey } from "../core/ports";
 import type { BuilderModule } from "../shell/contract";
 import {
   appendModule,
@@ -33,7 +34,7 @@ import {
   removedCount,
 } from "./chain";
 import { expand, type WorkflowLookup } from "./expand";
-import { paletteFor, producedPorts, type PaletteEntry } from "./gate";
+import { fragmentRequiredPorts, paletteFor, producedPorts, type PaletteEntry } from "./gate";
 import { subflowCandidates, type SubflowCandidate } from "./subflow";
 import type { SubflowNodeDocument, WorkflowDocument, WorkflowNodeDocument } from "./types";
 import { isSubflowNode } from "./types";
@@ -122,6 +123,54 @@ const PaletteRow: React.FC<{ entry: PaletteEntry; onAdd: () => void }> = ({ entr
         </span>
       </button>
     </li>
+  );
+};
+
+/**
+ * The fragment notice: a fragment is validated where it is inserted, so the gate is off here — stated as a
+ * warning panel rather than the palette's muted hint, because an off safety net should not read as a footnote.
+ *
+ * Beneath the warning, the ports the fragment will need from the flow around it: the union of its modules'
+ * unmet `required` ports, read by the same positional walk a candidate's verdict uses (`unmetRequiredPorts`
+ * via `fragmentRequiredPorts`) with an empty prefix. `inputs === null` means the fragment could not be
+ * flattened, so there is nothing to name — the chain reports that per node, and the panel stays silent rather
+ * than duplicating it. An empty list is a real, good state and is said plainly instead of shown as an empty box.
+ */
+const FragmentNotice: React.FC<{ inputs: readonly PortKey[] | null }> = ({ inputs }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+      <p className="flex items-start gap-1.5 text-sm font-medium text-amber-800 dark:text-amber-300">
+        <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>
+          {t(
+            "modelBuilder.workflows.editor.fragmentWarning",
+            "Validation is off while editing a fragment: its requirements are read where it is inserted, so its modules are not gated here.",
+          )}
+        </span>
+      </p>
+
+      {inputs !== null && (
+        <div className="mt-2 text-[11px] text-amber-800 dark:text-amber-300">
+          {inputs.length === 0 ? (
+            <p>
+              {t(
+                "modelBuilder.workflows.editor.fragmentInputsNone",
+                "This fragment needs nothing from the flow around it.",
+              )}
+            </p>
+          ) : (
+            <p className="flex flex-wrap items-center gap-1">
+              <span>{t("modelBuilder.workflows.editor.fragmentInputs", "Needs from the flow that inserts it:")}</span>
+              {inputs.map((port) => (
+                <PortChip key={port} port={port} missing />
+              ))}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -276,10 +325,28 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     () => Object.fromEntries(catalogue.map((entry) => [entry.module.id, entry.module])),
     [catalogue],
   );
+  // A fragment is authored to be spliced into another flow, so its own prefix is not the test for what it may
+  // contain: the palette offers every module and the picker drops the positional `missing` verdict. A flow is
+  // gated as before (`GateOptions`).
+  const fragment = document.isSubflow === true;
   const palette = useMemo(
-    () => paletteFor(catalogue, document.nodes, lookup),
-    [catalogue, document.nodes, lookup],
+    () => paletteFor(catalogue, document.nodes, lookup, { fragment }),
+    [catalogue, document.nodes, lookup, fragment],
   );
+
+  /**
+   * What the fragment will need from the flow that inserts it: its own expansion read with an empty prefix
+   * (`fragmentRequiredPorts`). `null` when the fragment cannot be flattened — an unresolved subflow or a
+   * module this build lacks, which the chain reports per node, so the notice adds nothing to say.
+   */
+  const fragmentInputs = useMemo(() => {
+    if (!fragment) return null;
+    try {
+      return fragmentRequiredPorts(document, lookup, registry);
+    } catch {
+      return null;
+    }
+  }, [fragment, document, lookup, registry]);
 
   /**
    * The candidates for the open picker, judged against the chain prefix that ends where the subflow sits:
@@ -289,8 +356,8 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     if (picker === null) return [];
     const prefix = picker.kind === "append" ? document.nodes.length : picker.index;
     const produced = producedPorts(document.nodes.slice(0, prefix), catalogue, lookup);
-    return subflowCandidates(workflows, produced, registry, lookup, document.id);
-  }, [picker, document.nodes, document.id, workflows, catalogue, lookup, registry]);
+    return subflowCandidates(workflows, produced, registry, lookup, document.id, { fragment });
+  }, [picker, document.nodes, document.id, workflows, catalogue, lookup, registry, fragment]);
 
   /**
    * Each subflow node's expansion: the referenced workflow's module nodes, ids namespaced by the node and
@@ -453,7 +520,15 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         </button>
 
         <div className="min-w-0">
-          <h2 className="truncate text-base font-semibold text-foreground">{document.label}</h2>
+          <h2 className="flex items-center gap-2 truncate text-base font-semibold text-foreground">
+            {document.label}
+            {/* Visible so an ungated palette, and a refused run, read as authored rather than as a bug. */}
+            {fragment && (
+              <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                {t("modelBuilder.workflows.editor.fragment", "fragment")}
+              </span>
+            )}
+          </h2>
           <p className="truncate font-mono text-[11px] text-muted-foreground">
             {document.id} · {t("modelBuilder.workflows.editor.version", "version {{version}}", { version: document.version })}
           </p>
@@ -607,12 +682,16 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           <h3 className="mb-2 text-sm font-semibold text-foreground">
             {t("modelBuilder.workflows.editor.palette", "Modules")}
           </h3>
-          <p className="mb-3 text-xs text-muted-foreground">
-            {t(
-              "modelBuilder.workflows.editor.gateHint",
-              "A module can be added once the chain already produces every port it requires.",
-            )}
-          </p>
+          {fragment ? (
+            <FragmentNotice inputs={fragmentInputs} />
+          ) : (
+            <p className="mb-3 text-xs text-muted-foreground">
+              {t(
+                "modelBuilder.workflows.editor.gateHint",
+                "A module can be added once the chain already produces every port it requires.",
+              )}
+            </p>
+          )}
 
           {/* A subflow is not a module, so it does not sit in the list below: its own control opens the
               picker, which appends nothing until a workflow is chosen. */}

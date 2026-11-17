@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
-import { Copy, ExternalLink, Pencil, Plus, Trash2, Workflow as WorkflowIcon } from "lucide-react";
+import { Copy, ExternalLink, Layers, Pencil, Plus, Trash2, Workflow as WorkflowIcon } from "lucide-react";
 import { MODULES } from "../shell/moduleRegistry";
 import { copyPayload, documentWithNodes, newDocument, slugify } from "./document";
 import { workflowService } from "./service";
@@ -35,6 +35,9 @@ interface Editing {
   persisted: boolean;
 }
 
+/** Which kind the New form authors: an ordinary flow, or a fragment spliced into another (`isSubflow`). */
+type NewKind = "flow" | "subflow";
+
 function reasonOf(thrown: unknown): string {
   return thrown instanceof Error ? thrown.message : String(thrown);
 }
@@ -52,6 +55,7 @@ const WorkflowsPage: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [showNewForm, setShowNewForm] = useState(false);
+  const [newKind, setNewKind] = useState<NewKind>("flow");
   const [newLabel, setNewLabel] = useState("");
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -79,12 +83,21 @@ const WorkflowsPage: React.FC = () => {
     setEditing({ document: summary.definition, persisted: true });
   };
 
+  /** Open the New form for the kind being authored. Both kinds share it; only the document it builds differs. */
+  const startNew = (kind: NewKind): void => {
+    setNewKind(kind);
+    setSaveError(null);
+    setShowNewForm(true);
+  };
+
   const createNew = (): void => {
     const label = newLabel.trim();
     if (label.length === 0) return;
     setSaveError(null);
     setDirty(true);
-    setEditing({ document: newDocument(label), persisted: false });
+    // The same create path for both kinds: the id derives from the label (`newDocument` slugifies it) and
+    // `isSubflow` is the one difference — a fragment, spliced into another flow and validated where inserted.
+    setEditing({ document: newDocument(label, newKind === "subflow"), persisted: false });
     setShowNewForm(false);
     setNewLabel("");
   };
@@ -193,25 +206,36 @@ const WorkflowsPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowNewForm((open) => !open)}
-          className="ml-auto flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          {t("modelBuilder.workflows.new", "New workflow")}
-        </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => startNew("flow")}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" />
+            {t("modelBuilder.workflows.new", "New workflow")}
+          </button>
 
-        <a
-          href={EXAMPLE_MODULES_URL}
-          target="_blank"
-          rel="noreferrer"
-          title={t("modelBuilder.workflows.buildYourOwn", "Build your own module")}
-          className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-        >
-          <ExternalLink className="h-4 w-4" />
-          {t("modelBuilder.workflows.buildYourOwn", "Build your own module")}
-        </a>
+          <button
+            type="button"
+            onClick={() => startNew("subflow")}
+            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            <Layers className="h-4 w-4" />
+            {t("modelBuilder.workflows.newSubflow", "New subflow")}
+          </button>
+
+          <a
+            href={EXAMPLE_MODULES_URL}
+            target="_blank"
+            rel="noreferrer"
+            title={t("modelBuilder.workflows.buildYourOwn", "Build your own module")}
+            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+          >
+            <ExternalLink className="h-4 w-4" />
+            {t("modelBuilder.workflows.buildYourOwn", "Build your own module")}
+          </a>
+        </div>
       </header>
 
       {/* New: asks for a label; the id derives from it (plan §9). */}
@@ -223,6 +247,14 @@ const WorkflowsPage: React.FC = () => {
             createNew();
           }}
         >
+          {newKind === "subflow" && (
+            <p className="w-full text-xs text-muted-foreground">
+              {t(
+                "modelBuilder.workflows.newForm.subflowNote",
+                "A subflow is a fragment: it is spliced into another workflow and validated where it is inserted, not on its own.",
+              )}
+            </p>
+          )}
           <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
             {t("modelBuilder.workflows.newForm.label", "Label")}
             <input

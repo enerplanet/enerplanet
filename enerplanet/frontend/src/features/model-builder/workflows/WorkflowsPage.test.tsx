@@ -34,4 +34,11 @@ describe("the workflows header", () => {
     expect(html).toContain('rel="noreferrer"');
     expect(html).toContain("Build your own module");
   });
+
+  it("offers a New subflow action beside New workflow", () => {
+    const html = renderToStaticMarkup(<WorkflowsPage />);
+
+    expect(html).toContain("New workflow");
+    expect(html).toContain("New subflow");
+  });
 });

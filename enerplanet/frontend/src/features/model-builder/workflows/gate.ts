@@ -31,6 +31,20 @@ export interface PaletteEntry {
 }
 
 /**
+ * The one fact that turns the **position-dependent** parts of the gate off: the document being edited is a
+ * **fragment** (`isSubflow`).
+ *
+ * A fragment's requirements are met by whatever chain it is spliced into, so gating its modules on ports its
+ * own prefix does not produce is the wrong test — the rule is that a fragment can start with any node and
+ * skips validation. What survives is everything read off the composition rather than the prefix: a module's
+ * `requires` is still reported, and a candidate subflow that is recursive or unresolvable is still refused.
+ */
+export interface GateOptions {
+  /** Authoring a fragment: withhold nothing for an unmet requirement, and judge no candidate `missing`. */
+  readonly fragment?: boolean;
+}
+
+/**
  * The ports the chain has produced so far: the union of the declared surface of its modules, a subflow's
  * ports read from its expansion.
  */
@@ -89,6 +103,60 @@ export function missingPorts(module: Module, produced: ReadonlySet<PortKey>): Po
 }
 
 /**
+ * The union of `required` ports a flow leaves **unmet**, walked in execution order — the positional rule the
+ * gate is built on, in one place.
+ *
+ * A module's `required` port is unmet only when neither `produced` (what sits before the flow) nor a module
+ * **earlier in the same flow** has produced it: the flattened flow runs in this order, so a port a module
+ * later in the flow writes cannot satisfy an earlier reader. So `Y(A -> B -> C)` at a fixed position is
+ * addable exactly where A's requirements are met by `produced`, B's by `produced` or A, and so on. Ports are
+ * reported once each, in first-seen order.
+ *
+ * Two callers read this one rule — a subflow candidate's verdict, and a fragment's own unmet inputs — so the
+ * subtle ordering lives here rather than being re-derived in either.
+ */
+export function unmetRequiredPorts(
+  flow: readonly FlowNode[],
+  produced: ReadonlySet<PortKey>,
+  registry: ModuleRegistry,
+): PortKey[] {
+  const available = new Set<PortKey>(produced);
+  const missing: PortKey[] = [];
+  const seen = new Set<PortKey>();
+  for (const node of flow) {
+    const module = registry[node.moduleId];
+    // `expand` guaranteed every module is declared, so an absent one is unreachable — skipped defensively
+    // rather than asserted.
+    if (module === undefined) continue;
+    for (const port of requiredPorts(module)) {
+      if (!available.has(port) && !seen.has(port)) {
+        seen.add(port);
+        missing.push(port);
+      }
+    }
+    for (const port of declaredPorts(module)) available.add(port);
+  }
+  return missing;
+}
+
+/**
+ * The ports a **fragment** needs from the flow that inserts it: its own expansion walked with an **empty
+ * prefix**, because nothing before the fragment's first node exists yet.
+ *
+ * The same walk a candidate's verdict uses, applied to the fragment's own nodes — what the flow the fragment
+ * is spliced into must already have produced. Throws as `expand` does (a subflow nobody stores, a module this
+ * build lacks, a cycle): a fragment that cannot be flattened has no inputs to read, so the caller decides how
+ * to report it.
+ */
+export function fragmentRequiredPorts(
+  document: WorkflowDocument,
+  lookup: WorkflowLookup,
+  registry: ModuleRegistry,
+): PortKey[] {
+  return unmetRequiredPorts(expand(document, lookup, registry), new Set(), registry);
+}
+
+/**
  * The palette: every node module in the catalogue, in catalogue order, each with what it needs and what is
  * still missing.
  *
@@ -108,13 +176,18 @@ export function paletteFor(
   catalogue: readonly BuilderModule[],
   chain: readonly WorkflowNodeDocument[],
   lookup: WorkflowLookup,
+  options: GateOptions = {},
 ): PaletteEntry[] {
   const produced = producedPorts(chain, catalogue, lookup);
   return catalogue
     .filter((entry) => !isHostModule(entry.module))
     .map((entry) => {
       const requires = requiredPorts(entry.module);
-      const missing = missingPorts(entry.module, produced);
+      // A fragment skips the gate: every module is offered regardless of the ports its own prefix produces,
+      // because those requirements are read at the insertion site. `requires` is still reported — it is what
+      // that site has to satisfy — but nothing is withheld for it. A host module is still filtered out: that
+      // is not a requirement, it declares no region and can never be a step.
+      const missing = options.fragment === true ? [] : missingPorts(entry.module, produced);
       return { module: entry, requires, missing, available: missing.length === 0 };
     });
 }
@@ -122,7 +195,8 @@ export function paletteFor(
 /**
  * What a subflow picker renders for one candidate workflow: addable, or the reason it is not.
  *
- * - `missing` — the candidate's expansion needs ports the chain prefix does not produce yet.
+ * - `missing` — the candidate's expansion needs ports the chain prefix does not produce yet. Position-dependent:
+ *   skipped when authoring a fragment (`GateOptions`), whose requirements are read at the insertion site.
  * - `recursive` — the candidate's expansion would contain the workflow being edited, so placing it here would
  *   make that workflow expand into itself. A cycle has no valid expansion.
  * - `unresolved` — the candidate names a subflow nobody stores, or a module the registry does not declare. It
@@ -151,6 +225,7 @@ export function subflowVerdict(
   registry: ModuleRegistry,
   lookup: WorkflowLookup,
   editingId: string,
+  options: GateOptions = {},
 ): SubflowVerdict {
   if (candidate.id === editingId || expansionCycle({ ...candidate, id: editingId }, lookup) !== undefined) {
     return { ok: false, reason: "recursive" };
@@ -167,27 +242,16 @@ export function subflowVerdict(
     return { ok: false, reason: "unresolved" };
   }
 
-  // "Unmet" is positional: walk the expansion in order and a module's `required` port is unmet only when
-  // neither the chain prefix nor a module **earlier in this same expansion** has produced it yet. A port the
-  // expansion produces *later* does not count, because the flattened flow runs in this order — an earlier
-  // module cannot read a port a later one has not written. So `Y(A -> B -> C)` at Y is addable exactly where
-  // A's requirements are met by the chain, B's by the chain or A, and so on.
-  const available = new Set<PortKey>(produced);
-  const missing: PortKey[] = [];
-  const seen = new Set<PortKey>();
-  for (const node of flow) {
-    const module = registry[node.moduleId];
-    // `expand` guaranteed every module is declared, so an absent one is unreachable — skipped defensively
-    // rather than asserted.
-    if (module === undefined) continue;
-    for (const port of requiredPorts(module)) {
-      if (!available.has(port) && !seen.has(port)) {
-        seen.add(port);
-        missing.push(port);
-      }
-    }
-    for (const port of declaredPorts(module)) available.add(port);
-  }
+  // A fragment's requirements are met at the insertion site, not by its own prefix: `missing` is the
+  // position-dependent verdict and it does not apply here. `recursive` and `unresolved` still do — a defect in
+  // the composition is a defect wherever the fragment sits — so they were judged above and only `missing` is
+  // skipped. The candidate resolved, so it is addable.
+  if (options.fragment === true) return { ok: true };
+
+  // "Unmet" is positional, and the rule lives in `unmetRequiredPorts`: walk the expansion in order and a
+  // module's `required` port is unmet only when neither the chain prefix nor a module earlier in this same
+  // expansion has produced it yet. A port the expansion produces later does not count.
+  const missing = unmetRequiredPorts(flow, produced, registry);
 
   return missing.length === 0 ? { ok: true } : { ok: false, reason: "missing", missing };
 }

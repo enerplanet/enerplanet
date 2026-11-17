@@ -19,9 +19,22 @@ export function slugify(label: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** A new document from a label. `version` starts at 1 — the only version there is until flows distribute. */
-export function newDocument(label: string): WorkflowDocument {
-  return { id: slugify(label), version: 1, label, nodes: [] };
+/**
+ * A new document from a label. `version` starts at 1 — the only version there is until flows distribute.
+ *
+ * `isSubflow` authors a **fragment** — a document spliced into another flow and validated where it is
+ * inserted, not on its own. Its creation path is otherwise identical to a flow's: same id derived from the
+ * same label, same version, no nodes.
+ */
+export function newDocument(label: string, isSubflow = false): WorkflowDocument {
+  return {
+    id: slugify(label),
+    version: 1,
+    label,
+    // Written where a person puts it (`DOCUMENT_KEY_ORDER`), so a created fragment diffs like any other.
+    ...(isSubflow ? { isSubflow: true } : {}),
+    nodes: [],
+  };
 }
 
 /**

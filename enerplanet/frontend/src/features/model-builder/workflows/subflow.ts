@@ -14,7 +14,7 @@
 import type { ModuleRegistry } from "../core/flow";
 import type { PortKey } from "../core/ports";
 import type { WorkflowLookup } from "./expand";
-import { subflowVerdict, type SubflowVerdict } from "./gate";
+import { subflowVerdict, type GateOptions, type SubflowVerdict } from "./gate";
 import type { WorkflowDocument } from "./types";
 
 /** One stored workflow on offer, with the verdict the picker renders and whether it is a fragment. */
@@ -30,7 +30,9 @@ export interface SubflowCandidate {
  *
  * `produced` is the ports the chain prefix produces — the caller reads it from the nodes before the
  * insertion point, so a candidate whose expansion needs a port only a later node writes is refused, exactly
- * as a module would be.
+ * as a module would be. `options.fragment` (the document being edited is itself a fragment) turns that
+ * positional refusal off: its requirements are met at the insertion site. Recursive and unresolvable
+ * candidates are still refused (`GateOptions`).
  */
 export function subflowCandidates(
   workflows: readonly WorkflowDocument[],
@@ -38,12 +40,13 @@ export function subflowCandidates(
   registry: ModuleRegistry,
   lookup: WorkflowLookup,
   editingId: string,
+  options: GateOptions = {},
 ): SubflowCandidate[] {
   return workflows
     .map((document) => ({
       document,
       fragment: document.isSubflow === true,
-      verdict: subflowVerdict(document, produced, registry, lookup, editingId),
+      verdict: subflowVerdict(document, produced, registry, lookup, editingId, options),
     }))
     .sort((a, b) => Number(b.fragment) - Number(a.fragment));
 }
