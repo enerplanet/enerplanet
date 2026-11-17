@@ -142,7 +142,6 @@
     "clickToSelectBuilding": "Click to select this building",
     "clickToDeselectBuilding": "Click to remove this building from the selection",
     "cancel": "Cancel drawing",
-    "view3dOnly": "3D is for viewing: click a building for its details. Switch to Map to draw or edit the area.",
     "legendPv": "PV",
     "legendStorage": "Storage",
     "legendHeat": "Heat supply"

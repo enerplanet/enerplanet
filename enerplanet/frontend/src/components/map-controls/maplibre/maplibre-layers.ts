@@ -575,11 +575,20 @@ export function addOrUpdatePolygon(map: maplibregl.Map, coordinates: [number, nu
       type: 'Feature',
       properties: {},
       geometry: { type: 'MultiPolygon', coordinates: coordinates.map(c => [closeRing(c)]) },
+    }, {
+      type: 'Feature',
+      properties: { corner: true },
+      geometry: { type: 'MultiPoint', coordinates: coordinates.flat() },
     }],
   };
 
   const existing = map.getSource('user-polygon') as maplibregl.GeoJSONSource | undefined;
-  if (existing) { existing.setData(fc); return; }
+  if (existing) {
+    existing.setData(fc);
+    // Layers added since, the 3D buildings among them, would cover the corner handles.
+    if (map.getLayer('user-polygon-corner')) map.moveLayer('user-polygon-corner');
+    return;
+  }
 
   map.addSource('user-polygon', { type: 'geojson', data: fc });
 
@@ -594,6 +603,14 @@ export function addOrUpdatePolygon(map: maplibregl.Map, coordinates: [number, nu
     type: 'line',
     source: 'user-polygon',
     paint: { 'line-color': POLYGON_COLORS.stroke, 'line-width': 2.5 },
+  });
+  // The corner handles of the 2D drawer's Modify style (PolygonDrawer).
+  map.addLayer({
+    id: 'user-polygon-corner',
+    type: 'circle',
+    source: 'user-polygon',
+    filter: ['has', 'corner'],
+    paint: { 'circle-radius': 6, 'circle-color': '#06b6d4', 'circle-stroke-color': '#0891b2', 'circle-stroke-width': 2 },
   });
 }
 

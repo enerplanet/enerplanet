@@ -146,7 +146,8 @@ export function useMapLibreLayers(
     const apply = () => {
       if (!lod2LayerRef.current || !map.getLayer(LOD2_LAYER_ID)) {
         lod2LayerRef.current = new Lod2Layer();
-        map.addLayer(lod2LayerRef.current);
+        // Under the area's corner handles, which are dragged in 3D too.
+        map.addLayer(lod2LayerRef.current, map.getLayer('user-polygon-corner') ? 'user-polygon-corner' : undefined);
       }
       lod2LayerRef.current.setBuildings(lod2, pvSurfaceIds, techMarkers);
     };

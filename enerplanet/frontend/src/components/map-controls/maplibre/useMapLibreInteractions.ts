@@ -3,6 +3,7 @@ import type * as maplibregl from 'maplibre-gl';
 import type { Map as OlMap } from 'ol';
 import { INTERACTIVE_LAYERS } from './maplibre-styles';
 import type { Lod2Layer } from './maplibre-lod2';
+import type { AreaSketch3D } from './useAreaSketch3D';
 
 export interface InteractionCallbacks {
   onBuildingClick?: (properties: Record<string, any>, lngLat: [number, number]) => void;
@@ -23,6 +24,7 @@ export function useMapLibreInteractions(
   olMap: OlMap,
   visible: boolean,
   callbacks: InteractionCallbacks,
+  sketchRef?: React.RefObject<AreaSketch3D | null>,
 ) {
   const cbRefs = useRef(callbacks);
   const activeClusterKeyRef = useRef<string | null>(null);
@@ -115,9 +117,14 @@ export function useMapLibreInteractions(
       lod2Ref.current?.setHovered(props?.osm_id == null ? null : String(props.osm_id));
     };
 
+    // As in 2D, an area cannot start on a building or transformer, as a click there opens it.
+    const onModelFeature = (f: ReturnType<typeof queryFeatures>) =>
+      !!f && (f.layer.id.startsWith('buildings-3d') || f.layer.id.startsWith('transformers'));
+
     const handleClick = (evt: any) => {
       const pixel: [number, number] = [evt.pixel[0], evt.pixel[1]];
       const f = queryFeatures(pixel);
+      if (sketchRef?.current?.click(pixel, onModelFeature(f))) return;
       if (f) {
         const layerId = f.layer.id;
         const props = f.properties || {};
@@ -149,7 +156,15 @@ export function useMapLibreInteractions(
         const pixel: [number, number] = [evt.pixel[0], evt.pixel[1]];
         const f = queryFeatures(pixel);
 
-        if (f) {
+        if (sketchRef?.current?.move(pixel, onModelFeature(f))) {
+          setConnectedBuildingsFilter(null);
+          setHovered(null);
+          olMap.getTargetElement().style.cursor = 'crosshair';
+          pointing = true;
+          cbRefs.current.onBuildingHover?.(null, pixel);
+          cbRefs.current.onTransformerHover?.(null, pixel);
+          cbRefs.current.onMvLineHover?.(null, pixel);
+        } else if (f) {
           const layerId = f.layer.id;
           const props = f.properties || {};
           olMap.getTargetElement().style.cursor = 'pointer';
@@ -195,5 +210,5 @@ export function useMapLibreInteractions(
       olMap.un('click', handleClick);
       olMap.un('pointermove', handlePointerMove);
     };
-  }, [mapRef, lod2Ref, olMap, visible]);
+  }, [mapRef, lod2Ref, olMap, visible, sketchRef]);
 }

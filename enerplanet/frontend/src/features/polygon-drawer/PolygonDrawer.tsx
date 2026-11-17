@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FC } from "react";
 import Draw, { type DrawEvent } from "ol/interaction/Draw";
-import Modify, { type ModifyEvent } from "ol/interaction/Modify";
+import Modify, { ModifyEvent } from "ol/interaction/Modify";
 import DragPan from "ol/interaction/DragPan";
 import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
@@ -9,7 +9,7 @@ import type { Coordinate } from "ol/coordinate";
 import type Polygon from "ol/geom/Polygon";
 import type Map from "ol/Map";
 import { Style, Fill, Stroke, Circle as CircleStyle, Text } from "ol/style";
-import { Feature } from "ol";
+import { Collection, Feature } from "ol";
 import { MultiPoint, Polygon as OLPolygon, Point } from "ol/geom";
 import { altKeyOnly, noModifierKeys, primaryAction, shiftKeyOnly } from "ol/events/condition";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
@@ -25,6 +25,46 @@ export type PointerTarget = "corner" | "triangle-corner" | "polygon" | "building
 const CORNER_TOLERANCE_PX = 10;
 // Below this a polygon covers nothing, e.g. corners that all lie on one line.
 const MIN_POLYGON_AREA_M2 = 1;
+// Marks the drawer's Draw interaction, so drawPolygon finds it among the map's interactions.
+const AREA_DRAW = "areaDraw";
+// Holds the drawer's polygon source on its Modify interaction, so moveAreaCorner can edit it.
+const AREA_SOURCE = "areaSource";
+
+/**
+ * Adds a polygon through the map's PolygonDrawer, as if its corners (lon/lat) had been clicked: the 3D view,
+ * where the 2D map cannot be clicked, draws its areas this way.
+ */
+export function drawPolygon(map: Map, ring: [number, number][]): void {
+  const interactions = map.getInteractions().getArray();
+  const draw = interactions.find((i): i is Draw => i instanceof Draw && i.get(AREA_DRAW) === true);
+  if (!draw) throw new Error(`No PolygonDrawer on the map for a polygon of ${ring.length} corners`);
+  // A sketch turns off DragPan until it ends, which turns it on even where the 3D view had it off.
+  const pans = interactions.filter((i): i is DragPan => i instanceof DragPan);
+  const panActive = pans.map((p) => p.getActive());
+  draw.appendCoordinates(ring.map((c) => fromLonLat(c)));
+  draw.finishDrawing();
+  pans.forEach((p, i) => p.setActive(panActive[i]));
+}
+
+/**
+ * Moves one corner (lon/lat) of the drawer's polygons, as a corner drag on the 2D map would, so the
+ * change is checked and saved the same way. Indexes follow the polygons the drawer reports.
+ */
+export function moveAreaCorner(map: Map, polygon: number, corner: number, to: [number, number]): void {
+  const modify = map.getInteractions().getArray().find((i): i is Modify => i instanceof Modify && !!i.get(AREA_SOURCE));
+  const feature = (modify?.get(AREA_SOURCE) as VectorSource | undefined)?.getFeatures()[polygon];
+  const geometry = feature?.getGeometry() as Polygon | undefined;
+  if (!modify || !feature || !geometry) throw new Error(`No area polygon ${polygon} to move corner ${corner} of`);
+  // The listeners read only the source, not the event's map event.
+  const fire = (type: "modifystart" | "modifyend") =>
+    modify.dispatchEvent(new ModifyEvent(type, new Collection([feature]), undefined as unknown as MapBrowserEvent));
+  fire("modifystart");
+  const [ring, ...holes] = geometry.getCoordinates();
+  ring[corner] = fromLonLat(to);
+  if (corner === 0) ring[ring.length - 1] = ring[0];
+  geometry.setCoordinates([ring, ...holes]);
+  fire("modifyend");
+}
 
 interface PolygonDrawerProps {
   map: Map | null;
@@ -342,6 +382,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
           !(allowMultipleRef.current && vectorSource.getFeaturesAtCoordinate(event.coordinate).length > 0) &&
           (sketching || !onModelFeature(event.pixel)),
       });
+      draw.set(AREA_DRAW, true);
       drawInteractionRef.current = draw;
 
       map.addInteraction(draw);
@@ -487,6 +528,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
             }),
           }),
         });
+        modify.set(AREA_SOURCE, vectorSource);
         modifyInteractionRef.current = modify;
         map.addInteraction(modify);
         modify.getOverlay().setZIndex(MODIFY_SKETCH_Z_INDEX);
