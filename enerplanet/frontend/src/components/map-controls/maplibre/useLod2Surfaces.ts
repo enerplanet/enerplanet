@@ -30,12 +30,15 @@ interface AreaSurfaces {
   surfaces: Map<string, Lod2Surface[]>;
 }
 
-// An area's LoD2 geometry does not change while the page is open, so it is
-// fetched once per set of buildings and kept for later 3D views. The request
+// An area's LoD2 geometry, once every building has it, does not change while the page
+// is open, so it is kept per set of buildings for later 3D views. The request
 // itself is kept, so an area asked for twice at the same time is fetched once.
 const areaCache = new Map<string, Promise<AreaSurfaces>>();
 // The PV surface lookup runs one call per building; this many run at a time.
 const PARALLEL_REQUESTS = 4;
+// An open 3D view asks again this often, this many times, for buildings City2TABULA had not filled in.
+const RETRY_MS = 15_000;
+const RETRIES = 4;
 
 /** Roof and wall polygons of one building; other surface types are left out. */
 export function lod2SurfacesOf(building: SurfacesBuilding): Lod2Surface[] {
@@ -119,9 +122,13 @@ async function fetchArea(bbox: ReturnType<typeof bboxOf>, osmIds: ReadonlySet<st
 function areaSurfaces(key: string, buildings: GeoJSON.FeatureCollection): Promise<AreaSurfaces> {
   let request = areaCache.get(key);
   if (!request) {
-    request = fetchArea(bboxOf(buildings), new Set(key.split(',')));
-    // A failed request is dropped, so the next 3D view asks again.
-    request.catch(() => areaCache.delete(key));
+    const osmIds = new Set(key.split(','));
+    request = fetchArea(bboxOf(buildings), osmIds);
+    // A failed or incomplete answer is dropped, so the next 3D view asks again: City2TABULA
+    // fills in an area's buildings a while after its first request.
+    request
+      .then((area) => { if (area.surfaces.size < osmIds.size) areaCache.delete(key); })
+      .catch(() => areaCache.delete(key));
     areaCache.set(key, request);
   }
   return request;
@@ -141,18 +148,26 @@ export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, ena
   const buildingsRef = useRef(buildings);
   buildingsRef.current = buildings;
   const buildingKey = useMemo(() => (buildings ? osmIdsOf(buildings).sort().join(',') : ''), [buildings]);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => setAttempt(0), [buildingKey, enabled]);
 
   useEffect(() => {
     const current = buildingsRef.current;
     if (!enabled || !current?.features?.length || !buildingKey) return;
     let cancelled = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
     setLoading(true);
     areaSurfaces(buildingKey, current)
-      .then((result) => { if (!cancelled) setArea(result); })
+      .then((result) => {
+        if (cancelled) return;
+        setArea(result);
+        const complete = result.surfaces.size >= buildingKey.split(',').length;
+        if (!complete && attempt < RETRIES) retry = setTimeout(() => setAttempt((n) => n + 1), RETRY_MS);
+      })
       .catch((err) => console.warn('[3d] LoD2 surfaces unavailable; buildings stay flat footprints', err))
       .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [buildingKey, enabled]);
+    return () => { cancelled = true; clearTimeout(retry); };
+  }, [buildingKey, enabled, attempt]);
 
   return { surfaces: area.surfaces, loading, country: area.country };
 }
