@@ -2,7 +2,7 @@
  * Hook for rendering model results on the shared map
  * Uses the global map from useMapStore and shared gridLayerUtils
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMapStore } from '@/features/interactive-map/store/map-store';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
@@ -265,6 +265,8 @@ interface UseModelResultsMapOptions {
    * map; red when the connection's peak utilisation exceeds 100%.
    */
   connectionGeoJSON?: GeoJSON.FeatureCollection | null;
+  /** The 3D view is shown: its overlay finds what is under the pointer, so the 2D handlers stand down. */
+  is3D?: boolean;
 }
 
 export const useModelResultsMap = ({
@@ -278,6 +280,7 @@ export const useModelResultsMap = ({
   highlightedBuildings,
   selectedBuildingId,
   connectionGeoJSON,
+  is3D = false,
 }: UseModelResultsMapOptions) => {
   const { map } = useMapStore();
   const layersRef = useRef<VectorLayer<VectorSource>[]>([]);
@@ -297,6 +300,9 @@ export const useModelResultsMap = ({
   onTransformerHoverRef.current = onTransformerHover;
   const onTooltipChangeRef = useRef(onTooltipChange);
   onTooltipChangeRef.current = onTooltipChange;
+  const is3DRef = useRef(is3D);
+  is3DRef.current = is3D;
+  const selectFeatureRef = useRef<(feature: Feature<Geometry> | null) => void>(() => {});
 
   // Load model layers onto shared map
   useEffect(() => {
@@ -515,6 +521,7 @@ export const useModelResultsMap = ({
     if (!map) return;
 
     const handleClick = (evt: any) => {
+      if (is3DRef.current) return;
       let clickedFeature: Feature<Geometry> | null = null;
 
       map.forEachFeatureAtPixel(evt.pixel, (f) => {
@@ -525,7 +532,10 @@ export const useModelResultsMap = ({
         }
         return false;
       }, { hitTolerance: 5 });
+      selectFeature(clickedFeature);
+    };
 
+    const selectFeature = (clickedFeature: Feature<Geometry> | null) => {
       if (!clickedFeature) {
         onBuildingSelectRef.current(null);
         return;
@@ -609,8 +619,10 @@ export const useModelResultsMap = ({
       }
     };
 
+    selectFeatureRef.current = selectFeature;
+
     const handlePointerMove = (evt: any) => {
-      if (evt.dragging) return;
+      if (evt.dragging || is3DRef.current) return;
       const target = map.getTarget() as HTMLElement;
       const pixel = evt.pixel;
       const buildingSource = buildingSourceRef.current;
@@ -710,5 +722,17 @@ export const useModelResultsMap = ({
     });
   }, [map, highlightedBuildings, selectedBuildingId, hoveredTransformerId, results?.coordinates, model]);
 
-  return { buildingSourceRef };
+  const buildingFeature = useCallback((osmId: unknown): Feature<Geometry> | null => {
+    if (osmId == null) return null;
+    return buildingSourceRef.current?.getFeatures().find((f) => String(f.get('osm_id')) === String(osmId)) ?? null;
+  }, []);
+  /** Opens the panel of a building clicked in the 3D view, as a click on the 2D map does; null closes it. */
+  const selectBuilding3D = useCallback((osmId: unknown) => selectFeatureRef.current(buildingFeature(osmId)), [buildingFeature]);
+  /** Shows the tooltip of a building hovered in the 3D view; null hides it. */
+  const hoverBuilding3D = useCallback((osmId: unknown, pixel: number[]) => {
+    const feature = buildingFeature(osmId);
+    onTooltipChangeRef.current?.(feature ? createBuildingTooltip(pixel, feature.getProperties()) : null);
+  }, [buildingFeature]);
+
+  return { buildingSourceRef, selectBuilding3D, hoverBuilding3D };
 };
