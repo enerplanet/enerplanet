@@ -16,6 +16,7 @@ import { useConfiguratorParams } from "@/features/configurator/building-config/u
 import { fetchBestFitArrays, type BuildingPlace } from "@/features/configurator/building-config/pvBestFit";
 import { DEFAULT_USABLE_SHARE, type PvArray } from "@/features/configurator/building-config/usePvMode";
 import { forEachLimited } from "@/components/map-controls/maplibre/useLod2Surfaces";
+import { buildingPicker3D } from "@/components/map-controls/maplibre/buildingPicker3D";
 
 /** Whether a building carries any technology or a heat link to a producer. */
 const hasTechs = (f: Feature<Geometry>): boolean =>
@@ -213,34 +214,55 @@ export const useTechDragDrop = ({
   const dropTargetsRef = useRef<Feature<Geometry>[] | null>(null);
 
   const handleTechDragStart = useCallback((tech: Technology) => { setDraggingTech(tech); }, [setDraggingTech]);
-  const handleTechDragEnd = useCallback(() => { setDraggingTech(null); }, [setDraggingTech]);
+  const handleTechDragEnd = useCallback(() => {
+    buildingPicker3D.current?.highlight(null);
+    setDraggingTech(null);
+  }, [setDraggingTech]);
+
+  /** The map pixel of a drag event, relative to the map element. */
+  const pixelOf = useCallback((e: React.DragEvent<HTMLDivElement>): [number, number] | null => {
+    const rect = mapRef.current?.getBoundingClientRect();
+    return rect ? [e.clientX - rect.left, e.clientY - rect.top] : null;
+  }, [mapRef]);
+
+  /** The building under the pixel: in 3D the one drawn there, which a tilted view moves away from its footprint. */
+  const buildingAt = useCallback((pixel: [number, number]): Feature<Geometry> | null => {
+    const picker = buildingPicker3D.current;
+    if (picker) {
+      const osmId = picker.buildingAt(pixel);
+      return osmId === null ? null : collectBuildingsFromLayers(pylovoLayersRef.current).find((f) => String(f.get("osm_id")) === osmId) ?? null;
+    }
+    return map?.forEachFeatureAtPixel(pixel, (f: any) => f.get('feature_type') === 'building' ? f : null) ?? null;
+  }, [map, pylovoLayersRef]);
 
   const handleMapDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (!map || !draggingTech) return;
     try {
-      const mapElement = mapRef.current;
-      if (!mapElement) return;
-      const rect = mapElement.getBoundingClientRect();
-      const pixel = [e.clientX - rect.left, e.clientY - rect.top];
-      const feature = map.forEachFeatureAtPixel(pixel, (f: any) => f.get('feature_type') === 'building' ? f : null);
+      const pixel = pixelOf(e);
+      if (!pixel) return;
+      const feature = buildingAt(pixel);
       if (feature) {
         dropTargetsRef.current = dropTargets(feature, useModelStore.getState().selectedBuildingIds, collectBuildingsFromLayers(pylovoLayersRef.current));
         setSelectedTechForDialog(draggingTech); setSelectedBuildingForTech(feature); setTechDialogStep("pick"); setTechDialogOpen(true);
       }
       else showError(t("gridNotifications.dropOnBuilding"));
     } catch (error) { console.error("Error handling tech drop:", error); }
-    finally { setDraggingTech(null); }
-  }, [map, draggingTech, mapRef, pylovoLayersRef, showError, t, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep, setDraggingTech]);
+    finally {
+      buildingPicker3D.current?.highlight(null);
+      setDraggingTech(null);
+    }
+  }, [map, draggingTech, pixelOf, buildingAt, pylovoLayersRef, showError, t, setSelectedTechForDialog, setSelectedBuildingForTech, setTechDialogOpen, setTechDialogStep, setDraggingTech]);
 
+  // In 3D the building a drop would go to is tinted while dragging.
   const handleMapDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
-    if (!map || !draggingTech) return;
-    const mapElement = mapRef.current;
-    if (!mapElement) return;
-    // Highlight is handled inline via the feature's own style
-  }, [map, draggingTech, mapRef]);
+    const picker = buildingPicker3D.current;
+    const pixel = pixelOf(e);
+    if (!draggingTech || !picker || !pixel) return;
+    picker.highlight(picker.buildingAt(pixel));
+  }, [draggingTech, pixelOf]);
 
   /** Lays out PV on the buildings and reports those it could not; then runs done. */
   const layOutPvAndReport = useCallback((buildings: Feature<Geometry>[], usableShare: number, done?: () => void) => {
