@@ -695,7 +695,6 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 mvLinesGeoJSON={pylovoLayers.pylovoGridData?.mv_lines}
                 transformersGeoJSON={pylovoLayers.pylovoGridData?.transformers}
                 availableBoundaryGeoJSON={pylovoLayers.availableBoundaryGeoJSON}
-                selectedBoundaryFeature={pylovoLayers.regionBoundary?.boundary}
                 showBoundary={pylovoLayers.showBoundary}
                 polygonCoordinates={state.allPolygons}
                 selectedBuildingOsmIds={buildingAssign.selectedBuildingsForAssign}

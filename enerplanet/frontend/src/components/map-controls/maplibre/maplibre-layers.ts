@@ -503,25 +503,18 @@ export function addOrUpdateTransformers(map: maplibregl.Map, geojson: any, color
 export function addOrUpdateRegionBoundaries(
   map: maplibregl.Map,
   availableBoundaryGeoJSON?: any,
-  selectedBoundaryFeature?: any,
   visible: boolean = true,
 ): void {
   if (!visible) {
     clearSource(map, 'region-boundaries-available');
-    clearSource(map, 'region-boundary-selected');
     return;
   }
 
   const availableFC = toFeatureCollection(availableBoundaryGeoJSON) || { type: 'FeatureCollection', features: [] };
-  const selectedFC = toFeatureCollection(selectedBoundaryFeature) || { type: 'FeatureCollection', features: [] };
 
   const availableSource = map.getSource('region-boundaries-available') as maplibregl.GeoJSONSource | undefined;
   if (availableSource) { availableSource.setData(availableFC); }
   else { map.addSource('region-boundaries-available', { type: 'geojson', data: availableFC }); }
-
-  const selectedSource = map.getSource('region-boundary-selected') as maplibregl.GeoJSONSource | undefined;
-  if (selectedSource) { selectedSource.setData(selectedFC); }
-  else { map.addSource('region-boundary-selected', { type: 'geojson', data: selectedFC }); }
 
   if (map.getLayer('region-boundaries-available-fill')) return;
 
@@ -539,20 +532,6 @@ export function addOrUpdateRegionBoundaries(
     type: 'line',
     source: 'region-boundaries-available',
     paint: { 'line-color': BOUNDARY_COLORS.availableStroke, 'line-width': 1.4, 'line-dasharray': [3, 2] },
-  });
-
-  map.addLayer({
-    id: 'region-boundary-selected-fill',
-    type: 'fill',
-    source: 'region-boundary-selected',
-    paint: { 'fill-color': BOUNDARY_COLORS.selectedFill, 'fill-opacity': 1 },
-  }, fillBeforeId);
-
-  map.addLayer({
-    id: 'region-boundary-selected-line',
-    type: 'line',
-    source: 'region-boundary-selected',
-    paint: { 'line-color': BOUNDARY_COLORS.selectedStroke, 'line-width': 2.5 },
   });
 }
 

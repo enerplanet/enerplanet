@@ -47,8 +47,6 @@ export const BOUNDARY_COLORS = {
   availableHoverFill: 'rgba(99, 102, 241, 0.22)',
   availableStroke: 'rgba(99, 102, 241, 0.90)',
   availableGlow: 'rgba(99, 102, 241, 0.20)',
-  selectedFill: 'rgba(245, 158, 11, 0.08)',
-  selectedStroke: 'rgba(245, 158, 11, 0.98)',
   selectedGlow: 'rgba(245, 158, 11, 0.26)',
   labelText: '#312e81',
   labelHalo: '#ffffff',

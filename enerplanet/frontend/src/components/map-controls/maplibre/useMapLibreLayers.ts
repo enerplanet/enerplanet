@@ -27,7 +27,6 @@ export interface LayerData {
   transformersGeoJSON?: any;
   connectionGeoJSON?: GeoJSON.FeatureCollection | null;
   availableBoundaryGeoJSON?: any;
-  selectedBoundaryFeature?: any;
   showBoundary?: boolean;
   polygonCoordinates?: [number, number][][];
   selectedBuildingOsmIds?: string[];
@@ -55,7 +54,6 @@ export function useMapLibreLayers(
     transformersGeoJSON,
     connectionGeoJSON,
     availableBoundaryGeoJSON,
-    selectedBoundaryFeature,
     showBoundary = true,
     polygonCoordinates,
     selectedBuildingOsmIds = [],
@@ -103,7 +101,6 @@ export function useMapLibreLayers(
     addOrUpdateRegionBoundaries(
       map,
       availableBoundaryGeoJSON,
-      selectedBoundaryFeature,
       showBoundary
     );
     addOrUpdatePolygon(map, polygonCoordinates);
@@ -116,7 +113,6 @@ export function useMapLibreLayers(
     connections,
     userModels,
     availableBoundaryGeoJSON,
-    selectedBoundaryFeature,
     showBoundary,
     polygonCoordinates,
     selectedBuildingOsmIds,

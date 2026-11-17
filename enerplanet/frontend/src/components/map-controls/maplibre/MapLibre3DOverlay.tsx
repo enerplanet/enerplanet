@@ -42,7 +42,6 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   mvLinesGeoJSON,
   transformersGeoJSON,
   availableBoundaryGeoJSON,
-  selectedBoundaryFeature,
   showBoundary,
   polygonCoordinates,
   selectedBuildingOsmIds,
@@ -65,7 +64,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   // 2. Data layers
   const { footprintOnly, lod2LayerRef } = useMapLibreLayers(mapRef, {
     buildingsGeoJSON, linesGeoJSON, mvLinesGeoJSON,
-    transformersGeoJSON, availableBoundaryGeoJSON, selectedBoundaryFeature, showBoundary, polygonCoordinates,
+    transformersGeoJSON, availableBoundaryGeoJSON, showBoundary, polygonCoordinates,
     selectedBuildingOsmIds, isBuildingAssignMode, onBoundaryRegionClick, userModelGeoJSON, onUserModelClick, techsFor,
   }, mapReady);
 
