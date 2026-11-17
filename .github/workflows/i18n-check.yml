@@ -12,6 +12,13 @@
 
 name: i18n check
 
+# Least privilege: the job only reads the repository (checkout, npm ci, run the
+# test), so the GITHUB_TOKEN needs nothing beyond read access to the contents.
+# Without an explicit block the token inherits the repository default, which may
+# be read/write — hence the CodeQL "workflow does not contain permissions" alert.
+permissions:
+  contents: read
+
 on:
   pull_request:
     branches: [main, dev]
