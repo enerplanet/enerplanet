@@ -5,13 +5,21 @@ import { useMapLibreMap } from './useMapLibreMap';
 import { useMapLibreLayers, type LayerData } from './useMapLibreLayers';
 import { useMapLibreInteractions, type InteractionCallbacks } from './useMapLibreInteractions';
 import { useOlLayerSync } from './useOlLayerSync';
+import { useAreaSketch3D } from './useAreaSketch3D';
 import { MapLibre3DControls } from './MapLibre3DControls';
 import type { MapControlsPlacement } from '@/components/map-controls/MapControls';
 
 interface MapLibre3DOverlayProps extends LayerData, InteractionCallbacks {
   olMap: OlMap;
   visible: boolean;
-  isDrawing?: boolean;
+  /** Draws areas on the ground when given, and gets each closed one as lon/lat corners. */
+  onAreaDrawn?: (ring: [number, number][]) => void;
+  /** Takes a corner of polygonCoordinates dragged to a new lon/lat; corners stay fixed without it. */
+  onAreaCornerMoved?: (polygon: number, corner: number, to: [number, number]) => void;
+  /** Called when the first corner of an area is placed (true) and when the area closes or is abandoned. */
+  onSketchOpenChange?: (open: boolean) => void;
+  /** Abandons the area being drawn whenever it changes. */
+  cancelSketchTrigger?: number;
   /** Placement of the map's zoom buttons; the reset button sits under them. */
   controlsPlacement?: MapControlsPlacement;
 }
@@ -23,7 +31,10 @@ interface MapLibre3DOverlayProps extends LayerData, InteractionCallbacks {
 export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   olMap,
   visible,
-  isDrawing = false,
+  onAreaDrawn,
+  onAreaCornerMoved,
+  onSketchOpenChange,
+  cancelSketchTrigger = 0,
   controlsPlacement,
   // Layer data
   buildingsGeoJSON,
@@ -49,7 +60,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   onMapClick,
 }) => {
   // 1. Map lifecycle & OL sync
-  const { containerRef, mapRef, mapReady } = useMapLibreMap(olMap, visible, isDrawing);
+  const { containerRef, mapRef, mapReady } = useMapLibreMap(olMap, visible);
 
   // 2. Data layers
   const { footprintOnly, lod2LayerRef } = useMapLibreLayers(mapRef, {
@@ -59,13 +70,16 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   }, mapReady);
 
   // 3. Click/hover interactions (forwarded from OL events to MapLibre queryRenderedFeatures)
+  const sketchRef = useAreaSketch3D(
+    mapRef, mapReady, olMap, onAreaDrawn, onSketchOpenChange, cancelSketchTrigger, polygonCoordinates, onAreaCornerMoved,
+  );
   useMapLibreInteractions(mapRef, lod2LayerRef, olMap, visible, {
     onBuildingClick, onTransformerClick, onBuildingHover,
     onTransformerHover, onMvLineHover, onMapClick,
-  });
+  }, sketchRef);
 
   // 4. OL layer hiding & z-index management
-  useOlLayerSync(olMap, visible, isDrawing);
+  useOlLayerSync(olMap, visible);
 
   if (!visible) return null;
 

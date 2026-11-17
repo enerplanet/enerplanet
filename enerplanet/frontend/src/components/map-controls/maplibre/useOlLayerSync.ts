@@ -29,7 +29,7 @@ function ensureHidingStyle() {
 // The 2D map is hidden only through OL_HIDDEN_CLASS on its viewport. Hiding its
 // elements by inline style left a layer that OpenLayers detaches while hidden (the
 // base layer in 3D) still hidden when it was attached again, blanking the 2D map.
-export function useOlLayerSync(olMap: OlMap, visible: boolean, isDrawing: boolean) {
+export function useOlLayerSync(olMap: OlMap, visible: boolean) {
   const pendingTimeoutsRef = useRef<number[]>([]);
   const unmountedRef = useRef(false);
 
@@ -86,51 +86,9 @@ export function useOlLayerSync(olMap: OlMap, visible: boolean, isDrawing: boolea
     };
   }, [olMap, visible]);
 
-  const visibleRef = useRef(visible);
-  useEffect(() => { visibleRef.current = visible; }, [visible]);
-
-  useEffect(() => {
-    if (!visible || !isDrawing) return;
-    const viewport = olMap.getViewport();
-    if (!viewport) return;
-
-    viewport.classList.remove(OL_HIDDEN_CLASS);
-
-    const hiddenLayers: any[] = [];
-    const polygonZIndexMin = 2000;
-    const polygonZIndexMax = 2004;
-
-    olMap.getLayers().forEach((layer: any) => {
-      const z = layer.getZIndex?.();
-      const isPolygonLayer = z !== undefined && z >= polygonZIndexMin && z <= polygonZIndexMax;
-      if (!isPolygonLayer && layer.getVisible()) {
-        layer.setVisible(false);
-        hiddenLayers.push(layer);
-      }
-    });
-
-    const onLayerAdd = (e: any) => {
-      const layer = e.element;
-      const z = layer.getZIndex?.();
-      const isPolygonLayer = z !== undefined && z >= polygonZIndexMin && z <= polygonZIndexMax;
-      if (!isPolygonLayer && layer.getVisible()) {
-        layer.setVisible(false);
-        hiddenLayers.push(layer);
-      }
-    };
-    olMap.getLayers().on('add', onLayerAdd);
-
-    return () => {
-      olMap.getLayers().un('add', onLayerAdd);
-      hiddenLayers.forEach((layer) => layer.setVisible(true));
-      // Only re-hide if still in 3D mode (drawing just stopped)
-      if (visibleRef.current) viewport.classList.add(OL_HIDDEN_CLASS);
-    };
-  }, [olMap, visible, isDrawing]);
-
+  // The 3D view draws its own areas; the 2D drawing tools would act on a map that is hidden.
   useEffect(() => {
     if (!visible) return;
-    if (isDrawing) return;
 
     const deactivated: { interaction: any; wasActive: boolean }[] = [];
 
@@ -149,5 +107,5 @@ export function useOlLayerSync(olMap: OlMap, visible: boolean, isDrawing: boolea
         interaction.setActive(wasActive);
       });
     };
-  }, [olMap, visible, isDrawing]);
+  }, [olMap, visible]);
 }
