@@ -66,6 +66,8 @@ import {
 } from './carrierUnits';
 import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
+import { BaseLayerSwitcher } from '@/components/map-controls/BaseLayerSwitcher';
+import { View3dLegend } from '@/components/map-controls/maplibre/View3dLegend';
 import { CopyrightFooter } from '@/components/app-layout/CopyrightFooter';
 import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulation-charts/pypsa';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
@@ -590,7 +592,7 @@ export const ModelResultsViewer = () => {
   const capabilities = useMemo(() => capabilitiesFrom(pypsaData), [pypsaData]);
 
   // Use shared map for model results visualization
-  useModelResultsMap({
+  const { selectBuilding3D, hoverBuilding3D } = useModelResultsMap({
     model,
     results,
     onBuildingSelect: handleBuildingSelect,
@@ -603,6 +605,7 @@ export const ModelResultsViewer = () => {
     highlightedBuildings,
     selectedBuildingId: selectedBuilding ? String(selectedBuilding.buildingId) : null,
     connectionGeoJSON: connectionsGeoJSON,
+    is3D: isMapLibre3D,
   });
 
   
@@ -1017,6 +1020,8 @@ export const ModelResultsViewer = () => {
         <div className="w-[35%] flex-shrink-0 border-r border-border relative">
           <div ref={mapRef} className="w-full h-full" />
           {map && <MapControls />}
+          {map && <BaseLayerSwitcher />}
+          {map && isMapLibre3D && <View3dLegend />}
           {map && isMapLibre3D && (
             <MapLibre3DOverlay
               olMap={map}
@@ -1026,6 +1031,9 @@ export const ModelResultsViewer = () => {
               transformersGeoJSON={transformersGeoJSON}
               connectionGeoJSON={connectionsGeoJSON}
               visible={isMapLibre3D}
+              onBuildingClick={(props) => selectBuilding3D(props.osm_id)}
+              onMapClick={() => selectBuilding3D(null)}
+              onBuildingHover={(props, pixel) => hoverBuilding3D(props?.osm_id, pixel)}
             />
           )}
 
