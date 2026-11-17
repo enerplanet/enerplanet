@@ -4,8 +4,7 @@ The grid model configurator — a map-based UI for selecting a region, generatin
 
 > **Heat & tech-db support:** the configurator additionally assigns **heat** technologies
 > and consumes the **OpenTech-DB** catalog (via the backend read-only proxy). It coexists
-> with the legacy simulator techs — see the *Heat & OpenTech-DB* section below and
-> `~/roo-okf/heat/*` for the full design.
+> with the legacy simulator techs — see the *Heat & OpenTech-DB* section below.
 
 ## Quick start
 
@@ -115,7 +114,7 @@ producers→heat links → each building's techs go into model.config.buildings 
 
 ## Heat & OpenTech-DB
 
-The configurator supports **two co-existing tech systems** (see `~/roo-okf/heat/tech-systems.md`):
+The configurator supports **two co-existing tech systems**:
 
 | | Simulator techs (legacy) | OpenTech-DB techs |
 |---|---|---|
@@ -138,11 +137,11 @@ estimate for display.
 **Backend dependency.** The OpenTech-DB read-only proxy lives in the backend:
 `internal/opentechdb/client.go` + `handler.go`, a 1:1 passthrough mounted at
 `/api/opentech-db/*proxyPath` → upstream `/api/v1/<path>` (raw body, no
-`{success,data}` envelope). See `~/roo-okf/heat/opentechdb-api.md`.
+`{success,data}` envelope).
 
 > Heat-network features (expected-fit auto-resolve, blocking heat validation,
 > producer→consumer heat links, fuel-price surfacing) are planned but not yet in
-> the configurator — see `enerplanet/frontend/heat-configurator-plan.md`.
+> the configurator.
 
 ## Style conventions
 

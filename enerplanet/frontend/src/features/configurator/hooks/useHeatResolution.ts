@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // Heat resolution (supply side) — configurator hook for the expected-fit
-// auto-resolve (plan §1). Closes the gap where a building has heat demand but
+// auto-resolve. Closes the gap where a building has heat demand but
 // no assigned heat tech: in "expected" mode it assigns the likely tech for that
 // building type and flags the resolution as estimated; in "manual" mode it
 // never auto-assigns (the later blocking-validator stage handles that).
