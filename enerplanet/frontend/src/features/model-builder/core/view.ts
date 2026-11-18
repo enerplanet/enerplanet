@@ -37,10 +37,31 @@ export interface MapClick {
   readonly feature?: MapFeature;
 }
 
+/** A module layer's volume: how tall its polygons stand, and in what colour. */
+export interface LayerExtrusion {
+  /** A feature property holding the height in metres; a feature without one gets `fallback`. */
+  readonly heightFrom?: string;
+  /** Height in metres for a feature that has no height of its own. */
+  readonly fallback: number;
+  /**
+   * The volume's colour.
+   *
+   * A flat layer's fill keeps its own colour, so this is what makes one extruded layer read as a single thing —
+   * which is the point of extruding it at all: the volumes say which buildings are in hand.
+   */
+  readonly color: string;
+}
+
 /** What a layer is created with. */
 export interface LayerOptions {
   /** Whether this layer starts out accepting clicks. Only one layer is interactive at a time. */
   readonly interactive?: boolean;
+  /**
+   * Draw this layer's polygons as volumes rather than flat fills, so a tilted map shows them standing up.
+   *
+   * Only polygons: points and lines on the same layer are styled by their own layers and are unaffected.
+   */
+  readonly extrusion?: LayerExtrusion;
 }
 
 /**

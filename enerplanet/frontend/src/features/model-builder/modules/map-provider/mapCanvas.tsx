@@ -29,6 +29,15 @@ import { useTranslation } from "@spatialhub/i18n";
 import type { Extent, MapFeature } from "@model-builder/core";
 import type { HostRuntime, MapRenderer } from "./mapHost";
 import { captureCursor, pixelDistance, shouldClose, shouldTrimTail, startMarkerRadius } from "./capture";
+import {
+  CITY_3D_LAYER_ID,
+  POLYGON_FILTER,
+  cityBuildings3dLayer,
+  extrusionIdOf,
+  extrusionLayer,
+  extrusionOpacityAt,
+  hasOwnVolumes,
+} from "./extrusion";
 
 // maplibre-gl loads its worker relative to its own module, which Vite's dependency bundling moves; the worker
 // file is self-contained, so its own URL works in dev and in a build. Same fix as the legacy overlay.
@@ -41,12 +50,14 @@ const sourceOf = (id: string): string => `mb-source-${id}`;
 
 /**
  * One module layer is three MapLibre layers, not one: a GeoJSON source can hold points, lines and polygons at
- * once, and MapLibre styles one geometry type per layer. They are added, ordered and removed together.
+ * once, and MapLibre styles one geometry type per layer. They are added, ordered and removed together — and a
+ * layer that asked for volume has a fourth, over the same source.
  */
-const styleIdsOf = (id: string): readonly [string, string, string] => [
+const styleIdsOf = (id: string): readonly [string, string, string, string] => [
   `mb-layer-${id}-fill`,
   `mb-layer-${id}-line`,
   `mb-layer-${id}-circle`,
+  extrusionIdOf(id),
 ];
 
 /** The in-progress capture preview: its own source and layer, so no module layer is ever touched by it. */
@@ -116,6 +127,45 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
      * Failing here must not take the rest of the draw with it either: a throw in this loop used to abort every
      * layer after it and tell nobody.
      */
+    /**
+     * Every volume on the map at this pitch — which is only the layers that asked for one.
+     *
+     * They are the buildings a module put there, so they are the ones in hand; the basemap's own buildings are
+     * never extruded, because a tilted map that showed every building of the city would show the ones outside the
+     * area as loudly as the ones inside it.
+     *
+     * MapLibre cannot express the fade in the style (`pitch` is not an expression input), so it follows the map's
+     * `pitch` event instead — the same approach the legacy map takes for its own 3D layers.
+     */
+    const setExtrusionOpacity = (active: maplibregl.Map, pitch: number): void => {
+      const styleIds = [CITY_3D_LAYER_ID, ...runtime.stack.getLayerOrder().map(extrusionIdOf)];
+      for (const styleId of styleIds) {
+        if (active.getLayer(styleId) === undefined) continue;
+        active.setPaintProperty(styleId, "fill-extrusion-opacity", extrusionOpacityAt(pitch));
+      }
+    };
+
+    /**
+     * The city's own buildings: added once, then shown or hidden to suit what else is on the map.
+     *
+     * They are the fallback, so they are visible until a module layer stands up volumes of its own — and hidden
+     * from then on. Two volumes on one footprint is what looked broken; one layer with its visibility toggled is
+     * what makes both states available without ever drawing both.
+     */
+    const applyCity3d = (active: maplibregl.Map): void => {
+      if (active.getLayer(CITY_3D_LAYER_ID) === undefined) {
+        const spec = cityBuildings3dLayer(active.getStyle());
+        if (spec === undefined) return;
+        active.addLayer(spec.layer, spec.beforeId);
+        setExtrusionOpacity(active, active.getPitch());
+      }
+      active.setLayoutProperty(
+        CITY_3D_LAYER_ID,
+        "visibility",
+        hasOwnVolumes(runtime.stack) ? "none" : "visible",
+      );
+    };
+
     const drawLayer = (active: maplibregl.Map, id: string): void => {
       try {
         const data: GeoJSON.FeatureCollection = {
@@ -133,6 +183,14 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
         if (!rendered.has(id)) {
           addLayerTrio(active, id);
           rendered.add(id);
+        }
+
+        // A layer that asked for volume gets a fourth MapLibre layer over the same source, guarded on the layer
+        // itself rather than on `rendered`: an extrusion declared after the trio was drawn still has to appear.
+        const extrusion = runtime.stack.optionsOf(id)?.extrusion;
+        if (extrusion !== undefined && active.getLayer(extrusionIdOf(id)) === undefined) {
+          active.addLayer(extrusionLayer(id, sourceOf(id), extrusion));
+          setExtrusionOpacity(active, active.getPitch());
         }
       } catch (error) {
         console.error(`map layer "${id}" failed to draw`, error);
@@ -167,6 +225,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       dropGone(active, new Set(order));
       for (const id of order) drawLayer(active, id);
       orderLayers(active, order, runtime.stack.interactiveLayer());
+      applyCity3d(active);
     };
 
     /**
@@ -210,7 +269,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
         id: fill,
         type: "fill",
         source,
-        filter: ["==", ["geometry-type"], "Polygon"],
+        filter: POLYGON_FILTER,
         paint: { "fill-color": "#3b82f6", "fill-opacity": 0.25 },
       });
       active.addLayer({
@@ -445,6 +504,14 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
         dragRotate: true, // right-click rotate, the 3D gesture the legacy uses
         boxZoom: false,
         keyboard: false,
+      });
+
+      let lastPitch = Number.NaN;
+      created.on("pitch", () => {
+        const pitch = created.getPitch();
+        if (Math.abs(pitch - lastPitch) < 0.5) return;
+        lastPitch = pitch;
+        setExtrusionOpacity(created, pitch);
       });
 
       created.on("load", () => {

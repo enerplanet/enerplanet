@@ -120,6 +120,7 @@ const module = defineModule({
   // what this node writes.
   params: [
     { port: "modelId", required: true },
+    { port: "saveResult" },
     { port: "memeRun", required: true },
     { port: "memePypsaLeg" },
   ],
@@ -127,7 +128,7 @@ const module = defineModule({
   // Two edges, both honest: a different saved model is a different power flow, and — because the leg is
   // *derived from the Calliope run* — a different `memeRun` invalidates the leg too (the backend drops the
   // leg's row when a new Calliope run starts, so the old leg no longer describes this model's results).
-  affect: { modelId: ["memePypsaLeg"], memeRun: ["memePypsaLeg"] },
+  affect: { modelId: ["memePypsaLeg"], saveResult: ["memePypsaLeg"], memeRun: ["memePypsaLeg"] },
 
   // `overlay` is where an auto node shows its leg state; `bottom` is its status strip. No `sidebar`, and no
   // forward action — an auto node never has a Continue button.
@@ -160,9 +161,16 @@ const module = defineModule({
 
     const existing = ctx.read("memePypsaLeg");
 
-    // No leg recorded yet: this is the arrival run, and the only one that submits from nothing.
+    // No leg recorded on *this* session. That is the first pass through a flow, where there is genuinely
+    // nothing to read — and it is also a reopened session, because a run's record is not part of what a session
+    // restores. So "no record" cannot mean "submit": ask the model what it is doing first. A leg already
+    // pending, running or completed is one this session continues rather than starts, and submitting from
+    // nothing on one of those is what made reopening a finished model dispatch a second power flow.
     if (existing === undefined) {
-      ctx.commit({ memePypsaLeg: await gateway.submit(modelId) });
+      const current = await gateway.status(modelId);
+      const alreadyStarted =
+        current.status === "pending" || current.status === "running" || current.status === "completed";
+      ctx.commit({ memePypsaLeg: alreadyStarted ? current : await gateway.submit(modelId) });
       return;
     }
 

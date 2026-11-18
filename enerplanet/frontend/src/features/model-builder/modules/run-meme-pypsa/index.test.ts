@@ -21,7 +21,32 @@ import {
   type MemePypsaLeg,
   type MemeRun,
 } from "@model-builder/core";
+import { changedPorts, stageCascade } from "../../core/invalidator";
+import type { DiffOp } from "../../core/diff";
 import runMemePypsa, { issuesFor } from "./index";
+  it("is invalidated when the model is saved again, so an edited model is run again", () => {
+    // The leg describes a Calliope run of the *saved* model, and an edit re-saves under the same id: `saveResult`
+    // moves, `modelId` never does. Without this edge a completed leg stood for the rest of the session and the
+    // adjusted model the variant flow exists to run could not be powered at all.
+    const store = createStore({
+      ...runMemePypsa.mock,
+      memePypsaLeg: leg("completed"),
+      saveResult: { modelId: 7, created: true },
+    });
+    const primary: DiffOp[] = [
+      { op: "replace", path: "saveResult", prev: store.data.saveResult, next: { modelId: 7, created: false } },
+    ];
+
+    const cascade = stageCascade({
+      changed: changedPorts(primary),
+      primary,
+      data: store.data,
+      modules: [runMemePypsa.module],
+    });
+
+    expect(cascade.map((op) => op.path)).toContain("/memePypsaLeg");
+  });
+
 import { setMemePypsaLegGateway, type MemePypsaLegGateway } from "./source";
 
 /** The node these cases run as — the module's own id, which is what a host uses in test mode. */
@@ -92,13 +117,15 @@ describe("run-meme-pypsa's declaration", () => {
       "memePypsaLeg",
       "memeRun",
       "modelId",
+      "saveResult",
     ]);
   });
 
-  it("declares both edges — a different model and a different Calliope run each invalidate the leg", () => {
+  it("declares all three edges — a different model, a save, and a different Calliope run", () => {
     // The leg is *derived from* the Calliope run, so a different run makes the leg describe stale results;
     // the backend drops the leg's row when a new Calliope run starts for the same reason.
     expect([...runMemePypsa.module.affect.modelId!]).toEqual(["memePypsaLeg"]);
+    expect([...runMemePypsa.module.affect.saveResult!]).toEqual(["memePypsaLeg"]);
     expect([...runMemePypsa.module.affect.memeRun!]).toEqual(["memePypsaLeg"]);
   });
 
@@ -112,15 +139,44 @@ describe("run-meme-pypsa's declaration", () => {
 });
 
 describe("run-meme-pypsa's run", () => {
-  it("submits once on arrival and commits the leg record from the response", async () => {
-    const gateway = fakeGateway({ submit: leg("pending") });
+  it("reads the model first, then submits, when nothing has been started", async () => {
+    // The model reports nothing started, which is what one that has never been run looks like through the
+    // gateway: a leg status nobody has set lands on `failed`. Without this answer the fake defaults to a leg
+    // already going, which is the case below.
+    const gateway = fakeGateway({ submit: leg("pending"), status: leg("failed") });
     setMemePypsaLegGateway(gateway);
 
     const { store, error } = await runInScratch(runMemePypsa);
 
     expect(error).toBeUndefined();
+    expect(gateway.polled).toEqual([runMemePypsa.mock?.modelId]);
     expect(gateway.submitted).toEqual([runMemePypsa.mock?.modelId]);
     expect(store.data.memePypsaLeg).toEqual(leg("pending"));
+  });
+
+  it("continues a leg it finds already going instead of starting a second one", async () => {
+    // A reopened session restores without the leg's record, so arrival happens again — and the leg may already be
+    // running. Submitting from nothing here is what dispatched a duplicate power flow; the read is what tells a
+    // session continuing a leg from one starting it.
+    const gateway = fakeGateway({ status: leg("running") });
+    setMemePypsaLegGateway(gateway);
+
+    const { store, error } = await runInScratch(runMemePypsa);
+
+    expect(error).toBeUndefined();
+    expect(gateway.submitted).toEqual([]);
+    expect(store.data.memePypsaLeg?.status).toBe("running");
+  });
+
+  it("adopts a leg that has already finished, rather than running the model again", async () => {
+    const gateway = fakeGateway({ status: leg("completed") });
+    setMemePypsaLegGateway(gateway);
+
+    const { store, error } = await runInScratch(runMemePypsa);
+
+    expect(error).toBeUndefined();
+    expect(gateway.submitted).toEqual([]);
+    expect(store.data.memePypsaLeg?.status).toBe("completed");
   });
 
   it("submits nothing when the store already holds a leg record", async () => {
@@ -187,7 +243,8 @@ describe("run-meme-pypsa's run", () => {
   });
 
   it("reads the port before writing it — a leg that moves is rewritten without a clobber", async () => {
-    const gateway = fakeGateway({ status: leg("completed") });
+    // Two reads: the arrival, which finds nothing started and so submits; then the re-read after the leg moved.
+    const gateway = fakeGateway({ status: [leg("failed"), leg("completed")] });
     setMemePypsaLegGateway(gateway);
 
     const store = createStore({ ...runMemePypsa.mock });

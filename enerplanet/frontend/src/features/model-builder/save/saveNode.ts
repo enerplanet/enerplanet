@@ -302,7 +302,12 @@ export function createSaveNode(options: SaveNodeOptions): Module {
  *
  * `position` answers "the first node that is not done", and while this node runs it *is* that node, so
  * `complete` reads false on every save and a finished model could never be promoted to `draft` — which is
- * exactly what a run requires. The honest question is whether every **other** node is done.
+ * exactly what a run requires.
+ *
+ * The question is whether every node **before this one** is done, and pointedly not the ones after it. A flow
+ * may carry nodes that run *on the saved model* — the Calliope and PyPSA runs do — and those are `pending`
+ * while a save happens, by definition: asking whether every *other* node was done made every save `incomplete`
+ * the moment anything was placed behind the save, and a run refuses `incomplete`.
  *
  * `incomplete` is what an unfinished model gets, and it may round-trip that way: the bar's save pins
  * `incomplete` for the same reason. A complete first save is `draft`; a complete re-save is `modified`,
@@ -316,8 +321,10 @@ function statusFor(
   modelId: number | undefined,
 ): SaveStatus {
   const states = nodeStates(flow, registry, store);
-  const othersDone = flow.every((node) => node.id === nodeId || states[node.id] === "done");
+  const mine = flow.findIndex((node) => node.id === nodeId);
+  if (mine === -1) return "incomplete";
 
-  if (!othersDone) return "incomplete";
+  const upstreamDone = flow.slice(0, mine).every((node) => states[node.id] === "done");
+  if (!upstreamDone) return "incomplete";
   return modelId === undefined ? "draft" : "modified";
 }

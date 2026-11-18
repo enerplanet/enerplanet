@@ -95,14 +95,19 @@ const module = defineModule({
   auto: true,
 
   // `modelId` is required — the backend refuses a run unless the model is saved and complete, and `model-save`
-  // is what produces the id. `memeRun` is what this node writes.
+  // is what produces the id. `saveResult` is what makes an *edited* model runnable again: an edit re-saves under
+  // the same id, so the id alone never moves and a completed run would otherwise stand for the rest of the
+  // session. `memeRun` is what this node writes.
   params: [
     { port: "modelId", required: true },
+    { port: "saveResult" },
     { port: "memeRun" },
   ],
 
-  // The one edge: a different saved model is a different run, so this record is invalidated with it.
-  affect: { modelId: ["memeRun"] },
+  // Two edges, and both are needed: `modelId` moves when the model is *created*, while `saveResult` moves every
+  // time the model is saved — an edit re-saves under the same id. Without the second, a completed run stood for
+  // the rest of the session and an edited model could never be run again.
+  affect: { modelId: ["memeRun"], saveResult: ["memeRun"] },
 
   // `overlay` is where an auto node shows its run state; `bottom` is its status strip. No `sidebar`, and no
   // forward action — an auto node never has a Continue button.
@@ -125,9 +130,16 @@ const module = defineModule({
 
     const existing = ctx.read("memeRun");
 
-    // No run recorded yet: this is the arrival run, and the only one that submits from nothing.
+    // No run recorded on *this* session. That is the first pass through a flow, where there is genuinely
+    // nothing to read — and it is also a reopened session, because a run's record is not part of what a session
+    // restores. So "no record" cannot mean "submit": ask the model what it is doing first. One already queued,
+    // running or completed is a run this session continues rather than starts, and submitting from nothing on
+    // one of those is what made reopening a finished model dispatch a second calculation.
     if (existing === undefined) {
-      ctx.commit({ memeRun: await gateway.submit(modelId) });
+      const current = await gateway.status(modelId);
+      const alreadyStarted =
+        current.status === "pending" || current.status === "running" || current.status === "completed";
+      ctx.commit({ memeRun: alreadyStarted ? current : await gateway.submit(modelId) });
       return;
     }
 

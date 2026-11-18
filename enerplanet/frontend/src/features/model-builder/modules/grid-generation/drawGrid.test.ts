@@ -77,6 +77,15 @@ const transformers: GeoJSON.FeatureCollection = {
 const LAYERS = ["buildings", "lines", "mvLines", "transformers"] as const;
 
 describe("drawGrid", () => {
+  it("asks for the buildings as volumes — they are the buildings in hand, and the rest of the city is not", () => {
+    const map: MapStack = createMapStack();
+
+    drawGrid(map, { buildings, lines, mvLines, transformers });
+
+    expect(map.optionsOf("buildings")?.extrusion).toEqual({ fallback: 8, color: "#3b82f6" });
+    expect(map.optionsOf("lines")?.extrusion).toBeUndefined();
+  });
+
   it("puts every collection the grid produced on its own layer", () => {
     const map: MapStack = createMapStack();
 
