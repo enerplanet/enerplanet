@@ -2601,6 +2601,7 @@
     "loading": "Cargando instancias de Pylovo"
   },
   "regionSelector": {
+    "3dBuildingData": "Alturas 3D de edificios por LiDAR disponibles",
     "goToRegion": "Ir a la región",
     "jumpToRegion": "Ir a una región con datos de cuadrícula disponibles",
     "searchPlaceholder": "Buscar región o código postal...",

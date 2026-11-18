@@ -275,6 +275,16 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
                     {matchedPostcode && (
                         <span className="flex-shrink-0 text-[10px] text-muted-foreground tabular-nums">{matchedPostcode}</span>
                     )}
+                    {region.has3d && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="flex-shrink-0 px-1 py-0.5 text-[8px] font-bold leading-none rounded bg-slate-500/15 text-slate-500 dark:text-slate-400 border border-slate-500/25">
+                                    3D
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{t('regionSelector.3dBuildingData', 'LiDAR 3D building heights available')}</TooltipContent>
+                        </Tooltip>
+                    )}
                 </div>
                 <span className="text-[10px] text-muted-foreground flex-shrink-0 tabular-nums">
                     {formatNumber(region.gridCount)} {t('map.grids', 'grids')}

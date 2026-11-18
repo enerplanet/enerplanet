@@ -2600,6 +2600,7 @@
     "loading": "Loading Pylovo instances"
   },
   "regionSelector": {
+    "3dBuildingData": "LiDAR 3D building heights available",
     "goToRegion": "Go to region",
     "jumpToRegion": "Jump to a region with available grid data",
     "searchPlaceholder": "Search region or postcode...",

@@ -2600,6 +2600,7 @@
     "loading": "Pylovo-instanties laden"
   },
   "regionSelector": {
+    "3dBuildingData": "LiDAR-3D-gebouwhoogten beschikbaar",
     "goToRegion": "Ga naar regio",
     "jumpToRegion": "Ga naar een regio met beschikbare rastergegevens",
     "searchPlaceholder": "Regio of postcode zoeken...",
