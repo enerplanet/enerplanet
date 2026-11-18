@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import axios from '@/lib/axios';
+import type { DatasetCredit } from '@/features/configurator/building-config/credits';
 import { OBJECT_KEY_PREFIX } from '@/features/configurator/building-config/useBuildingState';
 
 /** One LoD2 roof or wall polygon: rings of [lon, lat, height above sea level in m]. */
@@ -22,12 +23,15 @@ export interface SurfacesBuilding {
 interface SurfacesPage {
   country: string;
   buildings: SurfacesBuilding[];
+  attributions?: DatasetCredit[];
   next_cursor: string | null;
 }
 
 interface AreaSurfaces {
   country: string | null;
   surfaces: Map<string, Lod2Surface[]>;
+  /** Credits of the 3D datasets the surfaces come from, one per dataset. */
+  credits: DatasetCredit[];
 }
 
 // An area's LoD2 geometry, once every building has it, does not change while the page
@@ -104,8 +108,9 @@ export async function forEachLimited<T>(items: T[], fn: (item: T) => Promise<voi
 }
 
 /** Reads every page of the area's surfaces; the first page names the country the rest are read for. */
-async function fetchArea(bbox: ReturnType<typeof bboxOf>, osmIds: ReadonlySet<string>): Promise<AreaSurfaces> {
+export async function fetchArea(bbox: ReturnType<typeof bboxOf>, osmIds: ReadonlySet<string>): Promise<AreaSurfaces> {
   const surfaces = new Map<string, Lod2Surface[]>();
+  const credits = new Map<string, DatasetCredit>();
   let country: string | null = null;
   let cursor: string | null = null;
   do {
@@ -114,9 +119,10 @@ async function fetchArea(bbox: ReturnType<typeof bboxOf>, osmIds: ReadonlySet<st
     });
     country = res.data.country;
     addByOsmId(surfaces, res.data.buildings ?? [], osmIds);
+    for (const c of res.data.attributions ?? []) credits.set(c.dataset_id, c);
     cursor = res.data.next_cursor;
   } while (cursor);
-  return { country, surfaces };
+  return { country, surfaces, credits: [...credits.values()] };
 }
 
 function areaSurfaces(key: string, buildings: GeoJSON.FeatureCollection): Promise<AreaSurfaces> {
@@ -136,12 +142,13 @@ function areaSurfaces(key: string, buildings: GeoJSON.FeatureCollection): Promis
 
 /**
  * The LoD2 roofs and walls City2TABULA has for the given WGS84 buildings, by
- * osm_id, loaded only while enabled, and the country they were read for. A
+ * osm_id, loaded only while enabled, the country they were read for and the
+ * credits of their datasets. A
  * building without 3D data is absent, so the caller can keep drawing it
  * another way; loading is true until the area is read.
  */
-export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, enabled: boolean): { surfaces: Map<string, Lod2Surface[]>; loading: boolean; country: string | null } {
-  const [area, setArea] = useState<AreaSurfaces>(() => ({ country: null, surfaces: new Map() }));
+export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, enabled: boolean): { surfaces: Map<string, Lod2Surface[]>; loading: boolean; country: string | null; credits: DatasetCredit[] } {
+  const [area, setArea] = useState<AreaSurfaces>(() => ({ country: null, surfaces: new Map(), credits: [] }));
   const [loading, setLoading] = useState(false);
   // The building data is rebuilt on many renders; the lookup restarts only when
   // the set of buildings changes, and reads their outlines from this ref.
@@ -169,5 +176,5 @@ export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, ena
     return () => { cancelled = true; clearTimeout(retry); };
   }, [buildingKey, enabled, attempt]);
 
-  return { surfaces: area.surfaces, loading, country: area.country };
+  return { surfaces: area.surfaces, loading, country: area.country, credits: area.credits };
 }

@@ -8,6 +8,7 @@ import { useOlLayerSync } from './useOlLayerSync';
 import { useAreaSketch3D } from './useAreaSketch3D';
 import { MapLibre3DControls } from './MapLibre3DControls';
 import type { MapControlsPlacement } from '@/components/map-controls/MapControls';
+import { Credits } from '@/features/configurator/building-config/Credits';
 
 interface MapLibre3DOverlayProps extends LayerData, InteractionCallbacks {
   olMap: OlMap;
@@ -62,7 +63,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   const { containerRef, mapRef, mapReady } = useMapLibreMap(olMap, visible);
 
   // 2. Data layers
-  const { footprintOnly, lod2LayerRef } = useMapLibreLayers(mapRef, {
+  const { footprintOnly, lod2LayerRef, credits } = useMapLibreLayers(mapRef, {
     buildingsGeoJSON, linesGeoJSON, mvLinesGeoJSON,
     transformersGeoJSON, availableBoundaryGeoJSON, showBoundary, polygonCoordinates,
     selectedBuildingOsmIds, isBuildingAssignMode, onBoundaryRegionClick, userModelGeoJSON, onUserModelClick, techsFor,
@@ -95,6 +96,11 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
       />
       {/* 3D pitch/bearing/reset controls */}
       <MapLibre3DControls mapRef={mapRef} placement={controlsPlacement} footprintOnly={footprintOnly} />
+      {credits.length > 0 && (
+        <div className="bg-card/80 text-muted-foreground absolute bottom-3 left-24 z-50 max-w-xl rounded px-2 py-1 text-[11px] backdrop-blur-sm">
+          <Credits credits={credits} />
+        </div>
+      )}
     </>
   );
 };
