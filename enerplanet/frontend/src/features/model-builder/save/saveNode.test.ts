@@ -75,13 +75,14 @@ function saveNodeFor(
   payloads: LegacyModelPayload[] = [],
   identity: { workspaceId?: number; userId?: string } = {},
   sessions: Session[] = [],
+  flow: Flow = FLOW,
 ): Module {
   return createSaveNode({
     session: () => ({
       gateway: gateway(payloads, sessions),
       store,
       workflow: WORKFLOW,
-      flow: FLOW,
+      flow,
       registry,
       ...identity,
     }),
@@ -209,6 +210,20 @@ describe("the status this node earns", () => {
     await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
 
     await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID });
+
+    expect(payloads[0].status).toBe("draft");
+  });
+
+  it("promotes a finished flow even with nodes after the save — the runs are pending while it saves", async () => {
+    // The regression this covers: the status asked whether every *other* node was done, and the runs sit behind
+    // the save by design, so they are pending and every save went out `incomplete` — which a run refuses. The
+    // guards above all had the save last, which is why none of them caught it.
+    const payloads: LegacyModelPayload[] = [];
+    const store = createStore(seed({ coordinates: [RING] }));
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+
+    const flow: Flow = [...FLOW, { id: "run-calliope", moduleId: "run-calliope" }];
+    await createEngine(store).runModule(saveNodeFor(store, payloads, {}, [], flow), { id: NODE_ID });
 
     expect(payloads[0].status).toBe("draft");
   });
