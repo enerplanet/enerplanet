@@ -1,5 +1,5 @@
 import React, { memo, useState } from "react";
-import { FileEdit, Users, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2 } from "lucide-react";
+import { FileEdit, Users, Star, AlertTriangle, Flag, ChevronRight, CheckCircle2, Blocks } from "lucide-react";
 import { IconLink, IconUnlink } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { Model, type FamilyOption } from "@/features/model-dashboard/services/modelService";
@@ -11,6 +11,7 @@ import ModelActions from "@/components/ui/ModelActions";
 import { formatDateTime } from "@/utils/dateHelpers";
 import { useTranslation } from "@spatialhub/i18n";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
+import { useExperimentalSessionModelIdsQuery } from "@/features/model-dashboard/hooks/useExperimentalSessionModelIds";
 import { failedStageLabel, failureMessage } from "@/features/model-dashboard/utils/failureMessage";
 import { isActiveStatus, runningLabelKey } from "@/features/model-dashboard/utils/statusHelpers";
 import { familyId, isUnlinkedCopy } from "@/features/model-dashboard/utils/dashboardHelpers";
@@ -384,6 +385,12 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
   const copyDivider = level > 0 ? "border-t border-border/60" : "";
   const canManageModel = canUserDeleteModel(model);
 
+  // Which models were worked on in the experimental builder. The set is fetched
+  // once and shared across rows; a row is marked only while its id is in it.
+  const navigate = useNavigate();
+  const { data: experimentalSessionIds } = useExperimentalSessionModelIdsQuery();
+  const isExperimentalSession = experimentalSessionIds?.includes(model.id) ?? false;
+
   const isNotModelOwner =
     currentUserId && model.user_id && String(model.user_id) !== String(currentUserId);
 
@@ -446,6 +453,11 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-1.5 empty:hidden">
               <FamilyCounts copyCount={copyCount} failedCopyCount={failedCopyCount} collapsed={familyCollapsed} />
+              {isExperimentalSession && (
+                <span className="whitespace-nowrap rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                  Experimental
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -503,6 +515,20 @@ const ModelTableRowBase: React.FC<ModelTableRowProps> = ({
                 status={model.status}
               />
             )}
+
+          {isExperimentalSession && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/app/modelbuilder?model=${model.id}`);
+              }}
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-background px-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <Blocks className="h-3.5 w-3.5" aria-hidden="true" />
+              Load in experimental
+            </button>
+          )}
         </div>
       </td>
 

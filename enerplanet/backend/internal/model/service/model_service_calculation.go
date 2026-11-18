@@ -66,6 +66,13 @@ func (s *ModelService) prepareModelRun(ctx context.Context, userID string, acces
 		return nil, fmt.Errorf("model calculation already in progress")
 	}
 
+	// A modular-builder model exists before its flow has finished, so there is nothing runnable
+	// behind it yet — its config may be an empty placeholder. Refused here rather than at dispatch
+	// because this is the one place all three start paths pass through.
+	if model.Status == backendmodels.ModelStatusIncomplete {
+		return nil, fmt.Errorf("model is incomplete: finish building it before running it")
+	}
+
 	if model.Country == nil || strings.TrimSpace(*model.Country) == "" {
 		if len(model.Coordinates) == 0 {
 			return nil, fmt.Errorf("country is required but model has no coordinates to resolve it")

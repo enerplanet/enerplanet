@@ -19,7 +19,6 @@ import {
   transformerCountStyle,
   OVERVIEW_ZOOM,
   boundaryStyleFunction,
-  selectedBoundaryStyleFunction,
   boundaryLabelStyle,
 } from '@/features/interactive-map/utils/mapStyleUtils';
 
@@ -398,9 +397,7 @@ export const loadAvailableBoundaryLayers = (
     const boundaryLayer = new VectorLayer({
       source,
       style: (feature: FeatureLike, resolution: number): ReturnType<StyleFunction> => {
-        const isSelected = feature.get('selected') === true;
-        const styleFn = isSelected ? selectedBoundaryStyleFunction : boundaryStyleFunction;
-        const styles = styleFn(feature as Feature<Geometry>, resolution);
+        const styles = boundaryStyleFunction(feature as Feature<Geometry>, resolution);
 
         const name = feature.get('name');
         const geom = (feature as Feature<Geometry>).getGeometry();
@@ -421,10 +418,7 @@ export const loadAvailableBoundaryLayers = (
   return layers;
 };
 
-/**
- * Highlight a selected region by setting `selected` on its boundary feature
- * and clearing it from all other available-boundary layers, then refreshing styles.
- */
+/** Shows only the picked region's boundary, or every region's when regionName is null. */
 export const highlightSelectedRegionBoundary = (
   map: OLMap,
   regionName: string | null
@@ -435,15 +429,8 @@ export const highlightSelectedRegionBoundary = (
     const src = vectorLayer.getSource();
     if (!src) return;
 
-    let hasTarget = false;
-    for (const feature of src.getFeatures()) {
-      const isTarget = regionName !== null && feature.get('name') === regionName;
-      feature.set('selected', isTarget, true);
-      if (isTarget) hasTarget = true;
-    }
-
+    const hasTarget = src.getFeatures().some((feature) => feature.get('name') === regionName);
     vectorLayer.setVisible(regionName === null || hasTarget);
-    src.changed();
   });
 };
 

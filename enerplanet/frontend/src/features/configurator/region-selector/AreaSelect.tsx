@@ -7,7 +7,7 @@ import { AreaSelectTour } from "@/features/guided-tour/AreaSelectTour";
 import { MapContainer } from "@/components/shared/MapContainer";
 import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useAreaSelect";
 import { PolygonDrawer } from "@/features/polygon-drawer";
-import type { PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
+import { drawPolygon, moveAreaCorner, type PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -59,7 +59,7 @@ import {
 
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
-import { View3dBanner } from "./components/View3dBanner";
+import { View3dLegend } from "@/components/map-controls/maplibre/View3dLegend";
 import { GridStatsBadge } from "./components/GridStatsBadge";
 import { WorkflowBar } from "@/components/map-controls/WorkflowBar";
 import { cn } from "@/lib/utils";
@@ -560,7 +560,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [actions]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
-  // 3D is for viewing: no drawing or deleting there, so no hints for them.
+  // The hints name 2D mouse actions, so 3D shows none.
   const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
   const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null && !isMapLibre3D);
 
@@ -695,13 +695,15 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 mvLinesGeoJSON={pylovoLayers.pylovoGridData?.mv_lines}
                 transformersGeoJSON={pylovoLayers.pylovoGridData?.transformers}
                 availableBoundaryGeoJSON={pylovoLayers.availableBoundaryGeoJSON}
-                selectedBoundaryFeature={pylovoLayers.regionBoundary?.boundary}
                 showBoundary={pylovoLayers.showBoundary}
                 polygonCoordinates={state.allPolygons}
                 selectedBuildingOsmIds={buildingAssign.selectedBuildingsForAssign}
                 isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
                 visible={isMapLibre3D}
-                isDrawing={state.isDrawing}
+                onAreaDrawn={activeMode === null ? (ring) => drawPolygon(map, ring) : undefined}
+                onAreaCornerMoved={(polygon, corner, to) => moveAreaCorner(map, polygon, corner, to)}
+                onSketchOpenChange={actions.setIsDrawing}
+                cancelSketchTrigger={cancelSketch}
                 onBuildingClick={ml3d.handleMl3dBuildingClick}
                 onTransformerClick={ml3d.handleMl3dTransformerClick}
                 onBuildingHover={ml3d.handleMl3dBuildingHover}
@@ -724,7 +726,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               gridIdToTrafoCapacity={gridIdToTrafoCapacity}
               gridIdToPeakLoad={gridIdToPeakLoad}
             />
-            {isMapLibre3D && <View3dBanner />}
+            {isMapLibre3D && <View3dLegend />}
             <GridActionBar
               hasGridData={siteMode && (pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
               isAddTransformerMode={addTransformer.isAddTransformerMode}
@@ -771,7 +773,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onToggleSiteMode={switchGridMode}
             simulateEV={simulateEV}
             onToggleSimulateEV={setSimulateEV}
-            availableRegions={editMode ? undefined : pylovoLayers.availableRegions}
+            availableRegions={editMode ? undefined : pylovoLayers.availableRegions.filter(r => r.has3d)}
             onRegionSelect={editMode ? undefined : regionSelection.handleRegionSelect}
             modelRegionName={editMode ? pylovoLayers.regionBoundary?.name : undefined}
           />
@@ -798,7 +800,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onPointerTargetChange={setPointerTarget}
         onPolygonRejected={() => notification.showError(t("drawing.polygonNoArea"))}
         onSketchCannotClose={(reason) => notification.showError(t(reason === "too-few-corners" ? "drawing.needThreeCorners" : "drawing.cornersInLine"))}
-        // 3D is for viewing: the area is drawn and edited on the 2D map.
+        // The 3D view draws its areas itself and hands them over through drawPolygon.
         suspended={activeMode !== null || isMapLibre3D}
         allowMultiple
         clearTrigger={state.clearTrigger}

@@ -142,7 +142,6 @@
     "clickToSelectBuilding": "Klicken, um dieses Gebäude auszuwählen",
     "clickToDeselectBuilding": "Klicken, um dieses Gebäude aus der Auswahl zu nehmen",
     "cancel": "Zeichnen abbrechen",
-    "view3dOnly": "3D dient zur Ansicht: Klicken Sie auf ein Gebäude für seine Details. Wechseln Sie zur Karte, um das Gebiet zu zeichnen oder zu bearbeiten.",
     "legendPv": "PV",
     "legendStorage": "Speicher",
     "legendHeat": "Wärmeversorgung"
@@ -1625,7 +1624,6 @@
       "storeys": "Geschosse (3D-Geometrie)",
       "floorArea": "Nutzfläche",
       "roomHeight": "Raumhöhe",
-      "envelope": "Hüllen-Referenz (TABULA)",
       "useType": {
         "SFH": "Einfamilienhaus",
         "TH": "Reihenhaus",
@@ -2612,7 +2610,6 @@
     "favorite": "Favoriten",
     "recent": "Zuletzt verwendet",
     "noRegionsFound": "Keine Regionen gefunden",
-    "3dBuildingData": "LiDAR-3D-Gebäudehöhen verfügbar",
     "buildingDialog": {
       "title": "Gebäudedetails",
       "description": "Details des ausgewählten Gebäudes anzeigen und bearbeiten, einschließlich Typ, Energiebedarf und Technologien.",
@@ -2889,6 +2886,8 @@
       "required": "Wert eingeben",
       "positive": "Muss größer als 0 sein",
       "notNegative": "Muss 0 oder größer sein",
+      "atLeast": "Muss mindestens {{min}} sein",
+      "atMost": "Darf höchstens {{max}} sein",
       "notEditable": "Dieser Wert kann hier nicht bearbeitet werden"
     }
   },
@@ -2957,5 +2956,386 @@
     "subtitle": "API-Zugriffstoken verwalten für",
     "title": "API-Token",
     "usageHint": "Verwenden Sie den Token aus jeder App: Authorization: Bearer <token>. Schreibgeschützte Token können Modelle auflisten und Ergebnisse mit den Berechtigungen dieses Benutzers herunterladen."
+  },
+  "modelBuilder": {
+    "shell": {
+      "loadingModel": "Modell wird geladen…",
+      "loadingWorkflow": "Der Workflow wird geladen…",
+      "noDefaultWorkflow": "Es ist kein Standard-Workflow festgelegt — führe `make seed` aus.",
+      "noRequestedWorkflow": "Kein gespeicherter Workflow entspricht \"{{id}}\".",
+      "workflowLoadFailed": "Der Workflow konnte nicht geladen werden: {{reason}}",
+      "noSession": "Dieses Modell hat keine experimentelle Sitzung zum Laden.",
+      "badModelId": "Diese Modell-ID ist keine Zahl.",
+      "divergence": "Der gespeicherte Zustand dieses Modells stimmte nicht mit seiner Historie überein; es wurde stattdessen aus der Historie neu aufgebaut.",
+      "variantSessionFailed": "Die Variante wurde erstellt, aber ihre Sitzung konnte nicht gespeichert werden: {{reason}}",
+      "title": "Model Builder",
+      "subtitle": "Modulvorschau — ein Modul nach dem anderen, mit Mock-Daten",
+      "module": "Modul",
+      "reset": "Sitzung zurücksetzen",
+      "noModules": "Es sind noch keine Module registriert.",
+      "noMap": "Es ist noch kein Basiskarten-Modul geladen.",
+      "layers": "Hinzugefügte Ebenen: {{count}}",
+      "noNode": "Dieser Workflow hat hier keinen Schritt.",
+      "mode": "Modus",
+      "modeWorkflow": "Workflow"
+    },
+    "grid-generation": {
+      "title": "Das synthetische Netz",
+      "description": "Erzeugt Gebäude, Trafos und Kabel aus dem gezeichneten Gebiet.",
+      "generate": "Netz erzeugen",
+      "regenerate": "Netz neu erzeugen",
+      "generating": "Wird erzeugt…",
+      "lossConfirm": "Trotzdem ersetzen",
+      "loss": "Erneutes Erzeugen ersetzt dieses Netz und verwirft die darauf aufbauende Bedarfs- und Technologiearbeit.",
+      "failed": "Das Netz konnte nicht erzeugt werden: {{reason}}",
+      "bottom": {
+        "none": "Noch kein Netz.",
+        "buildings": "Gebäude",
+        "transformers": "Trafos",
+        "cables": "Kabel",
+        "mvCables": "MS-Kabel"
+      },
+      "map": {
+        "title": "Das Netz",
+        "empty": "Erzeugen Sie ein Netz, um es hier zu sehen."
+      }
+    },
+    "map-provider": {
+      "start": "Start",
+      "clickToClose": "Klicken zum Schließen"
+    },
+    "building-configurator": {
+      "title": "Gebäudekonfigurator",
+      "configured": "{{configured}} von {{total}} Gebäuden konfiguriert",
+      "hint": "Klicken Sie ein Gebäude auf der Karte an, um es im Detail zu konfigurieren.",
+      "continue": "Weiter",
+      "edited": "{{count}} Gebäude bearbeitet, noch nicht übernommen"
+    },
+    "area-draw": {
+      "drawAnother": "Weiteres Gebiet zeichnen",
+      "drawnCount": "Gezeichnet: {{count}}",
+      "mapMissing": "Die Karte ist noch nicht bereit — bitte einen Moment warten.",
+      "ringTooSmall": "Dieses Polygon hatte keine Fläche, es wurde nichts übernommen.",
+      "title": "Modellgebiet",
+      "description": "Zeichnen Sie das Gebiet, in dem das Modell erstellt wird. Ein oder mehrere Polygone — alles Weitere wird darin erzeugt.",
+      "mapTitle": "Gebiet",
+      "mapHint": "Zeichnen Sie das Gebiet auf der Karte. Klicken setzt Eckpunkte; ein Klick auf die Startmarkierung schließt es, oder ein Rechtsklick. Escape bricht ab.",
+      "draw": "Gebiet zeichnen",
+      "drawing": "Zeichnen…",
+      "unapplied": "Dieses Gebiet ist noch nicht übernommen.",
+      "applied": "Das Gebiet ist übernommen.",
+      "polygons": "Gezeichnete Polygone",
+      "nothing": "Noch kein Polygon gezeichnet.",
+      "polygon": "{{index}}.",
+      "points": "{{count}} Punkte",
+      "area": "{{area}} km²",
+      "total": "Gesamtfläche",
+      "apply": "Gebiet übernehmen",
+      "confirmApply": "Trotzdem übernehmen",
+      "confirmBody": "Beim Übernehmen dieses Gebiets wird das bestehende Netz ({{count}} Gebäude) und alles darauf Aufgebaute entfernt.",
+      "confirmCancel": "Aktuelles Gebiet behalten",
+      "undo": "Letztes zurücknehmen",
+      "clear": "Alles löschen",
+      "discard": "Änderungen verwerfen",
+      "rulesHint": "Netz, Bedarf und Technologien werden innerhalb dieses Gebiets erzeugt. Eine Änderung entfernt, was auf dem alten aufgebaut ist."
+    },
+    "model-start": {
+      "title": "Modellstart",
+      "description": "Erstellt das Modell: Name, Zeitraum, Auflösung und die Region, in der gezeichnet wird.",
+      "nameLabel": "Modellname",
+      "period": {
+        "label": "Zeitraum",
+        "none": "Noch kein Zeitraum gewählt.",
+        "q1": "Q1",
+        "q2": "Q2",
+        "q3": "Q3",
+        "q4": "Q4"
+      },
+      "regionLabel": "Region",
+      "regionNone": "Region wählen",
+      "regionsLoading": "Regionen werden geladen…",
+      "regionsUnavailable": "Regionen sind derzeit nicht verfügbar.",
+      "apply": "Übernehmen",
+      "rulesHint": "Dies ist der Einstiegsknoten: Er benötigt nichts, und alles Nachgelagerte liest, was er anlegt."
+    },
+    "save": {
+      "refused": "nichts gesendet: {{reason}}"
+    },
+    "bar": {
+      "save": "Speichern",
+      "saved": "gespeichert · {{status}}",
+      "savedPartial": "Modell gespeichert, Sitzung nicht",
+      "prior": "vorher",
+      "current": "aktuell",
+      "next": "danach",
+      "complete": "Workflow abgeschlossen",
+      "testMode": "Testmodus"
+    },
+    "ledger": {
+      "history": "Verlauf",
+      "empty": "noch nichts",
+      "discarded": "verworfen",
+      "jump": "Sprung",
+      "auto": "auto"
+    },
+    "steps": {
+      "moveTo": "Zu {{step}}",
+      "title": "Schritte",
+      "blocked": "braucht {{ports}}",
+      "pruned": "verloren: {{ports}}"
+    },
+    "example-interactive": {
+      "title": "Beispielmodul",
+      "description": "Ein funktionierendes Beispiel und zugleich die Vorlage: liest seine Eingaben aus dem Store, committet über die Engine und rendert in alle vier Regionen.",
+      "nameLabel": "Modellname",
+      "resolutionLabel": "Zeitschritt",
+      "resolutionUnit": "{{minutes}} min",
+      "apply": "Namen übernehmen",
+      "rulesHint": "Dieses Modul deklariert genau die Ports, die es berührt. Der Store ist sein einziger Zustand, und run() ist der einzige Schreibweg.",
+      "bottom": {
+        "notSet": "nicht gesetzt"
+      },
+      "map": {
+        "title": "Karten-Region",
+        "hint": "Die Karte ist ein flüchtiger Interaktionsdienst, kein Modellzustand — alles, was erhalten bleiben soll, wird in den Store committet.",
+        "useRing": "Diesen Bereich verwenden",
+        "clear": "Leeren",
+        "points": "{{count}} Punkte"
+      },
+      "review": "Vor dem Speichern prüfen",
+      "overlay": {
+        "title": "Bereit zum Speichern?",
+        "hint": "Was der Save-Node sehen würde: die deklarierten Ports dieses Moduls und das Urteil von validate().",
+        "close": "Schließen",
+        "complete": "validate() ist zufrieden — es fehlt nichts.",
+        "issue": "{{port}}: {{message}}",
+        "required": "erforderlich",
+        "area": "Fläche",
+        "areaNone": "noch nicht gezeichnet",
+        "areaDrawn": "{{rings}} Ring(e), {{points}} Punkt(e)",
+        "shellHint": "Escape schließt dieses Panel. Den Rahmen des Overlays besitzt der Host — Abdunklung, Zentrierung und Ausweg."
+      }
+    },
+    "example-auto": {
+      "running": "Bereich wird zusammengefasst…",
+      "runningHint": "Läuft von selbst — die Zusammenfassung wird aus dem gezeichneten Bereich abgeleitet.",
+      "done": "Bereich zusammengefasst",
+      "failed": "Die Bereichszusammenfassung ist fehlgeschlagen",
+      "retry": "Erneut ausführen",
+      "bottom": {
+        "present": "Zusammenfassung vorhanden",
+        "notSet": "noch keine Zusammenfassung"
+      }
+    },
+    "dashboard": {
+      "newModel": "Neues Modell (experimentell)"
+    },
+    "model-save": {
+      "title": "Modell speichern",
+      "description": "Speichert das Modell und die Sitzung, damit es erneut geladen werden kann.",
+      "ready": "Alles, was das Modell braucht, ist vorhanden.",
+      "saving": "Speichern…",
+      "save": "Modell speichern",
+      "saved": "Gespeichert.",
+      "conversion": "model.json",
+      "required": "erforderlich",
+      "notSet": "nicht gesetzt",
+      "bottom": {
+        "ready": "bereit zum Speichern",
+        "missing": "{{count}} fehlt"
+      }
+    },
+    "weather": {
+      "title": "Wetter",
+      "description": "Welcher Wetterdatensatz für die Läufe des Modells verwendet wird. Die Zeitreihe selbst lädt das Backend zur Laufzeit.",
+      "scenarioLabel": "Solarjahr",
+      "scenario": {
+        "p10": "Niedrig (p10)",
+        "p50": "Typisch (p50)",
+        "p90": "Hoch (p90)"
+      },
+      "scenarioHint": "Ein Szenariojahr hat kein eigenes Kalenderjahr; die Modellperiode bestimmt die Daten.",
+      "continue": "Weiter",
+      "archiveLabel": "Archiv",
+      "noFetchHint": "Hier werden keine Wetterdaten geladen — die Konfiguration verweist auf einen Datensatz, das Backend lädt die Zeitreihe beim Lauf."
+    },
+    "building-demand": {
+      "title": "Gebäudebedarf",
+      "description": "Bedarf je Gebäude und Energieträger, abgeleitet aus den Gebäuden des Netzes.",
+      "vector": "Träger",
+      "buildings": "Gebäude",
+      "totalKwh": "Summe kWh/a",
+      "sourceEstimate": "vom Energiedienst geschätzt, eine Anfrage je Gebäude",
+      "sourceMirror": "aus Gebäudeklasse und Fläche gespiegelt — zur Laufzeit ist das Backend maßgeblich",
+      "autoHint": "Dieser Schritt läuft von selbst, sobald der Ablauf bei ihm ankommt: er liest die Gebäude, fragt den Dienst und zeichnet die Antworten auf. Hier ist nichts einzustellen.",
+      "running": "Bedarf wird geschätzt…",
+      "runningHint": "Läuft von selbst — eine Anfrage je Gebäude.",
+      "done": "Bedarf geschätzt",
+      "failed": "Die Bedarfsschätzung ist fehlgeschlagen",
+      "retry": "Erneut ausführen"
+    },
+    "technologies": {
+      "title": "Technologien",
+      "description": "Womit jedes Gebäude versorgt wird. Eine Technologie zu setzen ändert am Backend nichts, bis das Modell gespeichert und gerechnet wird.",
+      "assigned": "{{assigned}} von {{total}} Gebäuden",
+      "autoresolve": "Wärme automatisch ergänzen",
+      "autoresolveHint": "Weist jedem Gebäude mit Wärmebedarf und noch ohne Versorgung eine passende Wärmetechnologie zu. Diese Zuweisungen sind als geschätzt markiert — eine Vermutung nach Gebäudeklasse, die du überstimmen kannst.",
+      "assign": "Technologie zuweisen",
+      "assignAll": "Allen zuweisen",
+      "loading": "Katalog wird geladen…",
+      "unavailable": "Der Katalog ist nicht erreichbar; es können keine Technologien zugewiesen werden.",
+      "continue": "Weiter",
+      "noSelectionHint": "Eine Technologie je Typ wird auf alle Gebäude angewendet. Eine Auswahl einzelner Gebäude gibt es noch nicht."
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "Die Abläufe verfassen, die der Model Builder ausführt",
+      "new": "Neuer Workflow",
+      "newSubflow": "Neuer Subflow",
+      "buildYourOwn": "Eigenes Modul entwickeln",
+      "loading": "Workflows werden geladen...",
+      "loadError": "Die Workflows konnten nicht geladen werden: {{reason}}",
+      "empty": "Noch keine Workflows.",
+      "defaultBadge": "Standard",
+      "copy": "JSON kopieren",
+      "copied": "Kopiert",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleteConfirm": "\"{{label}}\" löschen?",
+      "deleteDefaultRefused": "Der Standard-Workflow kann nicht gelöscht werden.",
+      "deleteReport": "Gelöscht - {{sessions}} Sitzung(en) verwiesen darauf.",
+      "error": {
+        "save": "Der Workflow konnte nicht gespeichert werden: {{reason}}"
+      },
+      "newForm": {
+        "label": "Bezeichnung",
+        "id": "id: {{id}}",
+        "create": "Anlegen",
+        "cancel": "Abbrechen",
+        "subflowNote": "Ein Subflow ist ein Fragment: Er wird in einen anderen Workflow eingefügt und dort validiert, wo er eingesetzt wird, nicht für sich allein."
+      },
+      "editor": {
+        "back": "Zurück zur Liste",
+        "version": "Version {{version}}",
+        "unsaved": "Ungespeicherte Änderungen",
+        "saved": "Gespeichert",
+        "save": "Speichern",
+        "saving": "Speichern...",
+        "chain": "Kette",
+        "chainEmpty": "Die Kette ist leer. Füge ein Modul hinzu, um zu beginnen.",
+        "palette": "Module",
+        "add": "Hinzufügen",
+        "remove": "Entfernen",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "moveBlocked": "diese Verschiebung würde diese Ports unerfüllt lassen:",
+        "needs": "braucht",
+        "produces": "erzeugt",
+        "gateHint": "Ein Modul kann hinzugefügt werden, sobald die Kette bereits jeden benötigten Port erzeugt.",
+        "fragmentWarning": "Die Validierung ist beim Bearbeiten eines Fragments deaktiviert: Seine Anforderungen werden dort gelesen, wo es eingefügt wird, daher werden seine Module hier nicht geprüft.",
+        "fragmentInputs": "Benötigt von dem Workflow, der es einfügt:",
+        "fragmentInputsNone": "Dieses Fragment benötigt nichts von dem umgebenden Workflow.",
+        "removeConfirm": "Das Entfernen dieses Schritts entfernt auch alles danach - eine lineare Kette darf keine Lücke haben. {{count}} Schritt(e) entfernen?",
+        "unknownModule": "Unbekanntes Modul \"{{moduleId}}\" am Knoten \"{{nodeId}}\" - es ist nicht im Katalog dieses Builds.",
+        "notANode": "\"{{moduleId}}\" am Knoten \"{{nodeId}}\" ist kein Knoten - es ist ein Host-Modul, das einen Dienst bereitstellt, statt einen Schritt darzustellen.",
+        "addSubflow": "Workflow einfügen",
+        "subflowPickerHint": "An dieser Stelle wird ein Workflow eingefügt; die Fragment-Workflows stehen zuerst.",
+        "subflowNone": "Keine gespeicherten Workflows zum Einfügen.",
+        "choose": "Einfügen",
+        "fragment": "Fragment",
+        "current": "aktuell",
+        "subflow": "Subflow",
+        "changeWorkflow": "Workflow ändern",
+        "subflowOwnedBy": "Schritte aus \"{{label}}\" - bearbeitet in diesem Workflow, nicht hier.",
+        "subflowExpansionFailed": "Dieser Workflow kann hier nicht expandiert werden.",
+        "recursive": "würde diesen Workflow enthalten - ein Subflow kann sich nicht selbst enthalten, weder direkt noch transitiv",
+        "unresolved": "kann nicht aufgelöst werden - er nennt ein Modul oder einen Workflow, den dieser Build nicht hat"
+      }
+    },
+    "run-meme-calliope": {
+      "running": "Modell wird berechnet…",
+      "runningHint": "Das dauert einige Minuten. Du kannst diese Seite verlassen und zurückkehren — die Berechnung läuft auf dem Server weiter, und dieser Schritt setzt dort fort.",
+      "done": "Modellberechnung abgeschlossen",
+      "failed": "Die Modellberechnung ist fehlgeschlagen",
+      "retry": "Erneut ausführen",
+      "bottom": {
+        "notRun": "noch nicht berechnet",
+        "running": "läuft…",
+        "completed": "abgeschlossen",
+        "failed": "fehlgeschlagen"
+      }
+    },
+    "run-meme-pypsa": {
+      "running": "Lastfluss wird berechnet…",
+      "runningHint": "Das dauert einige Minuten. Du kannst diese Seite verlassen und zurückkehren — der Lastfluss läuft auf dem Server weiter, und dieser Schritt setzt dort fort.",
+      "done": "Lastfluss abgeschlossen",
+      "failed": "Der Lastfluss ist fehlgeschlagen",
+      "retry": "Erneut ausführen",
+      "bottom": {
+        "notRun": "noch nicht berechnet",
+        "running": "läuft…",
+        "completed": "abgeschlossen",
+        "failed": "fehlgeschlagen"
+      }
+    },
+    "result-overview": {
+      "title": "Ergebnisübersicht",
+      "description": "Eine Zusammenfassung der Ergebnisse des Modelllaufs. Die vollständige Ergebnisseite enthält die Details.",
+      "loading": "Ergebnisse werden geladen…",
+      "failed": "Die Ergebnisse konnten nicht geladen werden.",
+      "noGateway": "Kein Ergebnis-Gateway: Ein Host installiert eines mit setResultOverviewGateway() (shell/resultOverviewGateway.ts).",
+      "production": "Erzeugung (kWh)",
+      "consumption": "Verbrauch (kWh)",
+      "peakDemand": "Spitzenlast (kW)",
+      "timesteps": "Zeitschritte",
+      "locations": "Ergebnisstandorte",
+      "carriers": "Energieträger",
+      "link": "Vollständige Ergebnisseite öffnen",
+      "continue": "Weiter",
+      "bottom": {
+        "loading": "lädt…",
+        "noGateway": "kein Ergebnis-Gateway",
+        "failed": "nicht verfügbar",
+        "ready": "{{count}} Energieträger"
+      }
+    },
+    "model-variant": {
+      "title": "Modellvariante",
+      "description": "Erstellt eine Familienkopie dieses Modells. Die Variante wird ein eigenes gespeichertes Modell, innerhalb der Familie versioniert.",
+      "create": "Variante erstellen",
+      "continue": "Weiter",
+      "switchedTo": "Diese Seite zeigt jetzt die Variante.",
+      "titleLabel": "Titel",
+      "idLabel": "Varianten-ID",
+      "rootLabel": "Vergleichsbasis",
+      "bottom": {
+        "notSet": "noch keine Variante",
+        "ready": "Variante {{id}}"
+      }
+    },
+    "compare-variant": {
+      "title": "Variante vergleichen",
+      "description": "Ein schneller Vergleich des Originalmodells der Familie mit der Variante. Die vollständige Vergleichsseite zeigt die Details.",
+      "baseline": "Original",
+      "comparison": "Variante",
+      "production": "Erzeugung (kWh)",
+      "consumption": "Verbrauch (kWh)",
+      "peakDemand": "Spitzenlast (kW)",
+      "loading": "Ergebnisse werden geladen…",
+      "failed": "Die Ergebnisse konnten nicht geladen werden.",
+      "noVariant": "Noch keine Variante – zuerst eine erstellen.",
+      "noGateway": "Kein Vergleichs-Gateway: Ein Host installiert eines mit setCompareVariantGateway() (shell/compareVariantGateway.ts).",
+      "notRun": "Noch nicht berechnet.",
+      "link": "Vollständige Vergleichsseite öffnen",
+      "continue": "Weiter",
+      "bottom": {
+        "loading": "lädt…",
+        "noGateway": "kein Vergleichs-Gateway",
+        "failed": "nicht verfügbar",
+        "ready": "beide Seiten bereit",
+        "partial": "eine Seite noch nicht berechnet",
+        "empty": "keine Seite berechnet"
+      }
+    }
   }
 }

@@ -3,6 +3,8 @@ import type * as maplibregl from 'maplibre-gl';
 import type { Map as OlMap } from 'ol';
 import { INTERACTIVE_LAYERS } from './maplibre-styles';
 import type { Lod2Layer } from './maplibre-lod2';
+import { buildingPicker3D } from './buildingPicker3D';
+import type { AreaSketch3D } from './useAreaSketch3D';
 
 export interface InteractionCallbacks {
   onBuildingClick?: (properties: Record<string, any>, lngLat: [number, number]) => void;
@@ -23,6 +25,7 @@ export function useMapLibreInteractions(
   olMap: OlMap,
   visible: boolean,
   callbacks: InteractionCallbacks,
+  sketchRef?: React.RefObject<AreaSketch3D | null>,
 ) {
   const cbRefs = useRef(callbacks);
   const activeClusterKeyRef = useRef<string | null>(null);
@@ -115,9 +118,14 @@ export function useMapLibreInteractions(
       lod2Ref.current?.setHovered(props?.osm_id == null ? null : String(props.osm_id));
     };
 
+    // As in 2D, an area cannot start on a building or transformer, as a click there opens it.
+    const onModelFeature = (f: ReturnType<typeof queryFeatures>) =>
+      !!f && (f.layer.id.startsWith('buildings-3d') || f.layer.id.startsWith('transformers'));
+
     const handleClick = (evt: any) => {
       const pixel: [number, number] = [evt.pixel[0], evt.pixel[1]];
       const f = queryFeatures(pixel);
+      if (sketchRef?.current?.click(pixel, onModelFeature(f))) return;
       if (f) {
         const layerId = f.layer.id;
         const props = f.properties || {};
@@ -138,6 +146,8 @@ export function useMapLibreInteractions(
     };
 
     let throttleTimeout: number | null = null;
+    // The 2D map handlers set the same cursor, so it is cleared only on leaving a feature.
+    let pointing = false;
     const handlePointerMove = (evt: any) => {
       if (throttleTimeout !== null) return;
 
@@ -147,10 +157,19 @@ export function useMapLibreInteractions(
         const pixel: [number, number] = [evt.pixel[0], evt.pixel[1]];
         const f = queryFeatures(pixel);
 
-        if (f) {
+        if (sketchRef?.current?.move(pixel, onModelFeature(f))) {
+          setConnectedBuildingsFilter(null);
+          setHovered(null);
+          olMap.getTargetElement().style.cursor = 'crosshair';
+          pointing = true;
+          cbRefs.current.onBuildingHover?.(null, pixel);
+          cbRefs.current.onTransformerHover?.(null, pixel);
+          cbRefs.current.onMvLineHover?.(null, pixel);
+        } else if (f) {
           const layerId = f.layer.id;
           const props = f.properties || {};
           olMap.getTargetElement().style.cursor = 'pointer';
+          pointing = true;
 
           setHovered(layerId.startsWith('buildings-3d') ? props : null);
           if (layerId.startsWith('buildings-3d')) {
@@ -173,7 +192,8 @@ export function useMapLibreInteractions(
         } else {
           setConnectedBuildingsFilter(null);
           setHovered(null);
-          olMap.getTargetElement().style.cursor = '';
+          if (pointing) olMap.getTargetElement().style.cursor = '';
+          pointing = false;
           cbRefs.current.onBuildingHover?.(null, pixel);
           cbRefs.current.onTransformerHover?.(null, pixel);
           cbRefs.current.onMvLineHover?.(null, pixel);
@@ -183,13 +203,21 @@ export function useMapLibreInteractions(
 
     olMap.on('click', handleClick);
     olMap.on('pointermove', handlePointerMove);
+    buildingPicker3D.current = {
+      buildingAt: (pixel) => {
+        const f = queryFeatures(pixel);
+        return f?.layer.id.startsWith('buildings-3d') && f.properties?.osm_id != null ? String(f.properties.osm_id) : null;
+      },
+      highlight: (osmId) => setHovered(osmId === null ? null : { osm_id: osmId }),
+    };
 
     return () => {
+      buildingPicker3D.current = null;
       if (throttleTimeout !== null) clearTimeout(throttleTimeout);
       setConnectedBuildingsFilter(null);
       setHovered(null);
       olMap.un('click', handleClick);
       olMap.un('pointermove', handlePointerMove);
     };
-  }, [mapRef, lod2Ref, olMap, visible]);
+  }, [mapRef, lod2Ref, olMap, visible, sketchRef]);
 }

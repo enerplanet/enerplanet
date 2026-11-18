@@ -162,6 +162,8 @@ interface MapInteractionsLike {
   setSelectedTransformer: (transformer: any) => void;
   setTransformerDialogOpen: (open: boolean) => void;
   setBuildingTooltip: (tooltip: any) => void;
+  /** The tooltip of the 2D map's building with this osm_id, null when there is none. */
+  buildingTooltipFor: (osmId: string, pixel: number[]) => unknown;
   setTransformerTooltip: (tooltip: any) => void;
   setMvLineTooltip: (tooltip: any) => void;
 }
@@ -297,23 +299,7 @@ export const useMapLibre3DHandlers = ({
         mapInteractions.setBuildingTooltip(null);
         return;
       }
-      const fClasses = getFeatureFClasses(props);
-      const primary = getPrimaryFClass(props) || "unknown";
-      const enrichment = extractBuildingEnrichmentFromProps(props);
-      const heat = estimateYearlyHeatDemand(primary, props.area, explicitHeatDemandKwh(props));
-      mapInteractions.setBuildingTooltip({
-        x: pixel[0],
-        y: pixel[1],
-        type: primary,
-        fClass: primary,
-        fClasses,
-        yearlyDemandKwh: extractYearlyDemandCustomOnly(props),
-        yearlyHeatDemandKwh: heat.kwh,
-        heatDemandEstimated: heat.estimated,
-        techs: parseTechs(props.techs),
-        gridResultId: props.grid_result_id ?? props.transformer_id,
-        ...enrichment,
-      });
+      mapInteractions.setBuildingTooltip(mapInteractions.buildingTooltipFor(String(props.osm_id), pixel));
     },
     [mapInteractions]
   );

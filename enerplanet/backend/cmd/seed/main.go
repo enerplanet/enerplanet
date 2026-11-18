@@ -50,5 +50,8 @@ func main() {
 	// Seed Technologies
 	seedTechnologies(db)
 
+	// Seed the default Model Builder workflow
+	seedWorkflow(db)
+
 	// Energy demand is calculated dynamically based on building area and type
 }

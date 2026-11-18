@@ -9,6 +9,7 @@ import { PrivacyConsentGate } from "@/features/privacy-controls";
 import LanguageSettings from "@/features/settings/LanguageSettings";
 import { NotificationDropdown } from "@/components/ui/NotificationDropdown";
 import { useTranslation } from "@spatialhub/i18n";
+import { useFeatureFlag } from "@/features/settings/flags-store";
 
 import {
   LogOut,
@@ -21,6 +22,8 @@ import {
   LayoutDashboard,
   GitCompareArrows,
   LayoutGrid,
+  Blocks,
+  Workflow,
   LucideIcon,
   Cpu,
   ChevronLeft,
@@ -129,6 +132,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     }
   };
 
+  // The Model Builder is a runtime toggle (Settings → Experimental). Gating its entry in the render
+  // path means flipping the flag adds and removes it live, with no reload.
+  const modelBuilderEnabled = useFeatureFlag("modelbuilder");
+
   const sidebarItems: SidebarItem[] = useMemo(
     () => [
       {
@@ -139,6 +146,27 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         bgColor: "#ede9fe",
         dataTour: "simulations",
       },
+      ...(modelBuilderEnabled
+        ? [
+            {
+              path: "/app/modelbuilder",
+              icon: Blocks,
+              title: t("modelBuilder.shell.title"),
+              color: "#2563eb",
+              bgColor: "#dbeafe",
+              dataTour: "modelbuilder",
+            } satisfies SidebarItem,
+            // The builder's authoring surface, gated the same way: it is part of that feature.
+            {
+              path: "/app/modelbuilder/workflows",
+              icon: Workflow,
+              title: t("modelBuilder.workflows.title"),
+              color: "#0891b2",
+              bgColor: "#cffafe",
+              dataTour: "workflows",
+            } satisfies SidebarItem,
+          ]
+        : []),
       {
         path: "/app/simulation-reports",
         icon: GitCompareArrows,
@@ -156,7 +184,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         dataTour: "technologies",
       },
     ],
-    [t]
+    [t, modelBuilderEnabled]
   );
 
   const userMenuItems: UserMenuItem[] = useMemo(

@@ -10,8 +10,15 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
-/** A valid translation key: dot-separated identifiers, no spaces/URLs/JSX. */
-export const KEY_RE = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$/;
+/**
+ * A valid translation key: dot-separated segments, no spaces/URLs/JSX.
+ *
+ * A segment may contain a **dash** — module keys are `modelBuilder.<module-id>.*` and module ids are dashed
+ * (`modelBuilder.model-start.title`). Without the dash these keys did not match at all, so a dashed module's
+ * translations were never verified when missing and were reported as *unused* — which would have made
+ * `npm run i18n:prune` delete live translations.
+ */
+export const KEY_RE = /^[a-zA-Z][a-zA-Z0-9_-]*(\.[a-zA-Z0-9_-]+)+$/;
 /** A dynamic prefix: `family.of.keys.` (or a partial like `landing.howItWorks.step`). */
 export const PREFIX_RE = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)*\.?$/;
 

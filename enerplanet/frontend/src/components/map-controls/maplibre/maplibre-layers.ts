@@ -503,25 +503,18 @@ export function addOrUpdateTransformers(map: maplibregl.Map, geojson: any, color
 export function addOrUpdateRegionBoundaries(
   map: maplibregl.Map,
   availableBoundaryGeoJSON?: any,
-  selectedBoundaryFeature?: any,
   visible: boolean = true,
 ): void {
   if (!visible) {
     clearSource(map, 'region-boundaries-available');
-    clearSource(map, 'region-boundary-selected');
     return;
   }
 
   const availableFC = toFeatureCollection(availableBoundaryGeoJSON) || { type: 'FeatureCollection', features: [] };
-  const selectedFC = toFeatureCollection(selectedBoundaryFeature) || { type: 'FeatureCollection', features: [] };
 
   const availableSource = map.getSource('region-boundaries-available') as maplibregl.GeoJSONSource | undefined;
   if (availableSource) { availableSource.setData(availableFC); }
   else { map.addSource('region-boundaries-available', { type: 'geojson', data: availableFC }); }
-
-  const selectedSource = map.getSource('region-boundary-selected') as maplibregl.GeoJSONSource | undefined;
-  if (selectedSource) { selectedSource.setData(selectedFC); }
-  else { map.addSource('region-boundary-selected', { type: 'geojson', data: selectedFC }); }
 
   if (map.getLayer('region-boundaries-available-fill')) return;
 
@@ -539,20 +532,6 @@ export function addOrUpdateRegionBoundaries(
     type: 'line',
     source: 'region-boundaries-available',
     paint: { 'line-color': BOUNDARY_COLORS.availableStroke, 'line-width': 1.4, 'line-dasharray': [3, 2] },
-  });
-
-  map.addLayer({
-    id: 'region-boundary-selected-fill',
-    type: 'fill',
-    source: 'region-boundary-selected',
-    paint: { 'fill-color': BOUNDARY_COLORS.selectedFill, 'fill-opacity': 1 },
-  }, fillBeforeId);
-
-  map.addLayer({
-    id: 'region-boundary-selected-line',
-    type: 'line',
-    source: 'region-boundary-selected',
-    paint: { 'line-color': BOUNDARY_COLORS.selectedStroke, 'line-width': 2.5 },
   });
 }
 
@@ -575,11 +554,20 @@ export function addOrUpdatePolygon(map: maplibregl.Map, coordinates: [number, nu
       type: 'Feature',
       properties: {},
       geometry: { type: 'MultiPolygon', coordinates: coordinates.map(c => [closeRing(c)]) },
+    }, {
+      type: 'Feature',
+      properties: { corner: true },
+      geometry: { type: 'MultiPoint', coordinates: coordinates.flat() },
     }],
   };
 
   const existing = map.getSource('user-polygon') as maplibregl.GeoJSONSource | undefined;
-  if (existing) { existing.setData(fc); return; }
+  if (existing) {
+    existing.setData(fc);
+    // Layers added since, the 3D buildings among them, would cover the corner handles.
+    if (map.getLayer('user-polygon-corner')) map.moveLayer('user-polygon-corner');
+    return;
+  }
 
   map.addSource('user-polygon', { type: 'geojson', data: fc });
 
@@ -594,6 +582,14 @@ export function addOrUpdatePolygon(map: maplibregl.Map, coordinates: [number, nu
     type: 'line',
     source: 'user-polygon',
     paint: { 'line-color': POLYGON_COLORS.stroke, 'line-width': 2.5 },
+  });
+  // The corner handles of the 2D drawer's Modify style (PolygonDrawer).
+  map.addLayer({
+    id: 'user-polygon-corner',
+    type: 'circle',
+    source: 'user-polygon',
+    filter: ['has', 'corner'],
+    paint: { 'circle-radius': 6, 'circle-color': '#06b6d4', 'circle-stroke-color': '#0891b2', 'circle-stroke-width': 2 },
   });
 }
 

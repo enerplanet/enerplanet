@@ -3,6 +3,7 @@ package pylovo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -109,7 +110,13 @@ func (s *SiteHandler) CreateSite(c *gin.Context) {
 	count, revision, err := s.buildFromFootprints(ctx, siteID, countryName, geom)
 	if err != nil {
 		s.discard(ctx, siteID)
-		httputil.ErrorResponse(c, http.StatusUnprocessableEntity, err.Error())
+		var area areaError
+		if errors.As(err, &area) {
+			httputil.ErrorResponse(c, http.StatusUnprocessableEntity, err.Error())
+			return
+		}
+		logger.Logger.Errorf("Building site %d from 3D data failed: %v", siteID, err)
+		httputil.BadGateway(c, "The 3D building data for this area could not be loaded. Try again later or choose another region.")
 		return
 	}
 	site["building_count"] = count

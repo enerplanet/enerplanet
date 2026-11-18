@@ -3,6 +3,7 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
 	Plus,
+	Blocks,
 	Settings,
 	Search,
 	ArrowUpDown,
@@ -61,6 +62,7 @@ import { useModelDashboardHandlers } from '@/features/model-dashboard/hooks/useM
 import { useModelSelection } from '@/features/model-dashboard/hooks/useModelSelection';
 import { useBulkOperations } from '@/features/model-dashboard/hooks/useBulkOperations';
 import { useDeleteConfirm } from '@/hooks/useDeleteConfirm';
+import { useFeatureFlag } from '@/features/settings/flags-store';
 import ModelActionGroup, { type ActionConfig } from "@/components/shared/ModelActionGroup";
 import { useFavoriteModelsStore } from "@/features/model-dashboard/store/favorite-models";
 import { isModelDisabled as checkModelDisabled, isModelCompleted } from "@/features/model-dashboard/utils/statusHelpers";
@@ -152,6 +154,9 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 	useDocumentTitle(t('model.dashboard'), ' | EnerPlanET');
 
 	const navigate = useNavigate();
+	// The Model Builder is a runtime toggle (Settings → Experimental). Reading the flag in the render
+	// path means flipping it adds and removes this entry live, with no reload.
+	const modelBuilderEnabled = useFeatureFlag("modelbuilder");
 	const location = useLocation();
 	const confirm = useConfirm();
 	const passedWorkspaceId = location.state?.workspaceId;
@@ -857,7 +862,8 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 					title={t('model.dashboard')}
 					subtitle={t('model.manageConfigurations')}
 					actions={
-						<Tooltip>
+						<div className="flex items-center gap-2">
+							<Tooltip>
 							<TooltipTrigger asChild>
 								<span>
 									<button
@@ -885,7 +891,20 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 								</TooltipContent>
 							)}
 						</Tooltip>
-					}
+						{/* The experimental sibling of "New Model": same door, the new builder behind it.
+						    Orange on purpose — it is not at parity yet, and the flag removes it entirely. */}
+						{modelBuilderEnabled && (
+							<button
+								onClick={() => navigate('/app/modelbuilder')}
+								data-tour="model-builder"
+								className="inline-flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-orange-600"
+							>
+								<Blocks className="h-4 w-4" />
+								{t('modelBuilder.dashboard.newModel')}
+							</button>
+						)}
+					</div>
+				}
 				/>
 
 				<div className="flex min-h-0 w-full flex-1 flex-col space-y-5">

@@ -15,16 +15,13 @@ maplibregl.setWorkerUrl(workerUrl);
  *
  * In 3D mode, MapLibre handles zoom, pan, and rotation natively for smooth
  * perspective-correct movement. Camera changes sync back to OL for state
- * consistency. During drawing mode, control reverts to OL for 2D polygon creation.
+ * consistency.
  */
-export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolean = false) {
+export function useMapLibreMap(olMap: OlMap, visible: boolean) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   // The map is created a frame after mount; effects that need it re-run on this.
   const [mapReady, setMapReady] = useState(false);
-  const isDrawingRef = useRef(isDrawing);
-
-  useEffect(() => { isDrawingRef.current = isDrawing; }, [isDrawing]);
 
   useEffect(() => {
     if (!containerRef.current || !visible) return;
@@ -174,7 +171,6 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
 
       // Forward wheel events for smooth animated zooming
       const onWheel = (e: WheelEvent) => {
-        if (isDrawingRef.current) return; // Let OL handle during drawing
         e.preventDefault();
         e.stopPropagation();
         const target = mlCanvas || container;
@@ -196,7 +192,6 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
       const DRAG_THRESHOLD = 3; // pixels before treating as drag vs click
 
       const onMouseDown = (e: MouseEvent) => {
-        if (isDrawingRef.current) return; // Let OL handle during drawing
         if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
           // Right-click or Ctrl+click → 3D rotation
           e.preventDefault();
@@ -217,7 +212,6 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
       };
 
       const onMouseMove = (e: MouseEvent) => {
-        if (isDrawingRef.current) return;
         if (dragStartPos && !isDragging) {
           const dx = e.clientX - dragStartPos.x;
           const dy = e.clientY - dragStartPos.y;
@@ -272,7 +266,6 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
       };
 
       const onTouchStart = (e: TouchEvent) => {
-        if (isDrawingRef.current) return;
         if (e.touches.length >= 2) {
           // Multi-touch → forward for pinch-zoom/rotate
           e.preventDefault();
@@ -331,9 +324,8 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
   }, [olMap, visible]);
 
   // Disable OL zoom/pan interactions in 3D mode — MapLibre handles them.
-  // Re-enable during drawing so OL 2D polygon creation works normally.
   useEffect(() => {
-    if (!visible || isDrawing) return;
+    if (!visible) return;
     const disabled: any[] = [];
     olMap.getInteractions().forEach((interaction) => {
       if (
@@ -350,7 +342,7 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
     return () => {
       disabled.forEach(i => i.setActive(true));
     };
-  }, [olMap, visible, isDrawing]);
+  }, [olMap, visible]);
 
   // Disable OL DoubleClickZoom in 3D mode — it conflicts with polygon closing
   useEffect(() => {
@@ -368,28 +360,6 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean, isDrawing: boolea
       deactivated.forEach((interaction) => interaction.setActive(true));
     };
   }, [olMap, visible]);
-
-  // Reset MapLibre pitch/bearing to 0 when drawing starts so OL 2D drawing
-  // aligns with the MapLibre view.
-  useEffect(() => {
-    if (!visible || !isDrawing) return;
-    const map = mapRef.current;
-    if (!map) return;
-
-    const prevPitch = map.getPitch();
-    const prevBearing = map.getBearing();
-    if (prevPitch !== 0 || prevBearing !== 0) {
-      map.easeTo({ pitch: 0, bearing: 0, duration: 300 });
-    }
-
-    return () => {
-      // Restore previous 3D view when drawing finishes
-      const m = mapRef.current;
-      if (m && (prevPitch !== 0 || prevBearing !== 0)) {
-        m.easeTo({ pitch: prevPitch, bearing: prevBearing, duration: 300 });
-      }
-    };
-  }, [visible, isDrawing]);
 
   return { containerRef, mapRef, mapReady };
 }

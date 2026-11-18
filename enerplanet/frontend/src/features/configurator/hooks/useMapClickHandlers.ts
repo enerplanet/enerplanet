@@ -4,14 +4,17 @@ import type { Map as OLMap, Feature } from "ol";
 import type { Geometry } from "ol/geom";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
+import OLFeature from "ol/Feature";
+import { Fill, Stroke, Style } from "ol/style";
 import { useModelStore } from "@/features/configurator/store/modelStore";
+import { useMapStore } from "@/features/interactive-map/store/map-store";
 import { getFeatureFClasses, getPrimaryFClass } from "@/features/configurator/utils/fClassUtils";
 import { extractBuildingEnrichmentFromProps, extractPeakLoadFromProps, extractSelectedFClassFromProps } from "@/features/configurator/utils/buildingFeatureExtraction";
 import { extractYearlyDemandAll } from "@/features/configurator/utils/parsing";
 import { estimateYearlyHeatDemand, explicitHeatDemandKwh } from "@/features/configurator/utils/heatDemand";
 import { buildFClassDetails } from "@/features/configurator/hooks/useAreaSelect/helpers/fClassDemand";
 import { extractTransformerId } from "@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments";
-import { countConnectedBuildings, findBuildingLayer, highlightConnectedBuildings } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
+import { collectBuildingsFromLayers, countConnectedBuildings, findBuildingLayer, highlightConnectedBuildings } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import { createBuildingStyleFunction, createBuildingHighlightStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 import { isBuildingDisabled } from "@/features/configurator/hooks/useBuildingSelection";
 
@@ -51,6 +54,12 @@ interface MapClickOptions {
   suppressDialogOnClickRef?: React.RefObject<boolean>;
   suppressMapInteractions?: boolean;
 }
+
+// The 3D view's hover colour (HOVER_COLOR in maplibre-lod2.ts).
+const HOVER_STYLE = new Style({
+  stroke: new Stroke({ color: '#3b82f6', width: 3 }),
+  fill: new Fill({ color: 'rgba(59, 130, 246, 0.25)' }),
+});
 
 export const useMapClickHandlers = ({
   map, isDrawing, pylovoLayersRef, suppressDialogOnClickRef, suppressMapInteractions = false,
@@ -97,7 +106,12 @@ export const useMapClickHandlers = ({
     if (!map) return;
     if (suppressMapInteractions) { setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); return; }
 
+    // The 3D view picks buildings by their LoD2 shape (useMapLibreInteractions); the hidden 2D layers
+    // would find the footprint on the ground under the pointer, another building when the view is tilted.
+    const in3D = () => useMapStore.getState().selectedBaseLayerId === "maplibre_3d";
+
     const handleClick = (evt: any) => {
+      if (in3D()) return;
       // Modified clicks belong to the polygon drawer (Shift, Alt on a corner) and useBuildingSelection (Alt, Ctrl, Cmd).
       const e = evt.originalEvent;
       if (isDrawing || suppressDialogOnClickRef?.current || e?.shiftKey || e?.altKey || e?.ctrlKey || e?.metaKey) return;
@@ -140,9 +154,24 @@ export const useMapClickHandlers = ({
     // however it moves within it, and stays where it appeared. Leaving the
     // feature first cancels it, so sweeping across buildings renders nothing.
     let pending: ReturnType<typeof setTimeout> | undefined;
+    // The 3D overlay sets the same cursor, so it is cleared only on leaving a feature.
+    let pointing = false;
     let target: unknown = null;
     let shown = false;
     let lastPixel: number[] = [];
+    // The building under the pointer is outlined, as the 3D view tints it, so a click's target shows first.
+    const hoverSource = new VectorSource();
+    const hoverLayer = new VectorLayer({ source: hoverSource, style: HOVER_STYLE, zIndex: 101 });
+    map.addLayer(hoverLayer);
+    let hovered: unknown = null;
+    // Found at the exact pixel, as a click finds what it opens; the tooltip lookup allows for thin lines.
+    const setHovered = (pixel: number[] | null) => {
+      const building = pixel && map.forEachFeatureAtPixel(pixel, (f: any) => (f.get('feature_type') === 'building' ? f : undefined)) || null;
+      if (building === hovered) return;
+      hovered = building;
+      hoverSource.clear();
+      if (building) hoverSource.addFeature(new OLFeature(building.getGeometry()));
+    };
     const clearTooltips = () => { setTransformerTooltip(null); setBuildingTooltip(null); setMvLineTooltip(null); };
     const showTooltip = (feature: any, pixel: number[]) => {
       const type = feature.get('feature_type');
@@ -160,9 +189,11 @@ export const useMapClickHandlers = ({
     };
 
     const handlePointerMove = (evt: any) => {
-      if (evt.dragging || isDrawing) { hide(); return; }
+      if (evt.dragging || isDrawing || in3D()) { hide(); setHovered(null); return; }
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f: any) => { const t = f.get('feature_type'); if (t === 'transformer' || t === 'building' || t === 'mv_line') return f; return null; }, { hitTolerance: 5 });
-      map.getTargetElement().style.cursor = feature ? 'pointer' : '';
+      if (feature || pointing) map.getTargetElement().style.cursor = feature ? 'pointer' : '';
+      pointing = !!feature;
+      setHovered(evt.pixel);
       if (feature && feature === target) {
         if (!shown) lastPixel = evt.pixel;
         return;
@@ -176,10 +207,16 @@ export const useMapClickHandlers = ({
 
     map.on('click', handleClick);
     map.on('pointermove', handlePointerMove);
-    return () => { clearTimeout(pending); map.un('click', handleClick); map.un('pointermove', handlePointerMove); };
+    return () => { clearTimeout(pending); map.un('click', handleClick); map.un('pointermove', handlePointerMove); map.removeLayer(hoverLayer); };
   }, [map, isDrawing, suppressMapInteractions]);
 
   const handleCloseTransformerDialog = useCallback(() => { setTransformerDialogOpen(false); setSelectedTransformer(null); }, [setTransformerDialogOpen, setSelectedTransformer]);
+  // The 3D view's building data is copied when the grid loads; technologies and analysis results
+  // added since are on the 2D map's features, so its tooltip is built from those.
+  const buildingTooltipFor = useCallback((osmId: string, pixel: number[]) => {
+    const feature = collectBuildingsFromLayers(pylovoLayersRef.current).find((f) => String(f.get('osm_id')) === osmId);
+    return feature ? createBuildingTooltip(feature, pixel) : null;
+  }, [pylovoLayersRef]);
   const handleCloseBuildingDialog = useCallback(() => { setBuildingDialogOpen(false); setSelectedBuilding(null); setSelectedBuildingFeature(null); }, [setBuildingDialogOpen, setSelectedBuilding, setSelectedBuildingFeature]);
 
   // Hover tooltips change on every pointer move, so they are read in
@@ -192,6 +229,7 @@ export const useMapClickHandlers = ({
     selectedBuilding, setSelectedBuilding,
     selectedBuildingFeature, setSelectedBuildingFeature,
     setBuildingTooltip,
+    buildingTooltipFor,
     setMvLineTooltip,
     handleCloseTransformerDialog, handleCloseBuildingDialog,
   };

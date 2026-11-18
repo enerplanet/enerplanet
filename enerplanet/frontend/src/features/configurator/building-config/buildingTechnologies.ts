@@ -6,6 +6,10 @@
 
 import type { TechCard, TechField, Technologies } from '@thd-spatial-ai/building-configurator';
 
+import { defaultConstraints, defaultProduct, productsOfType } from '@/features/technologies/catalogue';
+import type { Technology } from '@/features/technologies/services/technologyService';
+import { formatNumber } from '@/utils/formatNumber';
+
 import type { PvArray } from './usePvMode';
 
 interface Constraint {
@@ -16,6 +20,9 @@ interface Constraint {
 /** One technology as stored in a building's `techs` property. */
 export interface BuildingTech {
   alias?: string;
+  icon?: string;
+  /** The catalogue product it was chosen from; absent for the type's default product. */
+  product?: string;
   constraints?: Constraint[];
   arrays?: PvArray[] | null;
   [extra: string]: unknown;
@@ -28,11 +35,15 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 /** A card field: its constraint, label key, unit, and whether "no limit" is allowed. */
 interface FieldSpec {
   key: string;
-  label: 'size' | 'power' | 'energy' | 'cop' | 'efficiency' | 'investment' | 'price';
+  /** A buildingConfig.tech label key for the headline fields; the others take the parameter's name. */
+  label?: 'size' | 'power' | 'energy' | 'cop' | 'efficiency' | 'investment' | 'price';
   unit: string;
   unbounded?: boolean;
   /** Efficiencies must be above zero; every other value may be zero. */
   positive?: boolean;
+  /** The catalogue's limits; the lower one is 0 when it gives none. */
+  min?: number;
+  max?: number;
 }
 
 const SIZE: FieldSpec = { key: 'cont_energy_cap_max', label: 'size', unit: 'kW', unbounded: true };
@@ -67,38 +78,123 @@ function cardValue(raw: unknown): number | null | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
+// Each size with its investment cost per unit. A gas price (cost_om_con) is per kWh used, not an investment.
+const COST_OF_SIZE: [size: string, cost: string, unit: string][] = [
+  ['cont_energy_cap_max', 'cost_energy_cap', 'EUR/kW'],
+  ['cont_storage_cap_max', 'cost_storage_cap', 'EUR/kWh'],
+];
+
+/** A card's investment: each priced size times its cost, or only the rates while a size is left open. */
+function investmentOf(tech: BuildingTech): TechCard['investment'] {
+  const valueOf = (key: string) => cardValue(tech.constraints?.find((c) => c.key === key)?.value);
+  const priced = COST_OF_SIZE.flatMap(([sizeKey, costKey, unit]) => {
+    const size = valueOf(sizeKey);
+    const cost = valueOf(costKey);
+    return size === undefined || typeof cost !== 'number' ? [] : [{ size, cost, unit }];
+  });
+  if (priced.length === 0) return undefined;
+  if (priced.some((p) => p.size === null)) {
+    return { amount: null, currency: 'EUR', rate: priced.map((p) => `${formatNumber(p.cost)} ${p.unit}`).join(' + ') };
+  }
+  return { amount: priced.reduce((sum, p) => sum + (p.size ?? 0) * p.cost, 0), currency: 'EUR' };
+}
+
+/** The catalogue product a building's technology came from, else its type's default product. */
+export function productOf(catalogue: Technology[], techKey: string, tech: BuildingTech): Technology | undefined {
+  return catalogue.find((p) => p.key === (tech.product ?? techKey)) ?? defaultProduct(catalogue, techKey);
+}
+
+const finite = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
+
+/**
+ * The fields of a technology: the headline ones FIELDS names first, then every
+ * other parameter the building stores, with the catalogue product's unit and limits.
+ */
+function specsOf(techKey: string, tech: BuildingTech, product: Technology | undefined): FieldSpec[] {
+  const named = FIELDS[techKey] ?? DEFAULT_FIELDS;
+  const others = (tech.constraints ?? [])
+    .filter((c) => !named.some((spec) => spec.key === c.key))
+    .map((c): FieldSpec => {
+      const meta = product?.constraints.find((m) => m.key === c.key);
+      return { key: c.key, unit: meta?.unit ?? '', unbounded: meta?.default_value === UNBOUNDED, min: finite(meta?.min), max: finite(meta?.max) };
+    });
+  return [...named, ...others];
+}
+
+/** A field's label: its headline name, else the parameter's translated name. */
+function labelOf(spec: FieldSpec, runMode: 'plan' | 'operate', product: Technology | undefined, t: Translate): string {
+  if (!spec.label) {
+    const alias = product?.constraints.find((m) => m.key === spec.key)?.alias;
+    return t(`parameters.names.${spec.key}`, { defaultValue: alias ?? spec.key });
+  }
+  return t(`buildingConfig.tech.${spec.unbounded && runMode === 'plan' ? `${spec.label}Max` : spec.label}`);
+}
+
 /** Edits are refused per field; the message is shown under it until a valid value arrives. */
 export type FieldErrors = Record<string, string>;
 
 /** Key of one field's error in FieldErrors. */
 export const errorKey = (techKey: string, fieldKey: string) => `${techKey}:${fieldKey}`;
 
-/** One card per installed technology except PV, whose card the configurator draws from its pv prop. */
+/**
+ * One card per installed technology except PV, whose card the configurator
+ * draws from its pv prop. catalogue labels the parameters and lists the
+ * products a card offers; without it the cards show the headline fields' names.
+ */
 export function technologyCards(
   techs: BuildingTechs,
   runMode: 'plan' | 'operate',
   errors: FieldErrors,
   t: Translate,
+  catalogue: Technology[] = [],
 ): Omit<TechCard, 'action'>[] {
   return Object.entries(techs).filter(([techKey]) => techKey !== 'pv_supply').map(([techKey, tech]) => {
+    const product = productOf(catalogue, techKey, tech);
     const fields: TechField[] = [];
-    for (const spec of FIELDS[techKey] ?? DEFAULT_FIELDS) {
+    const figures: NonNullable<TechCard['figures']> = [];
+    for (const spec of specsOf(techKey, tech, product)) {
       const value = cardValue(tech.constraints?.find((c) => c.key === spec.key)?.value);
       if (value === undefined) continue;
-      const label = spec.unbounded && runMode === 'plan' ? `${spec.label}Max` : spec.label;
+      const label = labelOf(spec, runMode, product, t);
+      // The investment has its own line on the card, worked out from these figures.
+      if (spec.label && spec.label !== 'investment') figures.push({ label, value, unit: spec.unit || undefined });
       fields.push({
         key: spec.key,
-        label: t(`buildingConfig.tech.${label}`),
+        label,
         value,
         unit: spec.unit || undefined,
         editable: true,
-        min: 0,
+        min: spec.min ?? 0,
+        max: spec.max,
         error: errors[errorKey(techKey, spec.key)],
       });
     }
     const title = t(`technologies.types.${techKey}`, { defaultValue: tech.alias ?? techKey });
-    return { id: techKey, title, subtitle: tech.alias && tech.alias !== title ? tech.alias : undefined, fields };
+    // The default product's name only repeats the title.
+    const subtitle = tech.product && tech.product !== techKey ? tech.alias : undefined;
+    return { id: techKey, type: techKey, title, subtitle, fields, figures, investment: investmentOf(tech) };
   });
+}
+
+/** The products a card offers, as the configurator's drop-down lists them; empty when there is no choice. */
+export function productOptions(catalogue: Technology[], techKey: string): { id: string; name: string; detail?: string }[] {
+  const products = productsOfType(catalogue, techKey);
+  if (products.length < 2) return [];
+  return products.map((p) => ({
+    id: p.key,
+    name: p.alias,
+    detail: p.manufacturer ?? undefined,
+  }));
+}
+
+/** The techs with techKey switched to product, at the product's own values. */
+export function setTechProduct(techs: BuildingTechs, techKey: string, product: Technology): BuildingTechs {
+  const tech = techs[techKey];
+  if (!tech) return techs;
+  return {
+    ...techs,
+    [techKey]: { ...tech, alias: product.alias, icon: product.icon, product: product.key, constraints: defaultConstraints(product) },
+  };
 }
 
 
@@ -112,17 +208,25 @@ export function setTechField(
   fieldKey: string,
   value: number | null,
   t: Translate,
+  catalogue: Technology[] = [],
 ): { techs: BuildingTechs } | { error: string } {
   const tech = techs[techKey];
-  const spec = (FIELDS[techKey] ?? DEFAULT_FIELDS).find((f) => f.key === fieldKey);
+  const spec = tech && specsOf(techKey, tech, productOf(catalogue, techKey, tech)).find((f) => f.key === fieldKey);
   if (!tech || !spec) return { error: t('buildingConfig.tech.notEditable') };
-  if (value === null && !spec.unbounded) return { error: t('buildingConfig.tech.required') };
-  if (value !== null && (value < 0 || (spec.positive && value === 0))) {
-    return { error: t(spec.positive ? 'buildingConfig.tech.positive' : 'buildingConfig.tech.notNegative') };
-  }
+  const refused = refusal(spec, value, t);
+  if (refused) return { error: refused };
   const stored = value === null ? UNBOUNDED : value;
   const constraints = (tech.constraints ?? []).map((c) => (c.key === fieldKey ? { ...c, value: stored } : c));
   return { techs: { ...techs, [techKey]: { ...tech, constraints } } };
+}
+
+/** Why value does not fit spec, or null when it does. */
+function refusal(spec: FieldSpec, value: number | null, t: Translate): string | null {
+  if (value === null) return spec.unbounded ? null : t('buildingConfig.tech.required');
+  if (spec.positive && value <= 0) return t('buildingConfig.tech.positive');
+  if (value < (spec.min ?? 0)) return spec.min ? t('buildingConfig.tech.atLeast', { min: spec.min }) : t('buildingConfig.tech.notNegative');
+  if (spec.max !== undefined && value > spec.max) return t('buildingConfig.tech.atMost', { max: spec.max });
+  return null;
 }
 
 /** The techs without techKey. */

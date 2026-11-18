@@ -18,6 +18,7 @@ import { LOD2_LAYER_ID, Lod2Layer } from './maplibre-lod2';
 import { useLod2Surfaces } from './useLod2Surfaces';
 import { usePvSurfaceIds, type TechsFor } from './usePvSurfaceIds';
 import { techMarkersOf, type TechMarker } from './techMarkers';
+import { useTechMarksStore } from './techMarksStore';
 
 export interface LayerData {
   buildingsGeoJSON?: any;
@@ -26,7 +27,6 @@ export interface LayerData {
   transformersGeoJSON?: any;
   connectionGeoJSON?: GeoJSON.FeatureCollection | null;
   availableBoundaryGeoJSON?: any;
-  selectedBoundaryFeature?: any;
   showBoundary?: boolean;
   polygonCoordinates?: [number, number][][];
   selectedBuildingOsmIds?: string[];
@@ -54,7 +54,6 @@ export function useMapLibreLayers(
     transformersGeoJSON,
     connectionGeoJSON,
     availableBoundaryGeoJSON,
-    selectedBoundaryFeature,
     showBoundary = true,
     polygonCoordinates,
     selectedBuildingOsmIds = [],
@@ -102,7 +101,6 @@ export function useMapLibreLayers(
     addOrUpdateRegionBoundaries(
       map,
       availableBoundaryGeoJSON,
-      selectedBoundaryFeature,
       showBoundary
     );
     addOrUpdatePolygon(map, polygonCoordinates);
@@ -115,7 +113,6 @@ export function useMapLibreLayers(
     connections,
     userModels,
     availableBoundaryGeoJSON,
-    selectedBoundaryFeature,
     showBoundary,
     polygonCoordinates,
     selectedBuildingOsmIds,
@@ -146,13 +143,18 @@ export function useMapLibreLayers(
     const apply = () => {
       if (!lod2LayerRef.current || !map.getLayer(LOD2_LAYER_ID)) {
         lod2LayerRef.current = new Lod2Layer();
-        map.addLayer(lod2LayerRef.current);
+        // Under the area's corner handles, which are dragged in 3D too.
+        map.addLayer(lod2LayerRef.current, map.getLayer('user-polygon-corner') ? 'user-polygon-corner' : undefined);
       }
+      lod2LayerRef.current.setShown(useTechMarksStore.getState().shown);
       lod2LayerRef.current.setBuildings(lod2, pvSurfaceIds, techMarkers);
     };
     if (map.isStyleLoaded()) apply();
     else map.once('idle', apply);
   }, [mapRef, mapReady, lod2, pvSurfaceIds, techMarkers]);
+
+  const shownMarks = useTechMarksStore((s) => s.shown);
+  useEffect(() => { lod2LayerRef.current?.setShown(shownMarks); }, [shownMarks]);
 
   // Interactions setup
   useEffect(() => {
