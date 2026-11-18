@@ -20,7 +20,28 @@ import {
   type Coordinates,
   type ModelData,
 } from "@model-builder/core";
-import areaDraw, { areaKm2, hold, needsConfirmation } from "./index";
+import areaDraw, { areaGeometry, areaKm2, hold, needsConfirmation } from "./index";
+
+describe("the geometry the map is framed to", () => {
+  it("gives every ring its own polygon, which is how this module draws them", () => {
+    expect(areaGeometry([RING_A, RING_B])).toEqual({
+      type: "MultiPolygon",
+      coordinates: [[RING_A], [RING_B]],
+    });
+  });
+
+  it("has nothing to frame when no area is drawn", () => {
+    expect(areaGeometry([])).toBeUndefined();
+    expect(areaGeometry(undefined)).toBeUndefined();
+  });
+
+  it("leaves out a ring that is not a shape yet, rather than framing a point", () => {
+    // The same threshold `validate` reports: a polygon needs three points.
+    const notAShape = [RING_A[0], RING_A[1]] as [number, number][];
+    expect(areaGeometry([notAShape])).toBeUndefined();
+    expect(areaGeometry([notAShape, RING_A])).toEqual({ type: "MultiPolygon", coordinates: [[RING_A]] });
+  });
+});
 
 /** The node these cases run as — the module's own id, which is what a host uses in test mode. */
 const NODE = areaDraw.module.id;

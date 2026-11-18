@@ -25,7 +25,7 @@
  * `coordinates`, through the cascade.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   defineModule,
   fingerprint,
@@ -102,6 +102,22 @@ export function areaKm2(rings: Coordinates): number {
     total += Math.abs(sum / 2) * EARTH_RADIUS_KM * EARTH_RADIUS_KM;
   }
   return total;
+}
+
+/**
+ * The drawn rings as one geometry to frame, or `undefined` when there is nothing worth framing.
+ *
+ * **Each ring is its own polygon**, which is how this module draws them, so the area as a whole is a MultiPolygon.
+ *
+ * A ring of fewer than three points is not a shape yet — the same rule `validate` reports — and framing one would
+ * zoom the map into a point.
+ *
+ * Here rather than beside the effect so it can be tested without a map, like the rest of this module's arithmetic.
+ */
+export function areaGeometry(rings: Coordinates | undefined): GeoJSON.MultiPolygon | undefined {
+  const drawn = (rings ?? []).filter((ring) => ring.length >= 3);
+  if (drawn.length === 0) return undefined;
+  return { type: "MultiPolygon", coordinates: drawn.map((ring) => [ring]) } as GeoJSON.MultiPolygon;
 }
 
 /** Whether anything downstream of the area exists to lose. The grid is what `coordinates` feeds. */
@@ -222,6 +238,17 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     });
     map.setInteractiveLayer(AREA_LAYER);
   }, [map, region, draft]);
+
+  // Where the model is, framed once, when its area first exists. Only the `map` instance does this — the module
+  // renders once per region, and two instances would make the fit twice, the second one animated.
+  const framed = useRef(false);
+  useEffect(() => {
+    if (region !== "map" || map === undefined || framed.current) return;
+    const area = areaGeometry(data.coordinates);
+    if (area === undefined) return;
+    framed.current = true;
+    map.fitTo(area);
+  }, [map, region, data.coordinates]);
 
   /** The layer is this module's, so this module takes it off when it leaves. */
   useEffect(() => {
