@@ -30,7 +30,6 @@ export type FeatureFlagCategory = "general" | "experimental";
  * - `default`  value used while the user has never toggled it
  */
 const REGISTRY = [
-  { id: "experimentalSettings", category: "general", default: false },
   { id: "modelbuilder", category: "experimental", default: false },
 ] as const satisfies ReadonlyArray<{
   id: string;

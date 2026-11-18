@@ -497,18 +497,29 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     (nodeId: string, module: BuilderModule["module"]): void => {
       setError(null);
       setAutoStatus({ id: nodeId, state: "running" });
-      void session.engine
-        .runModule(module, { id: nodeId, auto: true })
-        .then(() =>
+      // Hold the frame on this node while it runs, exactly as the forward action's `run` does — and for the
+      // same reason, which bites an auto node hardest: its own output is what makes the node *done*, so the
+      // derived position moves on in the very React commit that delivers the writes, and a module that draws
+      // from what it just produced (the grid generator, above all) unmounts before its effect can draw. The
+      // `held` slot is what gives the run its moment on screen.
+      setHeld(nodeId);
+      void (async () => {
+        try {
+          await session.engine.runModule(module, { id: nodeId, auto: true });
           setAutoStatus((current) =>
             current?.id === nodeId ? { id: nodeId, state: "done" } : current,
-          ),
-        )
-        .catch((thrown: unknown) => {
+          );
+        } catch (thrown) {
           const message = thrown instanceof Error ? thrown.message : String(thrown);
           setError(message);
           setAutoStatus({ id: nodeId, state: "error", message });
-        });
+        } finally {
+          // Two frames, as in `run`: one for React to commit the writes and run the effects that read them,
+          // one to be sure that commit has been painted. Only then does the derived position take over.
+          await nextPaint();
+          setHeld(undefined);
+        }
+      })();
     },
     [session.engine],
   );

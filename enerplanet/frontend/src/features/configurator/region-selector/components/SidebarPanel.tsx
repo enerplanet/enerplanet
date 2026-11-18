@@ -163,6 +163,7 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
   if (scenario) yearOptions = [periodYear ?? SCENARIO_DATE_YEAR];
   else if (periodYear && !weatherYears.includes(periodYear)) yearOptions = [...weatherYears, periodYear].sort((a, b) => a - b);
   const fullYear = (year: number) => ({ start: parseDate(`${year}-01-01`), end: parseDate(`${year}-12-31`) });
+  const defaultPeriod = (year: number) => ({ start: parseDate(`${year}-07-01`), end: parseDate(`${year}-07-31`) });
   // A year the app chose for the user, shown until they keep or change the period.
   const [yearToCheck, setYearToCheck] = useState<number | null>(null);
   const movePeriodToYear = (year: number) => {
@@ -179,10 +180,10 @@ function usePeriodYear(state: AreaSelectState, actions: AreaSelectActions, editM
   };
   const latestYear = weatherYears.at(-1);
   const defaultYear = scenario ? SCENARIO_DATE_YEAR : latestYear;
-  // A new model's empty period is filled after every render, because the
-  // configurator's store reset on mount runs after this component's effects.
+  // A new model's empty period is filled with July after every render, because
+  // the configurator's store reset on mount runs after this component's effects.
   useEffect(() => {
-    if (!editMode && !state.fromDate && defaultYear) actions.handleUpdateRange(fullYear(defaultYear));
+    if (!editMode && !state.fromDate && defaultYear) actions.handleUpdateRange(defaultPeriod(defaultYear));
   });
   // Switching to an archive without the period's year moves the period to that
   // archive's latest year, keeping day and month. Opening a saved model does not.

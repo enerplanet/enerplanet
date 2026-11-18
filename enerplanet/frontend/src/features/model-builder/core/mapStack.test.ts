@@ -250,6 +250,31 @@ describe("bounds", () => {
   });
 });
 
+describe("layer options", () => {
+  it("remembers a colour and an on-top flag, and a repeat is not a change", () => {
+    const onChange = vi.fn();
+    const host = createMapStack(onChange);
+
+    host.createLayer("highlight", { color: "#16a34a", onTop: true });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(host.optionsOf("highlight")).toMatchObject({ color: "#16a34a", onTop: true });
+
+    // Declaring the same thing again — which a module does on every render — must stay quiet.
+    host.createLayer("highlight", { color: "#16a34a", onTop: true });
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("merges a later option instead of clearing the earlier one", () => {
+    const host = createMapStack();
+
+    host.createLayer("a", { color: "#f00" });
+    host.createLayer("a", { onTop: true });
+
+    // A key left out of a later call is not a request to forget it.
+    expect(host.optionsOf("a")).toMatchObject({ color: "#f00", onTop: true });
+  });
+});
+
 describe("notification", () => {
   it("fires when something changed and stays quiet when nothing did", () => {
     const onChange = vi.fn();
