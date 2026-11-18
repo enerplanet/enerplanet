@@ -3006,6 +3006,11 @@
       "clickToClose": "Clic para cerrar"
     },
     "building-configurator": {
+      "found": "Edificios encontrados",
+      "footprint": "Superficie en planta",
+      "yearlyDemand": "Demanda eléctrica anual",
+      "peakLoad": "Carga punta",
+      "clickHint": "Configura un edificio haciendo clic en él en el mapa y luego pulsa Continuar.",
       "title": "Configurador de edificios",
       "configured": "{{configured}} de {{total}} edificios configurados",
       "hint": "Haz clic en un edificio del mapa para configurarlo en detalle.",

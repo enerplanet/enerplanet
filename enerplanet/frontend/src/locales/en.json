@@ -3005,6 +3005,11 @@
       "clickToClose": "Click to close"
     },
     "building-configurator": {
+      "found": "Buildings found",
+      "footprint": "Footprint area",
+      "yearlyDemand": "Yearly electricity demand",
+      "peakLoad": "Peak load",
+      "clickHint": "Configure a building by clicking it on the map, then press Continue.",
       "title": "Building configurator",
       "configured": "{{configured}} of {{total}} buildings configured",
       "hint": "Click a building on the map to configure it in detail.",

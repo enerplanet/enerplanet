@@ -46,6 +46,17 @@ const NODE = "building-configurator";
  */
 const LAYER = "buildings";
 
+/**
+ * The highlight layer: the buildings the user has configured, drawn over the grid's own buildings layer.
+ *
+ * The grid's layer is the one that takes clicks, so the provider raises it to the front — this layer opts to sit
+ * above it (`onTop`), or the highlight would be drawn under the very footprints it marks.
+ */
+const CONFIGURED_LAYER = "buildings-configured";
+
+/** The highlight colour: green, the "done" the old sidebar showed as a tick. */
+const CONFIGURED_COLOR = "#16a34a";
+
 // ── The pick and the pending edit. Shared across this module's regions, so it lives outside React: the module
 //    renders once per region it declares, and a component-local store would be per-region.
 
@@ -114,6 +125,36 @@ function idOf(
   const id = feature?.properties?.osm_id ?? feature?.id;
   if (typeof id === "number") return String(id);
   return typeof id === "string" && id.length > 0 ? id : null;
+}
+
+/** A finite number from a feature property, whether the grid wrote it as a number or as a string. */
+function numberOf(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+/** A building's footprint in m² — the grid writes it as `area`, the mock as `area_m2`. */
+function areaOf(feature: GeoJSON.Feature): number {
+  const props = feature.properties ?? {};
+  return numberOf(props.area_m2) ?? numberOf(props.area) ?? 0;
+}
+
+/**
+ * Whether the user has configured a building here.
+ *
+ * **Not** "has a demand entry": `building-demand` runs before this node and fills one for *every* building, so
+ * that test marked the whole grid and the old tick meant nothing. What a user actually does in this view is
+ * assign a technology or edit the building's envelope, both of which only this view writes — so those are the
+ * signals.
+ */
+function isConfigured(data: Readonly<ModelData>, id: string, feature: GeoJSON.Feature): boolean {
+  if ((data.technologies?.[id] ?? []).length > 0) return true;
+  const buem = feature.properties?.buem;
+  return buem !== undefined && buem !== null;
 }
 
 /**
@@ -270,11 +311,16 @@ const contract: Module = {
 // ── The regions. Each is its own component: the module renders once per declared region, and every one of
 //    them needs hooks of its own.
 
-/** Makes the buildings layer the one that accepts clicks, and opens the overlay on whatever was hit. */
-const MapRegion: FC<{ map: MapService; overlay: OverlayControl }> = ({ map, overlay }) => {
+/** Makes the buildings layer the one that accepts clicks, opens the overlay on a hit, and keeps the highlight up. */
+const MapRegion: FC<{ map: MapService; overlay: OverlayControl; data: Readonly<ModelData> }> = ({
+  map,
+  overlay,
+  data,
+}) => {
   useEffect(() => {
     map.createLayer(LAYER);
     map.setInteractiveLayer(LAYER);
+    map.createLayer(CONFIGURED_LAYER, { color: CONFIGURED_COLOR, onTop: true });
 
     const stop = map.onElementClick((click: MapClick) => {
       const id = idOf(click.feature);
@@ -287,8 +333,22 @@ const MapRegion: FC<{ map: MapService; overlay: OverlayControl }> = ({ map, over
     return () => {
       stop();
       map.setInteractiveLayer(null);
+      map.removeLayer(CONFIGURED_LAYER);
     };
   }, [map, overlay]);
+
+  // The highlight, redrawn whenever the store changes: a building gains it the moment it is configured, and
+  // loses it when the grid is redrawn and the building is gone.
+  useEffect(() => {
+    const configured = buildingsOf(data).filter((feature) => {
+      const id = idOf(feature);
+      return id !== null && isConfigured(data, id, feature);
+    });
+    map.clearLayer(CONFIGURED_LAYER);
+    if (configured.length > 0) {
+      map.addFeatures(CONFIGURED_LAYER, { type: "FeatureCollection", features: configured });
+    }
+  }, [map, data]);
 
   return null;
 };
@@ -345,61 +405,103 @@ const OverlayRegion: FC<{
   );
 };
 
-/** The batch side: which buildings exist, and which of them have been configured. */
-const SidebarRegion: FC<{ overlay: OverlayControl; data: Readonly<ModelData> }> = ({ overlay, data }) => {
-  const { t } = useTranslation();
-  const state = usePicked();
-  const buildings = buildingsOf(data);
+/** A row of the summary: a label and its value. */
+const Stat: FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div className="flex items-baseline justify-between gap-3">
+    <dt className="text-xs text-muted-foreground">{label}</dt>
+    <dd className="text-sm font-medium tabular-nums">{value}</dd>
+  </div>
+);
 
-  const configured = useMemo(
-    () =>
-      buildings.filter((feature) => {
-        const id = idOf(feature);
-        if (id === null) return false;
-        return (
-          data.buildingParams?.electricity?.[id] !== undefined ||
-          (data.technologies?.[id] ?? []).length > 0
-        );
-      }).length,
-    [buildings, data],
-  );
+/**
+ * The batch side: **how much there is, not which ones.**
+ *
+ * A list of buildings used to live here — one row of raw `osm_id`s per building. It said nothing a user could
+ * act on (an id is not a name), and choosing a building is a gesture on the map, so the sidebar now summarises
+ * the grid and points at the map instead. Which buildings are already configured is shown *on the map*, not
+ * here, so the summarised count can stay a count.
+ */
+const SidebarRegion: FC<{ data: Readonly<ModelData> }> = ({ data }) => {
+  const { t } = useTranslation();
+
+  const stats = useMemo(() => {
+    const buildings = buildingsOf(data);
+    const electricity = data.buildingParams?.electricity ?? {};
+    let configured = 0;
+    let areaM2 = 0;
+    let yearlyKwh = 0;
+    let peakKw = 0;
+
+    for (const feature of buildings) {
+      areaM2 += areaOf(feature);
+      const id = idOf(feature);
+      if (id === null) continue;
+      if (isConfigured(data, id, feature)) configured += 1;
+      const params = electricity[id];
+      if (params !== undefined) {
+        yearlyKwh += params.yearlyKwh ?? 0;
+        peakKw += params.peakKw ?? 0;
+      }
+    }
+
+    return {
+      total: buildings.length,
+      configured,
+      areaM2,
+      yearlyKwh,
+      peakKw,
+      // The demand figures only mean something once `building-demand` has run; before that they would read as a
+      // confident zero.
+      hasDemand: Object.keys(electricity).length > 0,
+    };
+  }, [data]);
+
+  const number = (value: number): string => Math.round(value).toLocaleString();
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-auto p-3">
-      <div className="text-sm font-medium">
-        {t("modelBuilder.building-configurator.configured", "{{configured}} of {{total}} buildings configured", {
-          configured,
-          total: buildings.length,
-        })}
+    <div className="flex h-full flex-col gap-5 overflow-auto">
+      {/* The instruction is the sidebar's most useful sentence, so it leads — not a muted footnote at the
+          bottom where a reader looking for "what do I do here" would never find it. */}
+      <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
+        <p className="text-sm font-medium text-foreground">
+          {t(
+            "modelBuilder.building-configurator.clickHint",
+            "Configure a building by clicking it on the map, then press Continue.",
+          )}
+        </p>
       </div>
-      <ul className="min-h-0 space-y-1 overflow-auto">
-        {buildings.map((feature) => {
-          const id = idOf(feature);
-          if (id === null) return null;
-          const done =
-            data.buildingParams?.electricity?.[id] !== undefined ||
-            (data.technologies?.[id] ?? []).length > 0;
-          return (
-            <li key={id}>
-              <button
-                type="button"
-                onClick={() => {
-                  setPicked(id);
-                  overlay.open();
-                }}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg border border-border px-2 py-1 text-left text-xs hover:bg-muted ${
-                  state.osmId === id ? "bg-muted" : ""
-                }`}
-              >
-                <span className="truncate font-mono">{id}</span>
-                <span className={done ? "text-muted-foreground" : "text-foreground"}>
-                  {done ? "✓" : "·"}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+
+      <div>
+        <div className="text-3xl font-semibold tabular-nums">{stats.total}</div>
+        <div className="text-xs text-muted-foreground">
+          {t("modelBuilder.building-configurator.found", "Buildings found")}
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          {t("modelBuilder.building-configurator.configured", "{{configured}} of {{total}} buildings configured", {
+            configured: stats.configured,
+            total: stats.total,
+          })}
+        </div>
+      </div>
+
+      <dl className="space-y-2">
+        <Stat
+          label={t("modelBuilder.building-configurator.footprint", "Footprint area")}
+          value={`${number(stats.areaM2)} m²`}
+        />
+        {stats.hasDemand && (
+          <Stat
+            label={t("modelBuilder.building-configurator.yearlyDemand", "Yearly electricity demand")}
+            value={`${number(stats.yearlyKwh)} kWh`}
+          />
+        )}
+        {stats.hasDemand && (
+          <Stat
+            label={t("modelBuilder.building-configurator.peakLoad", "Peak load")}
+            value={`${number(stats.peakKw)} kW`}
+          />
+        )}
+      </dl>
     </div>
   );
 };
@@ -444,13 +546,13 @@ const Component: FC<ModuleViewProps> = ({ region, data, run, map, overlay }) => 
   const state = usePicked();
 
   if (region === "map" && map !== undefined && overlay !== undefined) {
-    return <MapRegion map={map} overlay={overlay} />;
+    return <MapRegion map={map} overlay={overlay} data={data} />;
   }
   if (region === "overlay" && overlay !== undefined) {
     return <OverlayRegion overlay={overlay} data={data} />;
   }
-  if (region === "sidebar" && overlay !== undefined) {
-    return <SidebarRegion overlay={overlay} data={data} />;
+  if (region === "sidebar") {
+    return <SidebarRegion data={data} />;
   }
   if (region === "bottom") {
     return <BottomRegion run={run} pending={state.pending.size} issues={issuesFor(data)} />;

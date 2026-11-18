@@ -3005,6 +3005,11 @@
       "clickToClose": "Klicken zum Schließen"
     },
     "building-configurator": {
+      "found": "Gefundene Gebäude",
+      "footprint": "Grundfläche",
+      "yearlyDemand": "Jährlicher Strombedarf",
+      "peakLoad": "Spitzenlast",
+      "clickHint": "Konfigurieren Sie ein Gebäude, indem Sie es auf der Karte anklicken, und drücken Sie dann auf Weiter.",
       "title": "Gebäudekonfigurator",
       "configured": "{{configured}} von {{total}} Gebäuden konfiguriert",
       "hint": "Klicken Sie ein Gebäude auf der Karte an, um es im Detail zu konfigurieren.",

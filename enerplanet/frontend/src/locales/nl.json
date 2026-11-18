@@ -3005,6 +3005,11 @@
       "clickToClose": "Klik om te sluiten"
     },
     "building-configurator": {
+      "found": "Gevonden gebouwen",
+      "footprint": "Grondoppervlak",
+      "yearlyDemand": "Jaarlijkse elektriciteitsvraag",
+      "peakLoad": "Piekbelasting",
+      "clickHint": "Configureer een gebouw door er op de kaart op te klikken en druk dan op Doorgaan.",
       "title": "Gebouwconfigurator",
       "configured": "{{configured}} van {{total}} gebouwen geconfigureerd",
       "hint": "Klik op een gebouw op de kaart om het in detail te configureren.",
