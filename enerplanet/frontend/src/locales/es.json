@@ -2981,14 +2981,6 @@
       "modeWorkflow": "flujo de trabajo"
     },
     "grid-generation": {
-      "title": "La red sintética",
-      "description": "Genera edificios, transformadores y cables a partir del área dibujada.",
-      "generate": "Generar red",
-      "regenerate": "Regenerar red",
-      "generating": "Generando…",
-      "lossConfirm": "Reemplazar de todos modos",
-      "loss": "Volver a generar reemplaza esta red y descarta el trabajo de demanda y tecnologías construido sobre ella.",
-      "failed": "No se pudo generar la red: {{reason}}",
       "bottom": {
         "none": "Aún no hay red.",
         "buildings": "edificios",
@@ -2999,7 +2991,8 @@
       "map": {
         "title": "La red",
         "empty": "Genere una red para verla aquí."
-      }
+      },
+      "map.empty": "La red aparece aquí en cuanto se genera."
     },
     "map-provider": {
       "start": "Inicio",

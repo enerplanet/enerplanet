@@ -2980,14 +2980,6 @@
       "modeWorkflow": "workflow"
     },
     "grid-generation": {
-      "title": "Het synthetische net",
-      "description": "Genereert gebouwen, transformatoren en kabels uit het getekende gebied.",
-      "generate": "Net genereren",
-      "regenerate": "Net opnieuw genereren",
-      "generating": "Bezig met genereren…",
-      "lossConfirm": "Toch vervangen",
-      "loss": "Opnieuw genereren vervangt dit net en gooit het daarop gebouwde vraag- en technologiewerk weg.",
-      "failed": "Het net kon niet worden gegenereerd: {{reason}}",
       "bottom": {
         "none": "Nog geen net.",
         "buildings": "gebouwen",
@@ -2998,7 +2990,8 @@
       "map": {
         "title": "Het net",
         "empty": "Genereer een net om het hier te zien."
-      }
+      },
+      "map.empty": "Het net verschijnt hier zodra het is gegenereerd."
     },
     "map-provider": {
       "start": "Start",
