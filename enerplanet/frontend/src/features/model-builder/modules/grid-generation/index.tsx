@@ -31,6 +31,7 @@ import {
   type ModuleViewProps,
   type PortKey,
   type RegionRef,
+  type LayerExtrusion,
   type ValidationIssue,
 } from "@model-builder/core";
 import { useTranslation } from "@spatialhub/i18n";
@@ -55,6 +56,15 @@ const LAYERS: Readonly<Record<ProducedPort, string | null>> = {
   transformers: "transformers",
   grids: null,
 };
+
+/**
+ * The buildings are the ones in hand: they are inside the drawn area, and the rest of the city is not. So they
+ * stand up in the highlight blue while the basemap's own buildings stay a ghost beneath them.
+ *
+ * Every one gets the same height. The building levels come from a separate backend call and are not on these
+ * features, and for saying "these are the buildings in play" a uniform volume does the job.
+ */
+const BUILDINGS_EXTRUSION: LayerExtrusion = { fallback: 8, color: "#3b82f6" };
 
 /**
  * The engine the frame installs.
@@ -218,7 +228,7 @@ export function drawGrid(map: GridMap, collections: Collections): void {
   // mid-draw: each `createLayer` and `addFeatures` redraws, and a redraw taken while the grid is only half
   // declared draws the part of it that exists — which is why the buildings appeared and the cables did not.
   for (const layer of mine) {
-    map.createLayer(layer);
+    map.createLayer(layer, layer === LAYERS.buildings ? { extrusion: BUILDINGS_EXTRUSION } : undefined);
     map.clearLayer(layer);
   }
 
