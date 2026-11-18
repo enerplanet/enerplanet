@@ -2325,10 +2325,6 @@
         "modelbuilder": {
           "label": "Model Builder",
           "description": "Modularer, workflow-getriebener Modell-Builder (ersetzt den Configurator)."
-        },
-        "experimentalSettings": {
-          "label": "Experimentell-Tab",
-          "description": "Zeigt den Tab „Experimentell“ in den Einstellungen. Ausschalten blendet ihn aus; /app/settings/experimental schaltet ihn wieder frei."
         }
       }
     },
@@ -2987,6 +2983,14 @@
       "modeWorkflow": "Workflow"
     },
     "grid-generation": {
+      "title": "Das synthetische Netz",
+      "description": "Erzeugt Gebäude, Trafos und Kabel aus dem gezeichneten Gebiet.",
+      "generate": "Netz erzeugen",
+      "regenerate": "Netz neu erzeugen",
+      "generating": "Wird erzeugt…",
+      "lossConfirm": "Trotzdem ersetzen",
+      "loss": "Erneutes Erzeugen ersetzt dieses Netz und verwirft die darauf aufbauende Bedarfs- und Technologiearbeit.",
+      "failed": "Das Netz konnte nicht erzeugt werden: {{reason}}",
       "bottom": {
         "none": "Noch kein Netz.",
         "buildings": "Gebäude",
@@ -2997,14 +3001,18 @@
       "map": {
         "title": "Das Netz",
         "empty": "Erzeugen Sie ein Netz, um es hier zu sehen."
-      },
-      "map.empty": "Das Netz erscheint hier, sobald es erzeugt ist."
+      }
     },
     "map-provider": {
       "start": "Start",
       "clickToClose": "Klicken zum Schließen"
     },
     "building-configurator": {
+      "found": "Gefundene Gebäude",
+      "footprint": "Grundfläche",
+      "yearlyDemand": "Jährlicher Strombedarf",
+      "peakLoad": "Spitzenlast",
+      "clickHint": "Konfigurieren Sie ein Gebäude, indem Sie es auf der Karte anklicken, und drücken Sie dann auf Weiter.",
       "title": "Gebäudekonfigurator",
       "configured": "{{configured}} von {{total}} Gebäuden konfiguriert",
       "hint": "Klicken Sie ein Gebäude auf der Karte an, um es im Detail zu konfigurieren.",

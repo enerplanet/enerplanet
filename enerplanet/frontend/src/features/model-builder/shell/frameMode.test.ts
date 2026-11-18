@@ -149,6 +149,40 @@ describe("the frame's mode decides what is on screen, and what the session start
   });
 });
 
+describe("the frame can be held on a node while its run is in flight", () => {
+  /**
+   * The mechanism an **auto** node depends on.
+   *
+   * The position is derived, and an auto node's own output is what makes it done — so the frame would move off
+   * the node in the very React commit that delivers its writes, and a module that draws from what it just
+   * produced (the grid generator, above all) would unmount before its effect ever drew. A `hold` keeps it on
+   * screen; the shell sets it for the duration of a run and clears it once the paint has landed (`BuilderShell`).
+   */
+  it("shows the held node even though the derived position is a different one", () => {
+    const workflow = toWorkflow(
+      {
+        ...DEFINITION,
+        nodes: [
+          { id: "one", moduleId: "example" },
+          { id: "two", moduleId: "unplaced" },
+        ],
+      },
+      ENTRIES,
+      noSubflows,
+      SEED,
+    );
+    const store = createStore(workflow.initial);
+
+    // Nothing has run, so the session's derived node is the first one.
+    expect(frameView(WORKFLOW_MODE, workflow, ENTRIES, store).nodeId).toBe("one");
+
+    // Held on the second: the frame must show it, not the derived first node.
+    const held = frameView(WORKFLOW_MODE, workflow, ENTRIES, store, "two");
+    expect(held.nodeId).toBe("two");
+    expect(held.entry?.module.id).toBe("unplaced");
+  });
+});
+
 describe("the frame reports whether the module on screen is automatic", () => {
   it("reports `auto: true` for a module that declares it — the node carries no flag of its own", () => {
     const entries: readonly BuilderModule[] = [example, AUTO];

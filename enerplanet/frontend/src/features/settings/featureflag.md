@@ -89,18 +89,12 @@ mounts/unmounts without a reload.
   belong in this store, not in a model/config store.
 - Values are per-browser, not per-account. A user who clears storage is back to defaults.
 
-## The Experimental tab itself is flag-gated
+## The Experimental tab is always visible
 
-The tab is hidden by default. Opening **`/app/settings/experimental`** once enables the
-`experimentalSettings` flag (persisted), activates the tab and rewrites the URL back to
-`/app/settings` — the URL is a one-shot unlock, not a mode.
-
-- Hide it again: switch **Experimental tab** off inside the panel (or the tab disappears on the
-  next settings visit).
-- Unlock again: open `/app/settings/experimental` again.
-
-This keeps the tab out of the way for normal users while making it reachable by link for anyone
-who needs it — no admin role, no env var.
+The tab is a permanent part of Settings — it is **not** flag-gated, and there is no URL to unlock
+it (`/app/settings/experimental` no longer exists; `/app/settings` is the only settings route).
+The registry's flags (currently `modelbuilder`) render inside the tab, each behind its own toggle.
+To hide the whole tab again you would re-introduce a gating flag for it.
 
 ## Gotchas
 

@@ -29,6 +29,7 @@ import {
 } from "@model-builder/core";
 import gridGeneration, {
   layerOrderFor,
+  needsConfirmation,
   setGridEngine,
   type GridEngine,
   type GridRequest,
@@ -116,14 +117,6 @@ describe("grid-generation's declaration", () => {
   it("says either input invalidates the entire output, not part of it", () => {
     expect([...gridGeneration.module.affect.coordinates!].sort()).toEqual([...PRODUCED]);
     expect([...gridGeneration.module.affect.region!].sort()).toEqual([...PRODUCED]);
-  });
-
-  it("runs itself, and those two ports are the only things that make it run again", () => {
-    // Automatic because there is nothing to decide: a redrawn area or another region means a new grid, and
-    // nothing else leaves the old one valid. No `sidebar` (there is no button to press) and no `overlay` (an
-    // auto node's overlay slot is force-opened, which for a node that *draws* would scrim its own grid).
-    expect(gridGeneration.module.auto).toBe(true);
-    expect([...gridGeneration.module.layout].sort()).toEqual(["bottom", "map"]);
   });
 });
 
@@ -232,6 +225,23 @@ describe("grid-generation's run", () => {
     await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id });
 
     expect(gridGeneration.module.validate?.({ store: store.data })).toEqual([]);
+  });
+});
+
+describe("grid-generation's data-loss rule", () => {
+  it("asks nothing of a store that has no grid yet", () => {
+    expect(needsConfirmation(DRAWN)).toBe(false);
+  });
+
+  it("warns when a grid is already there, because generating replaces it", () => {
+    expect(needsConfirmation({ ...DRAWN, buildings: fakeGrid().buildings })).toBe(true);
+  });
+
+  it("warns when demand or technology work stands on the grid that would go", () => {
+    // This is the loss that actually matters, and the one the user cannot see from the button: regenerating
+    // invalidates the work *downstream* of the grid.
+    expect(needsConfirmation({ ...DRAWN, technologies: { electricity: [] } })).toBe(true);
+    expect(needsConfirmation({ ...DRAWN, buildingParams: { electricity: {} } })).toBe(true);
   });
 });
 

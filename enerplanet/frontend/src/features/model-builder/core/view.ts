@@ -62,6 +62,23 @@ export interface LayerOptions {
    * Only polygons: points and lines on the same layer are styled by their own layers and are unaffected.
    */
   readonly extrusion?: LayerExtrusion;
+  /**
+   * The layer's colour — its fill, outline and points — when it should read differently from the provider's
+   * default.
+   *
+   * A module names a *colour*, not a fill or a stroke: how the colour is applied is the provider's business, and
+   * this keeps the styling behind the same blackbox as the engine. A coloured layer also reads a little more
+   * solidly than the default wash, because a layer given its own colour is, by construction, an annotation over
+   * something else rather than the base drawing.
+   */
+  readonly color?: string;
+  /**
+   * Render this layer **above the interactive one**.
+   *
+   * The designated layer is raised to the front so clicks land on it, which would otherwise bury an annotation
+   * drawn over the very layer it marks. This opts out for the rare layer that has to stay visible on top.
+   */
+  readonly onTop?: boolean;
 }
 
 /**

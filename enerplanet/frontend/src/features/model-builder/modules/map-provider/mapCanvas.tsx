@@ -25,6 +25,7 @@ import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import type { StyleSpecification } from "maplibre-gl";
 import { useTranslation } from "@spatialhub/i18n";
 import type { Extent, MapFeature } from "@model-builder/core";
 import type { HostRuntime, MapRenderer } from "./mapHost";
@@ -43,8 +44,26 @@ import {
 // file is self-contained, so its own URL works in dev and in a build. Same fix as the legacy overlay.
 maplibregl.setWorkerUrl(workerUrl);
 
-/** OpenFreeMap Positron: free vector tiles, no API key — the basemap the legacy map uses. */
-const BASE_STYLE = "https://tiles.openfreemap.org/styles/positron";
+/**
+ * OpenStreetMap: raster tiles, no API key — the standard OSM layer, the same one the legacy 2D map uses.
+ *
+ * Raster, so unlike the previous OpenFreeMap vector style it carries no `building` source-layer, and the map's
+ * own 3D building fallback (`extrusion.ts`) simply does not apply — the city's volumes were the basemap's, and a
+ * raster basemap has none to extrude. Module layers' own extrusions are unaffected.
+ */
+const BASE_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+  },
+  layers: [{ id: "osm", type: "raster", source: "osm" }],
+};
 
 const sourceOf = (id: string): string => `mb-source-${id}`;
 
@@ -209,6 +228,9 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       };
       for (const id of order) raise(id);
       if (interactive !== null) raise(interactive);
+      // After the clickable layer, never before: a layer that asked to sit on top is an annotation over the very
+      // layer it marks, and the clickable raise above would otherwise bury it.
+      for (const id of order) if (runtime.stack.optionsOf(id)?.onTop === true) raise(id);
     };
 
     /**
@@ -265,18 +287,23 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
     const addLayerTrio = (active: maplibregl.Map, id: string): void => {
       const [fill, line, circle] = styleIdsOf(id);
       const source = sourceOf(id);
+      // A layer given its own colour is an annotation over something else, so it draws more solidly than the
+      // default wash — that is what lets a highlight read against the layer it sits on.
+      const color = runtime.stack.optionsOf(id)?.color;
+      const fillColor = color ?? "#3b82f6";
+      const lineColor = color ?? "#1e3a5f";
       active.addLayer({
         id: fill,
         type: "fill",
         source,
         filter: POLYGON_FILTER,
-        paint: { "fill-color": "#3b82f6", "fill-opacity": 0.25 },
+        paint: { "fill-color": fillColor, "fill-opacity": color === undefined ? 0.25 : 0.55 },
       });
       active.addLayer({
         id: line,
         type: "line",
         source,
-        paint: { "line-color": "#1e3a5f", "line-width": 2 },
+        paint: { "line-color": lineColor, "line-width": color === undefined ? 2 : 3 },
       });
       active.addLayer({
         id: circle,
@@ -284,7 +311,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
         source,
         // Points only. Without this a polygon earns a dot per vertex, which is noise that hides the network.
         filter: ["==", ["geometry-type"], "Point"],
-        paint: { "circle-radius": 5, "circle-color": "#3b82f6", "circle-stroke-width": 1.5, "circle-stroke-color": "#ffffff" },
+        paint: { "circle-radius": 5, "circle-color": fillColor, "circle-stroke-width": 1.5, "circle-stroke-color": "#ffffff" },
       });
     };
 

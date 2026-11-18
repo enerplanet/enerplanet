@@ -22,7 +22,7 @@
  * one layer would take turns clearing each other's work.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   defineModule,
   type BuilderModule,
@@ -105,6 +105,20 @@ function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
 }
 
 /**
+ * Would generating throw away work?
+ *
+ * Two losses, and the second is the one a user cannot see from the button: replacing the grid itself, and
+ * invalidating everything built on it — the demand parameters and technology assignments downstream. The
+ * cascade is exactly this, so the warning names it.
+ */
+export function needsConfirmation(data: Readonly<ModelData>): boolean {
+  const hasGrid = PRODUCED.some((port) => data[port] !== undefined);
+  const hasDerivedWork = data.technologies !== undefined || data.buildingParams !== undefined;
+
+  return hasGrid || hasDerivedWork;
+}
+
+/**
  * H — the whole layer order, with ours on top.
  *
  * Another module's layer can be on the map at the same time (area-draw's is, until it unmounts), and
@@ -144,15 +158,7 @@ const module = defineModule({
   // One sealed transaction for the whole run: five ports that only make sense together.
   seal: "at-completion",
 
-  // Automatic: the frame runs it on arrival, and the walk runs it again when its ports go stale — which the
-  // `affect` edges above limit to a redrawn area or a different region. Regenerating an *unchanged* area
-  // re-derives the same grid, so no transaction is sealed and nothing downstream is discarded. That is what
-  // makes asking unnecessary: the only re-run is a real change, and a real change is meant to replace the grid.
-  auto: true,
-
-  // No `sidebar` and no `overlay`. There is nothing to press, so nothing wants a bar to press it from — and an
-  // auto node's overlay slot is force-opened, which for a node that *draws* would mean a scrim over its own grid.
-  layout: ["map", "bottom"],
+  layout: ["map", "sidebar", "bottom"],
 
   run: async (ctx: ModuleCtx) => {
     if (engine === null) {
@@ -239,8 +245,13 @@ export function drawGrid(map: GridMap, collections: Collections): void {
   map.setLayerOrder(layerOrderFor(map.getLayerOrder()));
 }
 
-const Component: React.FC<ModuleViewProps> = ({ region, data, map }) => {
+const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }) => {
   const { t } = useTranslation();
+  const [generating, setGenerating] = useState(false);
+  // The first click only warns; the second goes through. Reset whenever the store moves under us.
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const missing = issuesFor(data);
   const hasGrid = PRODUCED.some((port) => data[port] !== undefined);
 
@@ -258,6 +269,13 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, map }) => {
       }) as Partial<Record<ProducedPort, GeoJSON.FeatureCollection | undefined>>,
     [data.buildings, data.transformers, data.lines, data.mvLines],
   );
+
+  // A node change means whatever this module was about to say no longer applies here — including a warning
+  // the user has not answered yet.
+  useEffect(() => {
+    setConfirming(false);
+    setError(null);
+  }, [nodeId]);
 
   /**
    * The grid on the map. **Only the `map` region does this**: the module renders once per declared region, and
@@ -277,13 +295,27 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, map }) => {
     drawGrid(map, collections);
   }, [region, map, collections]);
 
-  // ── bottom: the counts. Intrinsic height on purpose — its box is a cap, not a quota.
-  if (region === "bottom") {
-    // What it is waiting for, in the gate's own words — the same courtesy a disabled button gets.
-    if (missing.length > 0) {
-      return <p className="text-sm text-muted-foreground">{missing[0]?.message}</p>;
+  const generate = (): void => {
+    if (missing.length > 0 || generating) return;
+    // The data-loss step: a store that would lose work needs the question asked first, and the button says
+    // what it will do rather than repeating itself.
+    if (needsConfirmation(data) && !confirming) {
+      setConfirming(true);
+      return;
     }
 
+    setConfirming(false);
+    setError(null);
+    setGenerating(true);
+    void run()
+      .catch((thrown: unknown) => {
+        setError(thrown instanceof Error ? thrown.message : String(thrown));
+      })
+      .finally(() => setGenerating(false));
+  };
+
+  // ── bottom: the counts. Intrinsic height on purpose — its box is a cap, not a quota.
+  if (region === "bottom") {
     if (!hasGrid) {
       return (
         <p className="text-sm text-muted-foreground">
@@ -346,8 +378,58 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, map }) => {
     );
   }
 
-  // Nothing is left for a region this module does not declare: `map` and `bottom` are the whole of it.
-  return null;
+  // ── sidebar: generate, and the data-loss warning. The area must already exist — this module has nothing to
+  //    offer without it, so it says so instead of offering a button that cannot work.
+  return (
+    <div className="flex h-full flex-col gap-4 overflow-auto">
+      <div className="shrink-0">
+        <h3 className="text-base font-semibold">{t("modelBuilder.grid-generation.title")}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t("modelBuilder.grid-generation.description")}
+        </p>
+      </div>
+
+      {missing.length > 0 && (
+        <ul className="shrink-0 space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+          {missing.map((issue) => (
+            <li key={issue.port}>{issue.message}</li>
+          ))}
+        </ul>
+      )}
+
+      {error !== null && (
+        <p className="shrink-0 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+          {t("modelBuilder.grid-generation.failed", "The grid could not be generated: {{reason}}", {
+            reason: error,
+          })}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={generate}
+        disabled={missing.length > 0 || generating}
+        className="w-full shrink-0 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {generating
+          ? t("modelBuilder.grid-generation.generating", "Generating…")
+          : confirming
+            ? t("modelBuilder.grid-generation.lossConfirm", "Replace it anyway")
+            : hasGrid
+              ? t("modelBuilder.grid-generation.regenerate", "Regenerate grid")
+              : t("modelBuilder.grid-generation.generate", "Generate grid")}
+      </button>
+
+      {confirming && (
+        <p className="shrink-0 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+          {t(
+            "modelBuilder.grid-generation.loss",
+            "Generating again replaces this grid and discards the demand and technology work built on it.",
+          )}
+        </p>
+      )}
+    </div>
+  );
 };
 
 const builderModule: BuilderModule = {

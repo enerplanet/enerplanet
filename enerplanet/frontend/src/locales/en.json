@@ -2325,10 +2325,6 @@
         "modelbuilder": {
           "label": "Model Builder",
           "description": "Modular, workflow-driven model builder (replaces the configurator)."
-        },
-        "experimentalSettings": {
-          "label": "Experimental tab",
-          "description": "Shows the Experimental tab in Settings. Turn it off to hide the tab; open /app/settings/experimental to unlock it again."
         }
       }
     },
@@ -2987,6 +2983,14 @@
       "modeWorkflow": "workflow"
     },
     "grid-generation": {
+      "title": "The synthetic grid",
+      "description": "Generate buildings, transformers and cables from the drawn area.",
+      "generate": "Generate grid",
+      "regenerate": "Regenerate grid",
+      "generating": "Generating…",
+      "lossConfirm": "Replace it anyway",
+      "loss": "Generating again replaces this grid and discards the demand and technology work built on it.",
+      "failed": "The grid could not be generated: {{reason}}",
       "bottom": {
         "none": "No grid yet.",
         "buildings": "buildings",
@@ -2997,14 +3001,18 @@
       "map": {
         "title": "The grid",
         "empty": "Generate a grid to see it here."
-      },
-      "map.empty": "The grid appears here once it is generated."
+      }
     },
     "map-provider": {
       "start": "Start",
       "clickToClose": "Click to close"
     },
     "building-configurator": {
+      "found": "Buildings found",
+      "footprint": "Footprint area",
+      "yearlyDemand": "Yearly electricity demand",
+      "peakLoad": "Peak load",
+      "clickHint": "Configure a building by clicking it on the map, then press Continue.",
       "title": "Building configurator",
       "configured": "{{configured}} of {{total}} buildings configured",
       "hint": "Click a building on the map to configure it in detail.",

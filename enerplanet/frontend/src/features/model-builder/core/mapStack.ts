@@ -153,6 +153,21 @@ function sameExtrusion(a: LayerExtrusion | undefined, b: LayerExtrusion): boolea
 }
 
 /**
+ * Whether a fresh set of options says the same thing as what is held, so a re-render is not a change.
+ *
+ * Only the keys actually provided are compared: a module may declare one option on mount and another on a later
+ * render, and a key it says nothing about this time must not read as a change.
+ */
+function sameOptions(held: LayerOptions | undefined, next: LayerOptions): boolean {
+  if (held === undefined) return false;
+  if (next.extrusion !== undefined && !sameExtrusion(held.extrusion, next.extrusion)) return false;
+  if (next.color !== undefined && held.color !== next.color) return false;
+  if (next.onTop !== undefined && held.onTop !== next.onTop) return false;
+  if (next.interactive !== undefined && held.interactive !== next.interactive) return false;
+  return true;
+}
+
+/**
  * The host's layer bookkeeping. `onChange` is called after a call that actually changed something, so a view
  * can re-render without polling.
  */
@@ -177,10 +192,16 @@ export function createMapStack(onChange: () => void = () => undefined): MapStack
       // An option that arrives after the layer was created still applies — a module creates its layer when it
       // mounts and may declare what it draws on a later render — but only when it differs, or every redraw of a
       // layer would look like a change and call `onChange` again.
-      const held = layerOptions.get(id);
-      if (options?.extrusion !== undefined && !sameExtrusion(held?.extrusion, options.extrusion)) {
-        layerOptions.set(id, { ...held, ...options });
-        changed = true;
+      if (options !== undefined) {
+        // Only what was actually named this time: an option left out is not a request to clear it.
+        const provided = Object.fromEntries(
+          Object.entries(options).filter(([, value]) => value !== undefined),
+        ) as LayerOptions;
+        const held = layerOptions.get(id);
+        if (!sameOptions(held, provided)) {
+          layerOptions.set(id, { ...held, ...provided });
+          changed = true;
+        }
       }
       if (changed) onChange();
     },
