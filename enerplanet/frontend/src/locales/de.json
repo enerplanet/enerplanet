@@ -2980,6 +2980,14 @@
       "modeWorkflow": "Workflow"
     },
     "grid-generation": {
+      "title": "Das synthetische Netz",
+      "description": "Erzeugt Gebäude, Trafos und Kabel aus dem gezeichneten Gebiet.",
+      "generate": "Netz erzeugen",
+      "regenerate": "Netz neu erzeugen",
+      "generating": "Wird erzeugt…",
+      "lossConfirm": "Trotzdem ersetzen",
+      "loss": "Erneutes Erzeugen ersetzt dieses Netz und verwirft die darauf aufbauende Bedarfs- und Technologiearbeit.",
+      "failed": "Das Netz konnte nicht erzeugt werden: {{reason}}",
       "bottom": {
         "none": "Noch kein Netz.",
         "buildings": "Gebäude",
@@ -2990,8 +2998,7 @@
       "map": {
         "title": "Das Netz",
         "empty": "Erzeugen Sie ein Netz, um es hier zu sehen."
-      },
-      "map.empty": "Das Netz erscheint hier, sobald es erzeugt ist."
+      }
     },
     "map-provider": {
       "start": "Start",

@@ -2980,6 +2980,14 @@
       "modeWorkflow": "workflow"
     },
     "grid-generation": {
+      "title": "The synthetic grid",
+      "description": "Generate buildings, transformers and cables from the drawn area.",
+      "generate": "Generate grid",
+      "regenerate": "Regenerate grid",
+      "generating": "Generating…",
+      "lossConfirm": "Replace it anyway",
+      "loss": "Generating again replaces this grid and discards the demand and technology work built on it.",
+      "failed": "The grid could not be generated: {{reason}}",
       "bottom": {
         "none": "No grid yet.",
         "buildings": "buildings",
@@ -2990,8 +2998,7 @@
       "map": {
         "title": "The grid",
         "empty": "Generate a grid to see it here."
-      },
-      "map.empty": "The grid appears here once it is generated."
+      }
     },
     "map-provider": {
       "start": "Start",
