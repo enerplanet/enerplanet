@@ -120,6 +120,7 @@ const module = defineModule({
   // what this node writes.
   params: [
     { port: "modelId", required: true },
+    { port: "saveResult" },
     { port: "memeRun", required: true },
     { port: "memePypsaLeg" },
   ],
@@ -127,7 +128,7 @@ const module = defineModule({
   // Two edges, both honest: a different saved model is a different power flow, and — because the leg is
   // *derived from the Calliope run* — a different `memeRun` invalidates the leg too (the backend drops the
   // leg's row when a new Calliope run starts, so the old leg no longer describes this model's results).
-  affect: { modelId: ["memePypsaLeg"], memeRun: ["memePypsaLeg"] },
+  affect: { modelId: ["memePypsaLeg"], saveResult: ["memePypsaLeg"], memeRun: ["memePypsaLeg"] },
 
   // `overlay` is where an auto node shows its leg state; `bottom` is its status strip. No `sidebar`, and no
   // forward action — an auto node never has a Continue button.

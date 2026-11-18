@@ -19,7 +19,33 @@ import {
   runInScratch,
   type MemeRun,
 } from "@model-builder/core";
+import { changedPorts, stageCascade } from "../../core/invalidator";
+import type { DiffOp } from "../../core/diff";
 import runMemeCalliope, { issuesFor } from "./index";
+
+  it("is invalidated when the model is saved again, so an edited model is run again", () => {
+    // A run consumes the *saved* model, and an edit re-saves under the same id: `saveResult` moves, `modelId`
+    // never does. Without this edge a completed run stood for the rest of the session and the adjusted model the
+    // variant flow exists to run could not be run at all.
+    const store = createStore({
+      ...runMemeCalliope.mock,
+      memeRun: run("completed"),
+      saveResult: { modelId: 7, created: true },
+    });
+    const primary: DiffOp[] = [
+      { op: "replace", path: "saveResult", prev: store.data.saveResult, next: { modelId: 7, created: false } },
+    ];
+
+    const cascade = stageCascade({
+      changed: changedPorts(primary),
+      primary,
+      data: store.data,
+      modules: [runMemeCalliope.module],
+    });
+
+    expect(cascade.map((op) => op.path)).toContain("/memeRun");
+  });
+
 import { setMemeRunGateway, type MemeRunGateway } from "./source";
 
 /** The node these cases run as — the module's own id, which is what a host uses in test mode. */
@@ -84,11 +110,14 @@ describe("run-meme-calliope's declaration", () => {
     expect(runMemeCalliope.module.params.map((param) => param.port).sort()).toEqual([
       "memeRun",
       "modelId",
+      "saveResult",
     ]);
   });
 
-  it("declares the one real edge — a different model is a different run", () => {
+  it("declares both edges — a different model, and a model saved again", () => {
+    // `modelId` moves when the model is created; `saveResult` moves on every save, which is what an edit produces.
     expect([...runMemeCalliope.module.affect.modelId!]).toEqual(["memeRun"]);
+    expect([...runMemeCalliope.module.affect.saveResult!]).toEqual(["memeRun"]);
     expect(runMemeCalliope.module.affect.memeRun).toBeUndefined();
   });
 
