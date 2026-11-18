@@ -678,8 +678,9 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
             </section>
 
             {/* Bounded box: intrinsic height, capped at ¼ of the content area — a cap, not a quota.
-                Stacked ABOVE the overlay slot: a module's own forward action is chrome, not content, and burying
-                it under the module's own modal leaves a button that looks live and cannot be pressed. */}
+                Above the *auto* overlay slot, which is a full-bleed run state with this region as its status strip
+                underneath it. Below a module-opened overlay: that is the module's own UI, and a piece of it that
+                opens full-screen — the building configurator's editor does — has to stay reachable. */}
             {inRegion("bottom") && (
               <footer className="relative z-50 max-h-[25%] shrink-0 overflow-hidden border-t border-border bg-card px-6 py-3">
                 <View {...viewProps("bottom")} />
@@ -697,7 +698,13 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
         {/* Scoped to the module column — the chrome you need to leave it is never covered. An **auto** node
             forces this slot open: it is where the node shows its own run state, since it has no forward action
             to press (`autoRun.ts`). An auto node gets the slot *full-bleed* — a loading indicator that takes the
-            screen — while a module-opened overlay (a click) keeps the host's centred card. */}
+            screen — while a module-opened overlay (a click) keeps the host's centred card.
+
+            That card carries `z-[60]`, over the bottom region's `z-50`, because a module's UI may open something
+            full-screen of its own — the building configurator's editor does — and the card is a stacking context:
+            a `fixed` child inside it is trapped at the card's own z-index, so the *wrapper* has to outrank the
+            chrome for the full-screen view to stay reachable. The auto slot keeps `z-40` on purpose, since the
+            bottom region is its status strip and that has to stay under it. */}
         {inRegion("overlay") &&
           (overlayOpen || view.auto === true) &&
           (view.auto === true ? (
@@ -705,7 +712,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
               <View {...viewProps("overlay")} />
             </div>
           ) : (
-            <div className="absolute inset-0 z-40 flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm">
+            <div className="absolute inset-0 z-[60] flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm">
               <div className="max-h-full w-full max-w-2xl overflow-hidden rounded-lg border border-border bg-card p-6 shadow-lg">
                 <View {...viewProps("overlay")} />
               </div>
