@@ -103,15 +103,44 @@ describe("run-meme-calliope's declaration", () => {
 });
 
 describe("run-meme-calliope's run", () => {
-  it("submits once on arrival and commits the run record from the response", async () => {
-    const gateway = fakeGateway({ submit: run("pending") });
+  it("reads the model first, then submits, when nothing has been started", async () => {
+    // The model reports nothing started, which is what one that has never been run looks like through the
+    // gateway: `draft` and its friends land on `failed`. Without this answer the fake defaults to a run already
+    // going, which is the case below.
+    const gateway = fakeGateway({ submit: run("pending"), status: run("failed") });
     setMemeRunGateway(gateway);
 
     const { store, error } = await runInScratch(runMemeCalliope);
 
     expect(error).toBeUndefined();
+    expect(gateway.polled).toEqual([runMemeCalliope.mock?.modelId]);
     expect(gateway.submitted).toEqual([runMemeCalliope.mock?.modelId]);
     expect(store.data.memeRun).toEqual(run("pending"));
+  });
+
+  it("continues a run it finds already going instead of starting a second one", async () => {
+    // A reopened session restores without the run's record, so arrival happens again — and the model may already
+    // be running. Submitting from nothing here is what dispatched a duplicate calculation; the read is what tells
+    // a session continuing a run from one starting it.
+    const gateway = fakeGateway({ status: run("running") });
+    setMemeRunGateway(gateway);
+
+    const { store, error } = await runInScratch(runMemeCalliope);
+
+    expect(error).toBeUndefined();
+    expect(gateway.submitted).toEqual([]);
+    expect(store.data.memeRun?.status).toBe("running");
+  });
+
+  it("adopts a run that has already finished, rather than running the model again", async () => {
+    const gateway = fakeGateway({ status: run("completed") });
+    setMemeRunGateway(gateway);
+
+    const { store, error } = await runInScratch(runMemeCalliope);
+
+    expect(error).toBeUndefined();
+    expect(gateway.submitted).toEqual([]);
+    expect(store.data.memeRun?.status).toBe("completed");
   });
 
   it("submits nothing when the store already holds a run record", async () => {
@@ -178,7 +207,8 @@ describe("run-meme-calliope's run", () => {
   });
 
   it("reads the port before writing it — a run that moves is rewritten without a clobber", async () => {
-    const gateway = fakeGateway({ status: run("completed") });
+    // Two reads: the arrival, which finds nothing started and so submits; then the re-read after the run moved.
+    const gateway = fakeGateway({ status: [run("failed"), run("completed")] });
     setMemeRunGateway(gateway);
 
     const store = createStore({ ...runMemeCalliope.mock });

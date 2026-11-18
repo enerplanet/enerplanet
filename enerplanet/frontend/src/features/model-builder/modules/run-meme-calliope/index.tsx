@@ -125,9 +125,16 @@ const module = defineModule({
 
     const existing = ctx.read("memeRun");
 
-    // No run recorded yet: this is the arrival run, and the only one that submits from nothing.
+    // No run recorded on *this* session. That is the first pass through a flow, where there is genuinely
+    // nothing to read — and it is also a reopened session, because a run's record is not part of what a session
+    // restores. So "no record" cannot mean "submit": ask the model what it is doing first. One already queued,
+    // running or completed is a run this session continues rather than starts, and submitting from nothing on
+    // one of those is what made reopening a finished model dispatch a second calculation.
     if (existing === undefined) {
-      ctx.commit({ memeRun: await gateway.submit(modelId) });
+      const current = await gateway.status(modelId);
+      const alreadyStarted =
+        current.status === "pending" || current.status === "running" || current.status === "completed";
+      ctx.commit({ memeRun: alreadyStarted ? current : await gateway.submit(modelId) });
       return;
     }
 
