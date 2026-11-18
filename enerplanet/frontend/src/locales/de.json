@@ -48,7 +48,14 @@
       "hub_height": "Nabenhöhe",
       "rotor_diameter": "Rotordurchmesser",
       "annual_demand": "Jahresbedarf",
-      "peak_demand": "Spitzenbedarf"
+      "peak_demand": "Spitzenbedarf",
+      "cont_resource_unit": "Ressourceneinheit",
+      "module_type": "PV-Modultyp",
+      "inverter_type": "Wechselrichtertyp",
+      "optimize_orientation": "Neigung und Ausrichtung optimieren",
+      "module_width_m": "PV-Modulbreite",
+      "module_height_m": "PV-Modulhöhe",
+      "module_power_kwp": "PV-Modulleistung"
     },
     "cont_energy_cap_max": "Die maximale Energiekapazität, die für diese Technologie installiert werden kann.",
     "cont_energy_cap_max_systemwide": "Die maximale Energiekapazität, die systemweit für diesen Technologietyp zulässig ist.",

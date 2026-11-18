@@ -215,7 +215,7 @@ export function usePvMode(
     change(installed.map((a) => (a.surface_id === surfaceId ? laidOut({ ...a, mounting, orientation }) : a)));
   }, [installed, change, laidOut]);
 
-  const typeLabel = building?.typeLabel ?? "";
+  const typeLabel = t("technologies.types.pv_supply", { defaultValue: building?.typeLabel ?? "" });
   const pv = useMemo<PvMode | undefined>(() => {
     if (!active || !rows) return undefined;
     const labels = otherBuildingLabels(rows, shownObjectId, t);

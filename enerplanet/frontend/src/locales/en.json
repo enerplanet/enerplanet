@@ -48,7 +48,14 @@
       "hub_height": "Hub height",
       "rotor_diameter": "Rotor diameter",
       "annual_demand": "Annual demand",
-      "peak_demand": "Peak demand"
+      "peak_demand": "Peak demand",
+      "cont_resource_unit": "Resource unit",
+      "module_type": "PV module type",
+      "inverter_type": "Inverter type",
+      "optimize_orientation": "Optimise tilt and azimuth",
+      "module_width_m": "PV module width",
+      "module_height_m": "PV module height",
+      "module_power_kwp": "PV module power"
     },
     "cont_energy_cap_max": "The maximum amount of energy capacity that can be installed for this technology.",
     "cont_energy_cap_max_systemwide": "The maximum energy capacity allowed across the entire system for this technology type.",
