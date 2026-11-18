@@ -16,18 +16,16 @@ func seedUser(ctx context.Context, kc *keycloak.Client) {
 	position := "Dev"
 	phone := ""
 
-	// Check if user exists
-	users, err := kc.FindUsers(ctx, username)
+	// Only seed the default admin when no users exist at all.
+	users, err := kc.FindUsers(ctx, "")
 	if err != nil {
 		log.Printf("Failed to find users: %v", err)
 		return
 	}
 
-	for _, u := range users {
-		if u.Username == username {
-			log.Println("User admin already exists")
-			return
-		}
+	if len(users) > 0 {
+		log.Printf("Users already exist (%d), skipping admin seed", len(users))
+		return
 	}
 
 	// Create user
