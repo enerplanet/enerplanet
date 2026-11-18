@@ -282,7 +282,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
                                     3D
                                 </span>
                             </TooltipTrigger>
-                            <TooltipContent>{t('regionSelector.3dBuildingData', 'LiDAR 3D building heights available')}</TooltipContent>
+                            <TooltipContent>{t('regionSelector.3dBuildingData', '3D city data available')}</TooltipContent>
                         </Tooltip>
                     )}
                 </div>
