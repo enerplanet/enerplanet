@@ -10,7 +10,7 @@
  * Duplicating the rules in each would mean two answers to "what order is this layer in".
  */
 
-import type { LayerOptions, MapFeature } from "./view";
+import type { LayerExtrusion, LayerOptions, MapFeature } from "./view";
 
 /** An extent as `[west, south, east, north]` — the order the model's `region` uses. */
 export type Extent = [number, number, number, number];
@@ -37,6 +37,14 @@ export interface MapStack {
   /** Which layer is up front and accepts clicks; `null` for none. Leaves the stored order alone. */
   setInteractiveLayer(id: string | null): void;
   interactiveLayer(): string | null;
+
+  /**
+   * What the layer was created with.
+   *
+   * The host keeps these because a module declares *what it draws* once and draws it many times: the renderer
+   * asks here rather than being told again on every redraw.
+   */
+  optionsOf(id: string): LayerOptions | undefined;
 
   /** What is on a layer, in the order it was added. */
   featuresOf(id: string): readonly MapFeature[];
@@ -137,6 +145,13 @@ export function boundsOf(geometry: GeoJSON.GeoJSON | undefined): Extent | undefi
   return sawPosition ? [west, south, east, north] : undefined;
 }
 
+/** Whether two extrusions describe the same volume, so a re-render with an equal option is not a change. */
+function sameExtrusion(a: LayerExtrusion | undefined, b: LayerExtrusion): boolean {
+  return (
+    a !== undefined && a.fallback === b.fallback && a.color === b.color && a.heightFrom === b.heightFrom
+  );
+}
+
 /**
  * The host's layer bookkeeping. `onChange` is called after a call that actually changed something, so a view
  * can re-render without polling.
@@ -144,6 +159,7 @@ export function boundsOf(geometry: GeoJSON.GeoJSON | undefined): Extent | undefi
 export function createMapStack(onChange: () => void = () => undefined): MapStack {
   const order: string[] = [];
   const features = new Map<string, MapFeature[]>();
+  const layerOptions = new Map<string, LayerOptions>();
   let interactive: string | null = null;
 
   return {
@@ -158,6 +174,14 @@ export function createMapStack(onChange: () => void = () => undefined): MapStack
         interactive = id;
         changed = true;
       }
+      // An option that arrives after the layer was created still applies — a module creates its layer when it
+      // mounts and may declare what it draws on a later render — but only when it differs, or every redraw of a
+      // layer would look like a change and call `onChange` again.
+      const held = layerOptions.get(id);
+      if (options?.extrusion !== undefined && !sameExtrusion(held?.extrusion, options.extrusion)) {
+        layerOptions.set(id, { ...held, ...options });
+        changed = true;
+      }
       if (changed) onChange();
     },
 
@@ -166,6 +190,7 @@ export function createMapStack(onChange: () => void = () => undefined): MapStack
       if (at === -1) return;
       order.splice(at, 1);
       features.delete(id);
+      layerOptions.delete(id);
       if (interactive === id) interactive = null;
       onChange();
     },
@@ -207,6 +232,7 @@ export function createMapStack(onChange: () => void = () => undefined): MapStack
     },
 
     interactiveLayer: () => interactive,
+    optionsOf: (id) => layerOptions.get(id),
     featuresOf: (id) => [...(features.get(id) ?? [])],
   };
 }
