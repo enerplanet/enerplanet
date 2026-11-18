@@ -715,7 +715,7 @@ export default function TechnologiesPage() {
               )}
 
               <a
-                href="/docs/technology-reference-guide.pdf"
+                href="https://enerplanet.github.io/enerplanet/enerplanet/technologies/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={TOOLBAR_BUTTON_CLASS}
