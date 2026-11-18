@@ -704,15 +704,21 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
             full-screen of its own — the building configurator's editor does — and the card is a stacking context:
             a `fixed` child inside it is trapped at the card's own z-index, so the *wrapper* has to outrank the
             chrome for the full-screen view to stay reachable. The auto slot keeps `z-40` on purpose, since the
-            bottom region is its status strip and that has to stay under it. */}
+            bottom region is its status strip and that has to stay under it.
+
+            Both wrappers zero the app layout's `--sidebar-width` and `--topbar-height`. The `backdrop-blur` here
+            is a filter, which makes this wrapper the containing block for `fixed` descendants — and the legacy
+            panel a module may install positions itself by those two tokens to sit beside the app's rail and under
+            its topbar. Measured from here that offset lands twice, since this wrapper already *is* the content
+            area. Zeroed, the panel spans the overlay exactly. */}
         {inRegion("overlay") &&
           (overlayOpen || view.auto === true) &&
           (view.auto === true ? (
-            <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/95 p-6 backdrop-blur-sm">
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/95 p-6 backdrop-blur-sm [--sidebar-width:0px] [--topbar-height:0px]">
               <View {...viewProps("overlay")} />
             </div>
           ) : (
-            <div className="absolute inset-0 z-[60] flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm">
+            <div className="absolute inset-0 z-[60] flex items-start justify-center bg-background/80 p-6 backdrop-blur-sm [--sidebar-width:0px] [--topbar-height:0px]">
               <div className="max-h-full w-full max-w-2xl overflow-hidden rounded-lg border border-border bg-card p-6 shadow-lg">
                 <View {...viewProps("overlay")} />
               </div>
