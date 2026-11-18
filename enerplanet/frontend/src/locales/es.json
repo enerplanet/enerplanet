@@ -48,7 +48,14 @@
       "hub_height": "Altura del buje",
       "rotor_diameter": "Diámetro del rotor",
       "annual_demand": "Demanda anual",
-      "peak_demand": "Demanda pico"
+      "peak_demand": "Demanda pico",
+      "cont_resource_unit": "Unidad de recurso",
+      "module_type": "Tipo de módulo FV",
+      "inverter_type": "Tipo de inversor",
+      "optimize_orientation": "Optimizar inclinación y azimut",
+      "module_width_m": "Ancho del módulo FV",
+      "module_height_m": "Alto del módulo FV",
+      "module_power_kwp": "Potencia del módulo FV"
     },
     "cont_energy_cap_max": "La cantidad máxima de capacidad energética que se puede instalar para esta tecnología.",
     "cont_energy_cap_max_systemwide": "La capacidad energética máxima permitida en todo el sistema para este tipo de tecnología.",

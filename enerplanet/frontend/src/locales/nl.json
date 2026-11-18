@@ -48,7 +48,14 @@
       "hub_height": "Ashoogte",
       "rotor_diameter": "Rotordiameter",
       "annual_demand": "Jaarlijkse vraag",
-      "peak_demand": "Piekvraag"
+      "peak_demand": "Piekvraag",
+      "cont_resource_unit": "Resource-eenheid",
+      "module_type": "Type PV-module",
+      "inverter_type": "Type omvormer",
+      "optimize_orientation": "Hellingshoek en oriëntatie optimaliseren",
+      "module_width_m": "Breedte PV-module",
+      "module_height_m": "Hoogte PV-module",
+      "module_power_kwp": "Vermogen PV-module"
     },
     "cont_energy_cap_max": "De maximale energiecapaciteit die voor deze technologie kan worden geïnstalleerd.",
     "cont_energy_cap_max_systemwide": "De maximale energiecapaciteit toegestaan in het hele systeem voor dit technologietype.",

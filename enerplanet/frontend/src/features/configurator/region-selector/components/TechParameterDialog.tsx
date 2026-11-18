@@ -153,6 +153,10 @@ const parameterNameKeys: Record<string, string> = {
   inv_eff: "parameters.names.inv_eff",
   losses: "parameters.names.losses",
   dc_ac_ratio: "parameters.names.dc_ac_ratio",
+  module_width_m: "parameters.names.module_width_m",
+  module_height_m: "parameters.names.module_height_m",
+  module_power_kwp: "parameters.names.module_power_kwp",
+  cont_resource_unit: "parameters.names.cont_resource_unit",
   // Biomass parameters
   feedstock_per_year: "parameters.names.feedstock_per_year",
   boiler_efficiency: "parameters.names.boiler_efficiency",
