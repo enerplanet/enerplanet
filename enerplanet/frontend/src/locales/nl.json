@@ -1947,10 +1947,6 @@
         "modelbuilder": {
           "label": "Model Builder",
           "description": "Modulaire, workflow-gedreven model builder (vervangt de configurator)."
-        },
-        "experimentalSettings": {
-          "label": "Experimenteel-tab",
-          "description": "Toont het tabblad Experimenteel in Instellingen. Zet het uit om het tabblad te verbergen; open /app/settings/experimental om het weer te ontgrendelen."
         }
       }
     },

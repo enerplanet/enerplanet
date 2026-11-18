@@ -19,8 +19,8 @@ import { useFeatureFlag, useFeatureFlagsStore } from "./flags-store";
  * No restart, no `.env` edit.
  *
  * Rows are grouped by category, in registry order, with a divider between the
- * groups — `general` (e.g. the tab's own visibility) reads as a separate block
- * from the actual `experimental` features.
+ * groups. Today every flag is `experimental`, so no divider shows; the grouping
+ * exists for when a non-experimental flag is added.
  */
 
 /** Registry grouped by category, in first-appearance order. Static by design. */
