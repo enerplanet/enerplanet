@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"platform.local/common/pkg/constants"
 	"platform.local/common/pkg/httputil"
 	platformlogger "platform.local/platform/logger"
 	"spatialhub_backend/internal/bearerauth"
@@ -20,8 +20,14 @@ type BearerVerifier interface {
 	Verify(context.Context, string) (*bearerauth.Identity, error)
 }
 
-// Authenticate bearer tokens.
-func BearerAuth(verifier BearerVerifier) gin.HandlerFunc {
+// PartnerAccountResolver finds the local account linked to a partner user id.
+type PartnerAccountResolver interface {
+	Resolve(partnerUserID string) (*bearerauth.Account, error)
+}
+
+// BearerAuth authenticates partner access tokens and acts as the linked local
+// account on the read-only toolbox routes.
+func BearerAuth(verifier BearerVerifier, accounts PartnerAccountResolver) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Public paths bypass.
 		if httputil.IsPublicPath(c.Request.URL.Path, backendPublicPaths) {
@@ -54,7 +60,7 @@ func BearerAuth(verifier BearerVerifier) gin.HandlerFunc {
 			rejectBearer(c, "malformed_header")
 			return
 		}
-		if verifier == nil {
+		if verifier == nil || accounts == nil {
 			rejectBearer(c, bearerauth.ErrUnavailable.Error())
 			return
 		}
@@ -63,32 +69,64 @@ func BearerAuth(verifier BearerVerifier) gin.HandlerFunc {
 			rejectBearer(c, rejectReason(err))
 			return
 		}
-		if !slices.Contains(strings.Fields(identity.Scope), bearerauth.ReadScope) ||
-			c.Request.Method != http.MethodGet || !toolboxReadRoute(c.FullPath()) {
-			bearerLog(c).WithFields(map[string]any{"user_id": identity.Subject, "token_id": identity.TokenID}).
+		if c.Request.Method != http.MethodGet || !toolboxReadRoute(c.FullPath()) {
+			bearerLog(c).WithFields(map[string]any{"partner_user_id": identity.Subject, "token_id": identity.TokenID}).
 				Warn("bearer request not permitted")
-			c.Header("WWW-Authenticate", `Bearer error="insufficient_scope", scope="enerplanet:read"`)
+			c.Header("WWW-Authenticate", `Bearer error="insufficient_scope"`)
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Token does not permit this operation"})
 			return
 		}
-		c.Set("user_id", identity.Subject)
-		c.Set("user_email", identity.Email)
-		c.Set("user_name", identity.Name)
-		c.Set("access_level", identity.AccessLevel)
-		c.Set("group_id", "")
-		c.Set(ctxBearerIdentity, identity)
-		// Skip session validation.
-		c.Set(ctxAPITokenAuthenticated, true)
-		bearerLog(c).WithFields(map[string]any{"user_id": identity.Subject, "token_id": identity.TokenID}).
-			Info("bearer token request")
+		if !setBearerAccount(c, accounts, identity) {
+			return
+		}
 		c.Next()
 	}
+}
+
+// setBearerAccount puts the account linked to identity into the request
+// context, or aborts the request.
+func setBearerAccount(c *gin.Context, accounts PartnerAccountResolver, identity *bearerauth.Identity) bool {
+	log := bearerLog(c).WithFields(map[string]any{"partner_user_id": identity.Subject, "token_id": identity.TokenID})
+	account, err := accounts.Resolve(identity.Subject)
+	switch {
+	case errors.Is(err, bearerauth.ErrNotLinked):
+		log.Warn("bearer user has no linked account")
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "No EnerPlanET account is linked to this user; sign in to EnerPlanET once to create it"})
+		return false
+	case errors.Is(err, bearerauth.ErrDisabled):
+		log.Warn("bearer user account is disabled")
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "The linked EnerPlanET account is disabled"})
+		return false
+	case err != nil:
+		log.WithError(err).Error("bearer account lookup failed")
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Account lookup unavailable, retry later"})
+		return false
+	}
+	c.Set("user_id", account.ID)
+	c.Set("user_email", account.Email)
+	c.Set("user_name", account.Name)
+	c.Set("access_level", toolboxAccessLevel(account.AccessLevel))
+	c.Set("group_id", "")
+	c.Set(ctxBearerIdentity, identity)
+	// Skip session validation.
+	c.Set(ctxAPITokenAuthenticated, true)
+	log.WithField("user_id", account.ID).Info("bearer token request")
+	return true
+}
+
+// toolboxAccessLevel caps delegated privileges at intermediate.
+func toolboxAccessLevel(level string) string {
+	switch level {
+	case constants.AccessLevelIntermediate, constants.AccessLevelManager, constants.AccessLevelExpert:
+		return constants.AccessLevelIntermediate
+	}
+	return constants.AccessLevelVeryLow
 }
 
 // Fixed log reasons.
 func rejectReason(err error) string {
 	for _, known := range []error{bearerauth.ErrUnavailable, bearerauth.ErrExpired, bearerauth.ErrInvalidToken,
-		bearerauth.ErrClaims, bearerauth.ErrLifetime, bearerauth.ErrEmail, bearerauth.ErrAccessLevel} {
+		bearerauth.ErrClaims, bearerauth.ErrLifetime} {
 		if errors.Is(err, known) {
 			return known.Error()
 		}
@@ -123,7 +161,7 @@ func toolboxReadRoute(route string) bool {
 }
 
 type WhoAmIResponse struct {
-	Issuer               string `json:"issuer"`
+	Issuer               string `json:"issuer,omitempty"` // partner tokens only
 	Subject              string `json:"subject"`
 	Email                string `json:"email"`
 	AccessLevel          string `json:"access_level"`
@@ -132,7 +170,7 @@ type WhoAmIResponse struct {
 
 // WhoAmI godoc
 // @Summary Resolve the current API identity
-// @Description SpatialHub subject and effective API permissions; never returns credentials.
+// @Description EnerPlanET user id and effective API permissions; never returns credentials.
 // @Tags Authentication
 // @Produce json
 // @Success 200 {object} WhoAmIResponse
@@ -141,14 +179,14 @@ type WhoAmIResponse struct {
 // @Security APITokenAuth
 // @Security SessionAuth
 // @Router /auth/whoami [get]
-func WhoAmI(issuer string) gin.HandlerFunc {
+func WhoAmI() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, ok := httputil.GetUserContext(c)
 		if !ok {
 			return
 		}
 		method := "session"
-		resolvedIssuer := issuer
+		resolvedIssuer := ""
 		if value, ok := c.Get(ctxBearerIdentity); ok {
 			method = "bearer"
 			resolvedIssuer = value.(*bearerauth.Identity).Issuer

@@ -1,0 +1,74 @@
+package users
+
+import (
+	"fmt"
+	urlpkg "net/url"
+
+	"platform.local/common/pkg/constants"
+	"spatialhub_backend/internal/bearerauth"
+	"spatialhub_backend/internal/config"
+)
+
+// AdminTokenSource issues Keycloak admin API tokens.
+type AdminTokenSource interface {
+	GetToken() (string, error)
+}
+
+// PartnerAccounts resolves a partner identity provider user to the local
+// account Keycloak linked to it at their first EnerPlanET sign-in.
+type PartnerAccounts struct {
+	store  *Store
+	tokens AdminTokenSource
+	alias  string
+}
+
+// NewPartnerAccounts resolves users of the identity provider named by
+// cfg.BearerAuth.IdentityProvider.
+func NewPartnerAccounts(cfg *config.Config, tokens AdminTokenSource) *PartnerAccounts {
+	return &PartnerAccounts{store: New(cfg), tokens: tokens, alias: cfg.BearerAuth.IdentityProvider}
+}
+
+// FindUsersByIdentityProvider returns the users linked to idpUserID at the
+// identity provider alias.
+func (s *Store) FindUsersByIdentityProvider(authToken, alias, idpUserID string) ([]User, error) {
+	url := fmt.Sprintf("%s/admin/realms/%s/users?briefRepresentation=false&idpAlias=%s&idpUserId=%s",
+		s.cfg.Auth.BaseURL, s.cfg.Auth.Realm, urlpkg.QueryEscape(alias), urlpkg.QueryEscape(idpUserID))
+	return s.getKeycloakUsers(authToken, url)
+}
+
+// Resolve returns the enabled local account linked to partnerUserID.
+func (p *PartnerAccounts) Resolve(partnerUserID string) (*bearerauth.Account, error) {
+	token, err := p.tokens.GetToken()
+	if err != nil {
+		return nil, fmt.Errorf("admin token for partner user %s: %w", partnerUserID, err)
+	}
+	users, err := p.store.FindUsersByIdentityProvider(token, p.alias, partnerUserID)
+	if err != nil {
+		return nil, fmt.Errorf("find user linked to %s user %s: %w", p.alias, partnerUserID, err)
+	}
+	switch {
+	case len(users) == 0:
+		return nil, bearerauth.ErrNotLinked
+	case len(users) > 1:
+		return nil, fmt.Errorf("%d users linked to %s user %s", len(users), p.alias, partnerUserID)
+	case !users[0].Enabled:
+		return nil, bearerauth.ErrDisabled
+	}
+	u := users[0]
+	name := getAttribute(u.Attributes, "fullName")
+	if name == "" {
+		name = u.Email
+	}
+	level := getAttribute(u.Attributes, "access_level")
+	if level == "" {
+		level = constants.AccessLevelVeryLow
+	}
+	return &bearerauth.Account{ID: u.ID, Email: u.Email, Name: name, AccessLevel: level}, nil
+}
+
+func getAttribute(attributes map[string][]string, key string) string {
+	if values := attributes[key]; len(values) > 0 {
+		return values[0]
+	}
+	return ""
+}

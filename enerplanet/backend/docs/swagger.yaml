@@ -25,6 +25,7 @@ definitions:
       email:
         type: string
       issuer:
+        description: partner tokens only
         type: string
       subject:
         type: string
@@ -1038,7 +1039,7 @@ info:
 paths:
   /auth/whoami:
     get:
-      description: SpatialHub subject and effective API permissions; never returns
+      description: EnerPlanET user id and effective API permissions; never returns
         credentials.
       produces:
       - application/json
@@ -2266,9 +2267,9 @@ securityDefinitions:
     name: session_id
     type: apiKey
   SpatialHubBearer:
-    description: Bearer <SpatialHub access token>, obtained by the toolbox backend
-      through JWT Authorization Grant. Requires configured integration and enerplanet:read
-      scope. Direct RENvolveIT tokens are not accepted.
+    description: Bearer <RENvolveIT access token> issued to the toolbox client with
+      the EnerPlanET audience. Read-only; acts as the EnerPlanET account linked to
+      the RENvolveIT user.
     in: header
     name: Authorization
     type: apiKey

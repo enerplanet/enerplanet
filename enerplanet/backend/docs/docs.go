@@ -28,7 +28,7 @@ const docTemplate = `{
                         "SessionAuth": []
                     }
                 ],
-                "description": "SpatialHub subject and effective API permissions; never returns credentials.",
+                "description": "EnerPlanET user id and effective API permissions; never returns credentials.",
                 "produces": [
                     "application/json"
                 ],
@@ -1772,6 +1772,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "issuer": {
+                    "description": "partner tokens only",
                     "type": "string"
                 },
                 "subject": {
@@ -3113,7 +3114,7 @@ const docTemplate = `{
             "in": "cookie"
         },
         "SpatialHubBearer": {
-            "description": "Bearer \u003cSpatialHub access token\u003e, obtained by the toolbox backend through JWT Authorization Grant. Requires configured integration and enerplanet:read scope. Direct RENvolveIT tokens are not accepted.",
+            "description": "Bearer \u003cRENvolveIT access token\u003e issued to the toolbox client with the EnerPlanET audience. Read-only; acts as the EnerPlanET account linked to the RENvolveIT user.",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

@@ -1,4 +1,4 @@
-// SpatialHub token verification.
+// Partner identity provider access token verification.
 package bearerauth
 
 import (
@@ -16,10 +16,7 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-jose/go-jose/v4"
-	"platform.local/common/pkg/constants"
 )
-
-const ReadScope = "enerplanet:read"
 
 // Default lifetime ceiling.
 const DefaultMaxTokenLifetime = 15 * time.Minute
@@ -31,16 +28,19 @@ var (
 	ErrInvalidToken = errors.New("invalid_token")
 	ErrClaims       = errors.New("invalid_claims")
 	ErrLifetime     = errors.New("lifetime_exceeded")
-	ErrEmail        = errors.New("unverified_email")
-	ErrAccessLevel  = errors.New("invalid_access_level")
+	ErrNotLinked    = errors.New("account_not_linked")
+	ErrDisabled     = errors.New("account_disabled")
 )
 
 type Options struct {
-	Issuer    string
-	Audience  string
-	ClientID  string
-	JWKSURL   string
-	CacheTTL  time.Duration
+	Issuer   string
+	Audience string
+	ClientID string
+	// Alias of the partner identity provider in the local realm, used to find
+	// the local account linked to the token subject.
+	IdentityProvider string
+	JWKSURL          string
+	CacheTTL         time.Duration
 	// Lifetime ceiling.
 	MaxTokenLifetime time.Duration
 	AllowHTTP        bool // Development only.
@@ -48,11 +48,11 @@ type Options struct {
 
 // Validate configuration.
 func (o Options) Validate() error {
-	if o.Issuer == "" && o.Audience == "" && o.ClientID == "" && o.JWKSURL == "" {
+	if o.Issuer == "" && o.Audience == "" && o.ClientID == "" && o.IdentityProvider == "" && o.JWKSURL == "" {
 		return nil
 	}
-	if o.Issuer == "" || o.Audience == "" || o.ClientID == "" {
-		return errors.New("bearer authentication requires issuer, API audience and toolbox client ID")
+	if o.Issuer == "" || o.Audience == "" || o.ClientID == "" || o.IdentityProvider == "" {
+		return errors.New("bearer authentication requires issuer, API audience, toolbox client ID and identity provider alias")
 	}
 	if o.CacheTTL <= 0 {
 		return errors.New("bearer JWKS cache TTL must be positive")
@@ -83,14 +83,19 @@ func (o Options) keysURL() string {
 	return strings.TrimRight(o.Issuer, "/") + "/protocol/openid-connect/certs"
 }
 
+// Identity is the verified partner user; Subject is their id at the partner.
 type Identity struct {
-	Issuer      string `json:"issuer"`
-	Subject     string `json:"subject"`
-	Email       string `json:"email"`
-	Name        string `json:"name"`
-	AccessLevel string `json:"access_level"`
-	Scope       string `json:"scope"`
-	TokenID     string `json:"-"`
+	Issuer  string
+	Subject string
+	TokenID string
+}
+
+// Account is the local user linked to a partner Identity.
+type Account struct {
+	ID          string
+	Email       string
+	Name        string
+	AccessLevel string
 }
 
 type Verifier struct {
@@ -136,17 +141,11 @@ func (v *Verifier) Verify(ctx context.Context, raw string) (*Identity, error) {
 		}
 		return nil, ErrInvalidToken
 	}
-	// Lenient claim decoding.
 	var claims struct {
-		Type          string          `json:"typ"`
-		ClientID      string          `json:"azp"`
-		Email         string          `json:"email"`
-		EmailVerified json.RawMessage `json:"email_verified"`
-		Name          string          `json:"name"`
-		AccessLevel   json.RawMessage `json:"access_level"`
-		Scope         string          `json:"scope"`
-		TokenID       string          `json:"jti"`
-		NotBefore     int64           `json:"nbf"`
+		Type      string `json:"typ"`
+		ClientID  string `json:"azp"`
+		TokenID   string `json:"jti"`
+		NotBefore int64  `json:"nbf"`
 	}
 	if err := token.Claims(&claims); err != nil {
 		return nil, ErrClaims
@@ -162,64 +161,7 @@ func (v *Verifier) Verify(ctx context.Context, raw string) (*Identity, error) {
 	if token.IssuedAt.IsZero() || token.Expiry.Sub(token.IssuedAt) > v.opts.MaxTokenLifetime {
 		return nil, ErrLifetime
 	}
-	verified, ok := boolClaim(claims.EmailVerified)
-	if strings.TrimSpace(claims.Email) == "" || !ok || !verified {
-		return nil, ErrEmail
-	}
-	level, ok := stringClaim(claims.AccessLevel)
-	if !ok {
-		return nil, ErrAccessLevel
-	}
-	switch level {
-	case "":
-		level = constants.AccessLevelVeryLow
-	case constants.AccessLevelVeryLow, constants.AccessLevelIntermediate:
-	case constants.AccessLevelManager, constants.AccessLevelExpert:
-		// Limit delegated privileges.
-		level = constants.AccessLevelIntermediate
-	default:
-		return nil, ErrAccessLevel
-	}
-	return &Identity{Issuer: token.Issuer, Subject: token.Subject, Email: claims.Email,
-		Name: claims.Name, AccessLevel: level, Scope: claims.Scope, TokenID: claims.TokenID}, nil
-}
-
-// String or singleton.
-func stringClaim(raw json.RawMessage) (string, bool) {
-	if len(raw) == 0 || string(raw) == "null" {
-		return "", true
-	}
-	var value string
-	if json.Unmarshal(raw, &value) == nil {
-		return value, true
-	}
-	var values []string
-	if json.Unmarshal(raw, &values) == nil && len(values) <= 1 {
-		if len(values) == 0 {
-			return "", true
-		}
-		return values[0], true
-	}
-	return "", false
-}
-
-// Boolean or text.
-func boolClaim(raw json.RawMessage) (bool, bool) {
-	var value bool
-	if json.Unmarshal(raw, &value) == nil {
-		return value, true
-	}
-	text, ok := stringClaim(raw)
-	if !ok {
-		return false, false
-	}
-	switch text {
-	case "true":
-		return true, true
-	case "false":
-		return false, true
-	}
-	return false, false
+	return &Identity{Issuer: token.Issuer, Subject: token.Subject, TokenID: claims.TokenID}, nil
 }
 
 // Minimum gap between downloads.
