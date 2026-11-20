@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -24,11 +25,28 @@ func (personalTokenValidator) Validate(raw string) (*models.APIToken, error) {
 	return &models.APIToken{UserID: "pat-user", UserEmail: "pat@example.com", AccessLevel: "intermediate", Scope: "read"}, nil
 }
 
+// Stands in for the Keycloak identity provider link lookup.
+type partnerAccounts struct{ calls atomic.Int32 }
+
+func (p *partnerAccounts) Resolve(partnerUserID string) (*bearerauth.Account, error) {
+	p.calls.Add(1)
+	switch partnerUserID {
+	case "partner-a":
+		return &bearerauth.Account{ID: "local-a", Email: "a@example.com", Name: "A", AccessLevel: "expert"}, nil
+	case "partner-disabled":
+		return nil, bearerauth.ErrDisabled
+	case "partner-down":
+		return nil, errors.New("keycloak unreachable")
+	}
+	return nil, bearerauth.ErrNotLinked
+}
+
 func TestBearerAuthenticationChain(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	f := testutil.NewOIDCFixture(t)
-	v, err := bearerauth.New(bearerauth.Options{Issuer: f.Issuer, Audience: "enerplanet-api", ClientID: "renvolveit-toolbox", CacheTTL: time.Minute, AllowHTTP: true})
+	v, err := bearerauth.New(bearerauth.Options{Issuer: f.Issuer, Audience: "enerplanet", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, AllowHTTP: true})
 	require.NoError(t, err)
+	accounts := &partnerAccounts{}
 	var authCalls atomic.Int32
 	authService := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authCalls.Add(1)
@@ -37,27 +55,29 @@ func TestBearerAuthenticationChain(t *testing.T) {
 	}))
 	defer authService.Close()
 	router := gin.New()
-	router.Use(APITokenAuth(personalTokenValidator{}), BearerAuth(v), AuthServiceMiddleware(AuthServiceOptions{AuthServiceURL: authService.URL}))
-	router.GET("/api/auth/whoami", WhoAmI(f.Issuer))
+	router.Use(APITokenAuth(personalTokenValidator{}), BearerAuth(v, accounts), AuthServiceMiddleware(AuthServiceOptions{AuthServiceURL: authService.URL}))
+	router.GET("/api/auth/whoami", WhoAmI())
 	for _, path := range []string{"/api/models", "/api/models/:id/results", "/api/users", "/api/models/:id/shares"} {
 		router.GET(path, func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"subject": c.GetString("user_id")}) })
 	}
 	// Production proxy route.
 	router.Any("/api/webservices/*proxyPath", func(c *gin.Context) { c.Status(http.StatusOK) })
 	router.POST("/api/models", func(c *gin.Context) { c.Status(http.StatusCreated) })
-	raw := f.Sign(t, f.Claims("local-user"))
-	missingScope := f.Claims("local-user")
-	missingScope["scope"] = "openid enerplanet:read:other"
+	raw := f.Sign(t, f.Claims("partner-a"))
 	tests := []struct {
 		name, method, path, header string
 		cookie                     bool
 		status                     int
 		body                       string
 	}{
-		{"JWT identity", "GET", "/api/auth/whoami", "Bearer " + raw, false, 200, `"subject":"local-user"`},
-		{"case insensitive scheme", "GET", "/api/models", "bearer " + raw, false, 200, `"subject":"local-user"`},
-		{"results", "GET", "/api/models/12/results", "Bearer " + raw, false, 200, "local-user"},
-		{"missing scope", "GET", "/api/models", "Bearer " + f.Sign(t, missingScope), false, 403, "Token does not permit"},
+		{"JWT acts as linked account", "GET", "/api/auth/whoami", "Bearer " + raw, false, 200, `"subject":"local-a"`},
+		{"JWT access level capped", "GET", "/api/auth/whoami", "Bearer " + raw, false, 200, `"access_level":"intermediate"`},
+		{"JWT reports partner issuer", "GET", "/api/auth/whoami", "Bearer " + raw, false, 200, `"issuer":"` + f.Issuer + `"`},
+		{"case insensitive scheme", "GET", "/api/models", "bearer " + raw, false, 200, `"subject":"local-a"`},
+		{"results", "GET", "/api/models/12/results", "Bearer " + raw, false, 200, "local-a"},
+		{"not linked", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-new")), false, 403, "No EnerPlanET account is linked"},
+		{"disabled account", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-disabled")), true, 403, "account is disabled"},
+		{"lookup failure", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-down")), true, 503, "Account lookup unavailable"},
 		{"writes forbidden", "POST", "/api/models", "Bearer " + raw, true, 403, "Token does not permit"},
 		{"admin forbidden", "GET", "/api/users", "Bearer " + raw, true, 403, "Token does not permit"},
 		{"unlisted model route", "GET", "/api/models/12/shares", "Bearer " + raw, false, 403, "Token does not permit"},
@@ -69,6 +89,7 @@ func TestBearerAuthenticationChain(t *testing.T) {
 		{"bad personal token", "GET", "/api/models", "Bearer whf_bad", true, 401, "Invalid API token"},
 		{"read personal token write", "POST", "/api/models", "Bearer whf_valid", false, 403, "This API token is read-only"},
 		{"browser session", "GET", "/api/auth/whoami", "", true, 200, `"subject":"session-user"`},
+		{"browser session has no issuer", "GET", "/api/auth/whoami", "", true, 200, `{"subject":"session-user"`},
 		{"anonymous health", "GET", "/api/webservices/health", "", false, 200, ""},
 		{"health with JWT", "GET", "/api/webservices/health", "Bearer " + raw, false, 200, ""},
 		{"health with garbage bearer", "GET", "/api/webservices/health", "Bearer garbage", false, 200, ""},
@@ -126,11 +147,34 @@ func TestBearerAuthenticationChain(t *testing.T) {
 func TestUnconfiguredBearerAuthRejectsJWT(t *testing.T) {
 	var verifier *bearerauth.Verifier
 	router := gin.New()
-	router.Use(BearerAuth(verifier))
+	router.Use(BearerAuth(verifier, &partnerAccounts{}))
 	router.GET("/api/models", func(c *gin.Context) { t.Fatal("invalid JWT reached handler") })
 	req := httptest.NewRequest("GET", "/api/models", nil)
 	req.Header.Set("Authorization", "Bearer any")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	require.Equal(t, 401, w.Code)
+}
+
+func TestForbiddenRouteSkipsAccountLookup(t *testing.T) {
+	f := testutil.NewOIDCFixture(t)
+	v, err := bearerauth.New(bearerauth.Options{Issuer: f.Issuer, Audience: "enerplanet", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, AllowHTTP: true})
+	require.NoError(t, err)
+	accounts := &partnerAccounts{}
+	router := gin.New()
+	router.Use(BearerAuth(v, accounts))
+	router.GET("/api/users", func(c *gin.Context) { t.Fatal("forbidden route reached handler") })
+	req := httptest.NewRequest("GET", "/api/users", nil)
+	req.Header.Set("Authorization", "Bearer "+f.Sign(t, f.Claims("partner-a")))
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	require.Equal(t, 403, w.Code)
+	require.Zero(t, accounts.calls.Load())
+}
+
+func TestToolboxAccessLevel(t *testing.T) {
+	for in, want := range map[string]string{"": "very_low", "very_low": "very_low", "intermediate": "intermediate",
+		"manager": "intermediate", "expert": "intermediate", "admin": "very_low"} {
+		require.Equal(t, want, toolboxAccessLevel(in), in)
+	}
 }
