@@ -2603,6 +2603,7 @@
     "loading": "Pylovo-Instanzen werden geladen"
   },
   "regionSelector": {
+    "3dBuildingData": "3D-Stadtdaten verfügbar",
     "goToRegion": "Zur Region gehen",
     "jumpToRegion": "Zu einer Region mit verfügbaren Rasterdaten springen",
     "searchPlaceholder": "Region oder Postleitzahl suchen...",
