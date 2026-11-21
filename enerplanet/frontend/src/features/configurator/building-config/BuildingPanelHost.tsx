@@ -22,7 +22,7 @@ import { TechTypeList } from '@/features/technologies/components/TechTypeList';
 import type { Technology } from '@/features/technologies/services/technologyService';
 import { useConfirm } from '@/hooks/useConfirmDialog';
 
-import { CHANGE_STATEMENT_URL, TABULA_DATASET_ID, type DatasetCredit } from './credits';
+import { Credits } from './Credits';
 import { configuratorServicesFor } from './heatClient';
 import { modelRunContext } from './runContext';
 import { toStoredBuem, type StoredBuem } from './storedBuem';
@@ -110,47 +110,6 @@ const SharedOutlineNotice: FC<{ count: number }> = ({ count }) => {
     <div className="bg-card pointer-events-none absolute bottom-20 left-1/2 z-40 w-max max-w-xl -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow-lg">
       <p className="text-muted-foreground">{t('buildingConfig.sharedOutline', { count })}</p>
     </div>
-  );
-};
-
-/** The licence credits of the building's 3D dataset and TABULA type, for the view's attribution corner. */
-const Credits: FC<{ credits: DatasetCredit[] }> = ({ credits }) => {
-  const { t } = useTranslation();
-  return (
-    <>
-      {credits.map((c) => {
-        const isTabula = c.dataset_id === TABULA_DATASET_ID;
-        return (
-          <div key={c.dataset_id}>
-            {isTabula ? t('tooltips.buildingType.title') : t('buildingConfig.credit3dData')}:{' '}
-            <a
-              href={c.credit_url ?? c.terms_url ?? c.licence_url}
-              title={isTabula ? c.changes : undefined}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              {c.credit}
-            </a>
-            , {c.licence}
-            {!isTabula && (
-              <>
-                ,{' '}
-                <a
-                  href={CHANGE_STATEMENT_URL}
-                  title={c.changes}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline decoration-dotted"
-                >
-                  {t('buildingConfig.modifiedBy', { name: 'City2TABULA' })}
-                </a>
-              </>
-            )}
-          </div>
-        );
-      })}
-    </>
   );
 };
 
