@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"spatialhub_backend/internal/geo"
 	"spatialhub_backend/internal/models"
 
 	"github.com/lib/pq"
@@ -244,12 +245,23 @@ func (rs *Store) ApplyCoverage(footprints map[string][]json.RawMessage) error {
 		if err := tx.Exec("UPDATE cached_regions SET has3_d = false").Error; err != nil {
 			return fmt.Errorf("reset has_3d: %w", err)
 		}
+		var names []string
+		if err := tx.Model(&models.CachedRegion{}).Distinct().Pluck("country", &names).Error; err != nil {
+			return fmt.Errorf("list region countries: %w", err)
+		}
+		// Regions carry PyLovo's country name ("Czech Republic"), footprints City2TABULA's ("czechia").
+		namesByC2T := map[string][]string{}
+		for _, n := range names {
+			if c := geo.NormalizeCountry(n); c != "" {
+				namesByC2T[c] = append(namesByC2T[c], n)
+			}
+		}
 		for country, geoms := range footprints {
 			list := make([]string, len(geoms))
 			for i, g := range geoms {
 				list[i] = string(g)
 			}
-			if err := tx.Exec(coverageSQL, pq.Array(list), country).Error; err != nil {
+			if err := tx.Exec(coverageSQL, pq.Array(list), pq.Array(namesByC2T[country])).Error; err != nil {
 				return fmt.Errorf("apply 3D coverage for %s: %w", country, err)
 			}
 		}
@@ -263,7 +275,7 @@ WITH f AS (
 ), r AS (
 	SELECT c.id, ST_CollectionExtract(ST_Intersection(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(c.boundary->>'geometry'), 4326)), f.geom), 3) AS geom
 	FROM cached_regions c, f
-	WHERE replace(lower(c.country), ' ', '_') = ? AND c.boundary->'geometry' IS NOT NULL
+	WHERE c.country = ANY(?::text[]) AND c.boundary->'geometry' IS NOT NULL
 )
 UPDATE cached_regions c
 SET has3_d = true, boundary = jsonb_set(c.boundary, '{geometry}', ST_AsGeoJSON(r.geom)::jsonb)
