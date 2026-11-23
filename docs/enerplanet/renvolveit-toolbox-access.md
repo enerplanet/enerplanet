@@ -94,6 +94,15 @@ when the user signs in to EnerPlanET with RENvolveIT. The token's user id
 | No link, no verified email in the token | `403`; the user signs in to EnerPlanET once |
 | Linked account disabled | `403` |
 
+!!! info "RENvolveIT emails are unverified"
+    RENvolveIT access tokens carry `email_verified: false`, so the toolbox
+    path does not create accounts yet. On a `403` for an unlinked user the
+    toolbox sends the member to
+    `/api/auth/sso/login?idp_hint=renvolveit&return_to=/app/model-dashboard`.
+    That first sign-in through RENvolveIT creates and links the account, and
+    every later toolbox call works. Automatic creation applies once RENvolveIT
+    marks emails as verified.
+
 Accounts are never linked by email alone. Whoever controls a RENvolveIT
 account with a given email would otherwise take over the EnerPlanET account
 that uses it, including its models.
