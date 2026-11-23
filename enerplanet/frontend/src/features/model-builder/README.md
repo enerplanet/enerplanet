@@ -123,11 +123,6 @@ Two stored workflows are seeded (`cmd/seed/`), and the editor authors more.
 
 Planned, and known rather than hidden:
 
-- **The seed flow's placement ids are not yet `"<n>-<name>"`.** Every placement should get a counted
-  id (`spec/history-v2.md` §2), but today a **seed** node keeps the id the workflow document gave it
-  (namespaced by its container for a composed one), and only an **appended** placement is minted in
-  the counted form. Closing the gap is what makes `n` mean "how many placements exist so far" over
-  the whole transcript rather than only the appended tail.
 - **`grid-editor`** — moving and deleting transformers. The generated grid is what we validate against.
 - **Loading an existing model** — the data layer is done (`load/unfold.ts` lifts a saved config back
   into the store's ports, round-trip tested); the UI to browse saved models is not there.

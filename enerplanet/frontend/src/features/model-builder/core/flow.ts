@@ -38,9 +38,10 @@ export type Flow = readonly FlowNode[];
 /**
  * A placement's own name — its seed `id`, else its `moduleId` (§2).
  *
- * A placement id is `"<n>-<name>"`, so the name is recovered by stripping the leading count. The
- * name, not the placement id, is what a workflow keys recommendations on (§6) and what a successor
- * re-uses when a re-run appends: the placement id changes on every re-run, the name does not.
+ * An **appended** placement's id is `"<n>-<name>"`, so the name is recovered by stripping the leading
+ * count; a **seed** placement keeps its document id and is returned as it stands. Either way the name,
+ * not the placement id, is what a workflow keys recommendations on (§6) and what a successor re-uses
+ * when a re-run appends: the placement id changes on every re-run, the name does not.
  */
 export function nodeName(node: FlowNode): string {
   const match = /^\d+-(.+)$/.exec(node.id);
