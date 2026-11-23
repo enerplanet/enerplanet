@@ -20,9 +20,9 @@ type BearerVerifier interface {
 	Verify(context.Context, string) (*bearerauth.Identity, error)
 }
 
-// PartnerAccountResolver finds the local account linked to a partner user id.
+// PartnerAccountResolver finds, or creates, the local account linked to a partner user.
 type PartnerAccountResolver interface {
-	Resolve(partnerUserID string) (*bearerauth.Account, error)
+	Resolve(identity *bearerauth.Identity) (*bearerauth.Account, error)
 }
 
 // BearerAuth authenticates partner access tokens and acts as the linked local
@@ -87,11 +87,15 @@ func BearerAuth(verifier BearerVerifier, accounts PartnerAccountResolver) gin.Ha
 // context, or aborts the request.
 func setBearerAccount(c *gin.Context, accounts PartnerAccountResolver, identity *bearerauth.Identity) bool {
 	log := bearerLog(c).WithFields(map[string]any{"partner_user_id": identity.Subject, "token_id": identity.TokenID})
-	account, err := accounts.Resolve(identity.Subject)
+	account, err := accounts.Resolve(identity)
 	switch {
 	case errors.Is(err, bearerauth.ErrNotLinked):
-		log.Warn("bearer user has no linked account")
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "No EnerPlanET account is linked to this user; sign in to EnerPlanET once to create it"})
+		log.Warn("bearer user has no linked account and no verified email")
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "No EnerPlanET account is linked to this user and the token has no verified email; sign in to EnerPlanET once to create it"})
+		return false
+	case errors.Is(err, bearerauth.ErrEmailInUse):
+		log.Warn("bearer user email belongs to an unlinked account")
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "An EnerPlanET account already uses this email; sign in to EnerPlanET once with RENvolveIT to link it"})
 		return false
 	case errors.Is(err, bearerauth.ErrDisabled):
 		log.Warn("bearer user account is disabled")

@@ -25,6 +25,8 @@ func TestVerifyAccessToken(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "partner-user", identity.Subject)
 		require.Equal(t, f.Issuer, identity.Issuer)
+		require.Equal(t, "partner-user@example.com", identity.Email)
+		require.True(t, identity.EmailVerified)
 	}
 	require.Equal(t, 1, f.Requests(), "signing keys should be reused")
 }

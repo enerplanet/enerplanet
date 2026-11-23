@@ -17,8 +17,8 @@ import (
 // Links partner user "partner-x" to local expert account "x".
 type linkedExperts struct{}
 
-func (linkedExperts) Resolve(partnerUserID string) (*bearerauth.Account, error) {
-	local := strings.TrimPrefix(partnerUserID, "partner-")
+func (linkedExperts) Resolve(id *bearerauth.Identity) (*bearerauth.Account, error) {
+	local := strings.TrimPrefix(id.Subject, "partner-")
 	return &bearerauth.Account{ID: local, Email: local + "@example.com", AccessLevel: "expert"}, nil
 }
 

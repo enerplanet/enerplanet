@@ -28,15 +28,17 @@ func (personalTokenValidator) Validate(raw string) (*models.APIToken, error) {
 // Stands in for the Keycloak identity provider link lookup.
 type partnerAccounts struct{ calls atomic.Int32 }
 
-func (p *partnerAccounts) Resolve(partnerUserID string) (*bearerauth.Account, error) {
+func (p *partnerAccounts) Resolve(id *bearerauth.Identity) (*bearerauth.Account, error) {
 	p.calls.Add(1)
-	switch partnerUserID {
+	switch id.Subject {
 	case "partner-a":
 		return &bearerauth.Account{ID: "local-a", Email: "a@example.com", Name: "A", AccessLevel: "expert"}, nil
 	case "partner-disabled":
 		return nil, bearerauth.ErrDisabled
 	case "partner-down":
 		return nil, errors.New("keycloak unreachable")
+	case "partner-taken":
+		return nil, bearerauth.ErrEmailInUse
 	}
 	return nil, bearerauth.ErrNotLinked
 }
@@ -78,6 +80,7 @@ func TestBearerAuthenticationChain(t *testing.T) {
 		{"not linked", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-new")), false, 403, "No EnerPlanET account is linked"},
 		{"disabled account", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-disabled")), true, 403, "account is disabled"},
 		{"lookup failure", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-down")), true, 503, "Account lookup unavailable"},
+		{"email of an unlinked account", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-taken")), true, 403, "already uses this email"},
 		{"writes forbidden", "POST", "/api/models", "Bearer " + raw, true, 403, "Token does not permit"},
 		{"admin forbidden", "GET", "/api/users", "Bearer " + raw, true, 403, "Token does not permit"},
 		{"unlisted model route", "GET", "/api/models/12/shares", "Bearer " + raw, false, 403, "Token does not permit"},

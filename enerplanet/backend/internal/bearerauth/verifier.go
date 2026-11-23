@@ -30,6 +30,7 @@ var (
 	ErrLifetime     = errors.New("lifetime_exceeded")
 	ErrNotLinked    = errors.New("account_not_linked")
 	ErrDisabled     = errors.New("account_disabled")
+	ErrEmailInUse   = errors.New("email_in_use")
 )
 
 type Options struct {
@@ -85,10 +86,14 @@ func (o Options) keysURL() string {
 }
 
 // Identity is the verified partner user; Subject is their id at the partner.
+// Email, EmailVerified and Name are used only to create a missing account.
 type Identity struct {
-	Issuer  string
-	Subject string
-	TokenID string
+	Issuer        string
+	Subject       string
+	TokenID       string
+	Email         string
+	EmailVerified bool
+	Name          string
 }
 
 // RejectedClaims reports the claims of a correctly signed token that failed a
@@ -156,10 +161,13 @@ func (v *Verifier) Verify(ctx context.Context, raw string) (*Identity, error) {
 		return nil, ErrInvalidToken
 	}
 	var claims struct {
-		Type      string `json:"typ"`
-		ClientID  string `json:"azp"`
-		TokenID   string `json:"jti"`
-		NotBefore int64  `json:"nbf"`
+		Type          string `json:"typ"`
+		ClientID      string `json:"azp"`
+		TokenID       string `json:"jti"`
+		NotBefore     int64  `json:"nbf"`
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
+		Name          string `json:"name"`
 	}
 	if err := token.Claims(&claims); err != nil {
 		return nil, ErrClaims
@@ -179,7 +187,8 @@ func (v *Verifier) Verify(ctx context.Context, raw string) (*Identity, error) {
 	if token.IssuedAt.IsZero() || token.Expiry.Sub(token.IssuedAt) > v.opts.MaxTokenLifetime {
 		return nil, rejected(ErrLifetime)
 	}
-	return &Identity{Issuer: token.Issuer, Subject: token.Subject, TokenID: claims.TokenID}, nil
+	return &Identity{Issuer: token.Issuer, Subject: token.Subject, TokenID: claims.TokenID,
+		Email: strings.TrimSpace(claims.Email), EmailVerified: claims.EmailVerified, Name: strings.TrimSpace(claims.Name)}, nil
 }
 
 // Minimum gap between downloads.

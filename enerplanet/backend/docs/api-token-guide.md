@@ -280,15 +280,16 @@ The toolbox backend sends the signed-in user's RENvolveIT access token instead
 of a `whf_` token. These tokens:
 
 - can only call `GET /auth/whoami`, `GET /models` and `GET /models/{id}`;
-- act as the EnerPlanET account the RENvolveIT user created by signing in to
-  EnerPlanET with RENvolveIT (including the invite linking above);
+- act as the EnerPlanET account linked to the RENvolveIT user; on the first
+  call with a verified email and no linked account, that account is created;
 - are checked against that account on every request, so disabling the account
   stops access at once.
 
 | Response | Cause | Retry helps |
 | --- | --- | --- |
 | `401 Unrecognised bearer token` | Signature, issuer, audience, client, type or lifetime check failed, or the token expired | After fetching a new token |
-| `403 No EnerPlanET account is linked to this user` | The RENvolveIT user has never signed in to EnerPlanET | After the user signs in once |
+| `403 No EnerPlanET account is linked to this user` | No linked account, and the token has no verified email to create one | After the user signs in once |
+| `403 An EnerPlanET account already uses this email` | The email belongs to an EnerPlanET account not yet linked to RENvolveIT | After the user signs in to EnerPlanET once with RENvolveIT |
 | `403 The linked EnerPlanET account is disabled` | The account was disabled in EnerPlanET | No |
 | `403 Token does not permit this operation` | Not a `GET`, or the route is not open to toolbox tokens | No |
 | `503 Account lookup unavailable` | The account lookup failed | Yes |

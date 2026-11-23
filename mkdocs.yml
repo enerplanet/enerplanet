@@ -125,6 +125,7 @@ nav:
       - Deployment: enerplanet/deployment.md
       - Authentication (Keycloak): enerplanet/keycloak.md
       - Identity Brokering: enerplanet/keycloak-identity-brokering.md
+      - RENvolveIT Toolbox API Access: enerplanet/renvolveit-toolbox-access.md
   - PyLovo Grid Engine:
       - Overview: pylovo/index.md
       - Quickstart: pylovo/quickstart.md
