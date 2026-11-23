@@ -73,20 +73,3 @@ export class ReentrantStoreWrite extends Error {
     this.name = "ReentrantStoreWrite";
   }
 }
-
-/**
- * A jump was asked for a node that is not behind the current position.
- *
- * Going *forward* is not a jump. The flow walks forward by running nodes, so the session reaches
- * a later node by running it — never by declaring itself there. A jump is therefore always a move
- * back, and the guard runs before anything is sealed, so a refused jump writes nothing.
- */
-export class JumpNotBackwards extends Error {
-  readonly target: string;
-
-  constructor(target: string) {
-    super(`[model-builder] cannot jump to node "${target}": a jump only moves back`);
-    this.name = "JumpNotBackwards";
-    this.target = target;
-  }
-}

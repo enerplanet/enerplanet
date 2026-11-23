@@ -1,16 +1,16 @@
 /**
  * The edit-while-behind prompt.
  *
- * A pending edit meeting a non-empty discard stack has
- * exactly three outcomes and no fourth path: drop the tail and continue here, branch to a new model,
- * or cancel and change nothing. The trigger is the seal itself — the first transaction after an undo
- * is what raises the question, which is why `needsPrompt` is just "is there a tail".
+ * With v2 (`spec/history-v2.md` §1, §9) there is no redo tail to truncate: the log is append-only,
+ * and an undo is a rollback commit. `needsPrompt` is still "is there something to redo" (a rollback
+ * is available), and the three choices still each have one outcome — but `discard-redo` now
+ * **appends** the edit rather than dropping a tail, so nothing in the log is ever lost.
  *
  * The core owns the decision and the guarantees. The save/copy calls around the branch are the
  * shell's, and `previewOf` is what keeps the "save the current model first" step from sealing a
- * transaction on the very session whose tail the prompt exists to protect.
+ * commit on the session the user is still deciding about.
  *
- * Written failing first.
+ * Written failing first against the new design.
  */
 import { describe, it, expect } from "vitest";
 import { needsPrompt, previewOf, resolveEdit, type EditChoice } from "./prompt";
@@ -23,37 +23,37 @@ const RESOLUTION = "/resolution";
 
 const PENDING = {
   primary: [{ op: "replace", path: MODEL_NAME, prev: "V1", next: "V3" }],
-  node: { id: "user-edit" },
+  node: { id: "user-edit", moduleId: "user-edit" },
 } as const;
 
 const PARENT = { modelId: 12, groupId: 7 };
 
-/** Three transactions, sitting two in: editing here is what raises the prompt. */
+/** Three commits, plus a rollback: editing here is what raises the prompt. */
 function session(): ReturnType<typeof createStore> {
   const store = createStore(seed());
   store.applyTransaction(
     [{ op: "replace", path: MODEL_NAME, prev: "Contract fixture", next: "V1" }],
     [],
-    { node: { id: "model-start" } },
+    { node: { id: "model-start", moduleId: "model-start" } },
   );
   store.applyTransaction([{ op: "replace", path: RESOLUTION, prev: 60, next: 30 }], [], {
-    node: { id: "settings" },
+    node: { id: "settings", moduleId: "settings" },
   });
   store.applyTransaction([{ op: "replace", path: MODEL_NAME, prev: "V1", next: "V2" }], [], {
-    node: { id: "rename" },
+    node: { id: "rename", moduleId: "rename" },
   });
-  store.undo(); // cursor 2 of 3: a tail to discard
+  store.undo(); // appends a rollback — something is redoable, so the prompt applies
   return store;
 }
 
 
 describe("the edit-while-behind prompt", () => {
-  it("asks only when there is a tail to discard", () => {
+  it("asks only when there is something to redo", () => {
     const store = createStore(seed());
     expect(needsPrompt(store)).toBe(false);
 
     store.applyTransaction([{ op: "replace", path: RESOLUTION, prev: 60, next: 30 }], [], {
-      node: { id: "settings" },
+      node: { id: "settings", moduleId: "settings" },
     });
     expect(needsPrompt(store)).toBe(false);
 
@@ -61,8 +61,9 @@ describe("the edit-while-behind prompt", () => {
     expect(needsPrompt(store)).toBe(true);
   });
 
-  it("discard-redo continues here: the tail goes and the edit is sealed", () => {
+  it("discard-redo appends the edit — nothing in the log is lost", () => {
     const store = session();
+    const before = store.log.length; // three commits + a rollback
 
     const resolution = resolveEdit({ store, choice: "discard-redo", pending: PENDING });
 
@@ -70,39 +71,34 @@ describe("the edit-while-behind prompt", () => {
     expect(resolution.link).toBeUndefined();
     expect(resolution.store).toBe(store); // the same session, moved on
     expect(store.data.modelName).toBe("V3");
-    expect(store.log).toHaveLength(3); // the discarded revision is gone, the edit took its place
-    expect(store.cursor).toBe(3);
-    expect(store.canRedo).toBe(false);
-    expect(store.log[2]).toMatchObject({ nodeId: "user-edit", primary: PENDING.primary });
+    expect(store.log).toHaveLength(before + 1); // the edit is appended, nothing discarded
+    expect(store.log[before].node?.id).toBe("user-edit");
+    expect(store.log[before].primary).toEqual(PENDING.primary);
   });
 
   it("new-model leaves the source intact and hands back a branch with its link", () => {
     const store = session();
-    const before = { data: fingerprint(store.data), cursor: store.cursor, log: store.log.length };
+    const before = { data: fingerprint(store.data), log: store.log.length };
 
     const resolution = resolveEdit({ store, choice: "new-model", pending: PENDING, parent: PARENT });
 
-    // The source session is untouched: same state, same log, same tail, redo still available.
+    // The source session is untouched: same state, same log.
     expect(fingerprint(store.data)).toBe(before.data);
     expect(store.log).toHaveLength(before.log);
-    expect(store.cursor).toBe(before.cursor);
-    expect(store.canRedo).toBe(true);
 
     // The branch carries the edit, and the family link the copy request needs.
     expect(resolution.store).not.toBe(store);
     expect(resolution.store.data.modelName).toBe("V3");
-    expect(resolution.store.log).toHaveLength(3);
-    expect(resolution.store.canRedo).toBe(false);
+    expect(resolution.store.log).toHaveLength(before.log + 1);
     expect(resolution.link).toEqual({ isCopy: true, parentModelId: 12, groupId: 7 });
   });
 
-  it("cancel changes nothing at all — bit-identical store and log, redo still there", () => {
+  it("cancel changes nothing at all", () => {
     const store = session();
     const before = {
       data: fingerprint(store.data),
-      cursor: store.cursor,
       canRedo: store.canRedo,
-      revisions: store.log.map((transaction) => transaction.revision),
+      revisions: store.log.map((commit) => commit.revision),
     };
 
     const resolution = resolveEdit({ store, choice: "cancel", pending: PENDING });
@@ -111,9 +107,8 @@ describe("the edit-while-behind prompt", () => {
     expect(fingerprint(store.data)).toBe(before.data);
     expect(store.data.modelName).toBe("V1"); // the pending change was not applied…
     expect(store.log).toHaveLength(before.revisions.length); // …and nothing was sealed
-    expect(store.cursor).toBe(before.cursor);
     expect(store.canRedo).toBe(before.canRedo);
-    expect(store.log.map((transaction) => transaction.revision)).toEqual(before.revisions);
+    expect(store.log.map((commit) => commit.revision)).toEqual(before.revisions);
   });
 
   it("gives every choice exactly one outcome — there is no fourth path", () => {
@@ -133,21 +128,19 @@ describe("the edit-while-behind prompt", () => {
   });
 });
 
+
 describe("saving before the copy must not seal", () => {
   it("previews the model as the user sees it, without touching the session", () => {
     const store = session();
-    const before = { data: fingerprint(store.data), log: store.log.length, cursor: store.cursor };
+    const before = { data: fingerprint(store.data), log: store.log.length };
 
     const payload = previewOf(store, PENDING);
 
     // The payload the save and the copy send carries the edit…
     expect(payload.modelName).toBe("V3");
-    // …while the session is exactly as it was, tail included. Sealing here would eat the very
-    // discard stack this prompt exists to protect.
+    // …while the session is exactly as it was.
     expect(fingerprint(store.data)).toBe(before.data);
     expect(store.log).toHaveLength(before.log);
-    expect(store.cursor).toBe(before.cursor);
-    expect(store.canRedo).toBe(true);
   });
 
   it("applies a staged cascade too, so the saved config holds no stale values", () => {

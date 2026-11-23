@@ -84,7 +84,7 @@ async function applied(): Promise<ReturnType<typeof createStore>> {
   const store = createStore(seed({ coordinates: [] }));
   const engine = createEngine(store);
   for (const module of [start, draw, grid]) {
-    await engine.runModule(module, { id: module.id });
+    await engine.runModule(module, { id: module.id, moduleId: module.id });
   }
   return store;
 }

@@ -127,7 +127,7 @@ async function runOnce(
   const store = createStore({ ...samples } as ModelData);
 
   try {
-    await createEngine(store).runModule(module, { id: module.id });
+    await createEngine(store).runModule(module, { id: module.id, moduleId: module.id });
   } catch (err) {
     if (perturbedPort === undefined) throw err;
     throw new Error(

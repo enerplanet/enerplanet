@@ -32,13 +32,13 @@ describe("one sealed transaction per action", () => {
       validate: () => [],
     });
 
-    await engine.runModule(module, { id: NODE_ID });
+    await engine.runModule(module, { id: NODE_ID, moduleId: NODE_ID });
 
     expect(store.log).toHaveLength(1);
     const [txn] = store.log;
     expect(txn.primary.map((op) => op.path).sort()).toEqual(["/buildings", "/transformers"]);
     expect(txn.cascade).toEqual([]);
-    expect(txn.nodeId).toBe(NODE_ID);
+    expect(txn.node?.id).toBe(NODE_ID);
     expect(store.data.buildings?.features).toHaveLength(1);
     expect(store.data.transformers).toEqual(fc());
   });
@@ -64,7 +64,7 @@ describe("one sealed transaction per action", () => {
       validate: () => [],
     });
 
-    await engine.runModule(module, { id: "two-writes" });
+    await engine.runModule(module, { id: "two-writes", moduleId: "two-writes" });
 
     expect(observedInsideRun).toEqual([{ buildings: 0, log: 0 }]);
     expect(store.data.buildings?.features).toHaveLength(1);
@@ -91,7 +91,7 @@ describe("undeclared port writes are rejected at the boundary", () => {
       validate: () => [],
     });
 
-    const error = await captureError(engine.runModule(module, { id: MODULE_ID }));
+    const error = await captureError(engine.runModule(module, { id: MODULE_ID, moduleId: MODULE_ID }));
 
     expect(error).toBeInstanceOf(PortWriteRejected);
     expect(error.moduleId).toBe(MODULE_ID);
@@ -120,7 +120,7 @@ describe("anti-clobber: you may only rewrite what you read", () => {
       validate: () => [],
     });
 
-    const error = await captureError(engine.runModule(blind, { id: BLIND_ID }));
+    const error = await captureError(engine.runModule(blind, { id: BLIND_ID, moduleId: BLIND_ID }));
 
     expect(error).toBeInstanceOf(PortWriteRejected);
     expect(error.port).toBe("buildings");
@@ -144,7 +144,7 @@ describe("anti-clobber: you may only rewrite what you read", () => {
       validate: () => [],
     });
 
-    await engine.runModule(editor, { id: "building-editor" });
+    await engine.runModule(editor, { id: "building-editor", moduleId: "building-editor" });
 
     expect(store.data.buildings?.features).toHaveLength(1);
     expect(store.log).toHaveLength(1);
@@ -164,7 +164,7 @@ describe("anti-clobber: you may only rewrite what you read", () => {
       validate: () => [],
     });
 
-    await engine.runModule(producer, { id: "transformer-producer" });
+    await engine.runModule(producer, { id: "transformer-producer", moduleId: "transformer-producer" });
 
     expect(store.data.transformers).toEqual(fc());
     expect(store.log).toHaveLength(1);
@@ -197,11 +197,11 @@ describe("seal granularity is a module declaration", () => {
     const engine = createEngine(store);
     const NODE_ID = "per-commit-editor";
 
-    await engine.runModule(fieldEditor(NODE_ID, "per-commit"), { id: NODE_ID });
+    await engine.runModule(fieldEditor(NODE_ID, "per-commit"), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(store.log).toHaveLength(2);
     expect(store.log.map((txn) => txn.primary.length)).toEqual([1, 1]);
-    expect(store.log.every((txn) => txn.nodeId === NODE_ID)).toBe(true);
+    expect(store.log.every((txn) => txn.node?.id === NODE_ID)).toBe(true);
 
     // undo granularity follows: one config change, not the whole node
     store.undo();
@@ -214,7 +214,7 @@ describe("seal granularity is a module declaration", () => {
     const engine = createEngine(store);
     const NODE_ID = "whole-node-editor";
 
-    await engine.runModule(fieldEditor(NODE_ID), { id: NODE_ID });
+    await engine.runModule(fieldEditor(NODE_ID), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary).toHaveLength(2);
@@ -247,7 +247,7 @@ describe("a write that carries nothing is refused", () => {
     const engine = createEngine(store);
 
     const error = await captureError<PortWriteRejected>(
-      engine.runModule(writing({ modelName: "   " }), { id: NODE_ID }),
+      engine.runModule(writing({ modelName: "   " }), { id: NODE_ID, moduleId: NODE_ID }),
     );
 
     expect(error).toBeInstanceOf(PortWriteRejected);
@@ -262,7 +262,7 @@ describe("a write that carries nothing is refused", () => {
     const engine = createEngine(store);
 
     const error = await captureError<PortWriteRejected>(
-      engine.runModule(writing({ transformers: null }), { id: NODE_ID }),
+      engine.runModule(writing({ transformers: null }), { id: NODE_ID, moduleId: NODE_ID }),
     );
 
     expect(error?.reason).toBe("empty");
@@ -277,7 +277,7 @@ describe("a write that carries nothing is refused", () => {
     const engine = createEngine(store);
 
     const error = await captureError<PortWriteRejected>(
-      engine.runModule(writing({ transformers: undefined }), { id: NODE_ID }),
+      engine.runModule(writing({ transformers: undefined }), { id: NODE_ID, moduleId: NODE_ID }),
     );
 
     expect(error?.reason).toBe("empty");
@@ -290,7 +290,7 @@ describe("a write that carries nothing is refused", () => {
     const store = createStore(seed());
     const engine = createEngine(store);
 
-    await engine.runModule(writing({ transformers: fc(), grids: [] }), { id: NODE_ID });
+    await engine.runModule(writing({ transformers: fc(), grids: [] }), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(store.data.transformers).toEqual(fc());
     expect(store.data.grids).toEqual([]);
@@ -302,7 +302,7 @@ describe("a write that carries nothing is refused", () => {
     const store = createStore(seed());
     const engine = createEngine(store);
 
-    await engine.runModule(writing({ grids: [{ count: 0, served: false }] }), { id: NODE_ID });
+    await engine.runModule(writing({ grids: [{ count: 0, served: false }] }), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(store.data.grids).toEqual([{ count: 0, served: false }]);
   });
@@ -330,7 +330,7 @@ describe("a node runs only when its required ports exist in the store", () => {
     const engine = createEngine(store);
 
     const error = await captureError<MissingRequiredPorts>(
-      engine.runModule(gatedModule(), { id: NODE_ID }),
+      engine.runModule(gatedModule(), { id: NODE_ID, moduleId: NODE_ID }),
     );
 
     expect(error).toBeInstanceOf(MissingRequiredPorts);
@@ -344,7 +344,7 @@ describe("a node runs only when its required ports exist in the store", () => {
     const store = createStore(seed({ region: { country: "DE", state: "BW" } }));
     const engine = createEngine(store);
 
-    await engine.runModule(gatedModule(), { id: NODE_ID });
+    await engine.runModule(gatedModule(), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(store.data.transformers).toEqual(fc());
     expect(store.log).toHaveLength(1);

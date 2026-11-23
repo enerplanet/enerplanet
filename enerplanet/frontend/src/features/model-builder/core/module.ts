@@ -36,9 +36,18 @@ export type NodeState = "pending" | "ready" | "active" | "done" | "skipped" | "s
  */
 export type SealGranularity = "at-completion" | "per-commit";
 
-/** Identifies the workflow node a run belongs to. */
+/** Identifies the workflow node a run belongs to — the **placement** that produced a commit (§2). */
 export interface NodeRef {
+  /** The placement id, e.g. `"5-area-draw"` (§2). Unique per occurrence, never reused. */
   id: string;
+  /**
+   * The module this placement runs, so a replay can rebuild the placement without the plan.
+   *
+   * A seed node's own `id` names it too, but an **appended** placement (a re-run's successor)
+   * has no seed entry, so the module has to ride on the commit for the transcript to be a pure
+   * function of `(seed flow, log)`.
+   */
+  moduleId: string;
   /**
    * Whether the run was an **automatic** step's — the module's own flag (`Module.auto`), carried here so the
    * engine can stamp it on the transaction and history can skip it. A different fact from the node's

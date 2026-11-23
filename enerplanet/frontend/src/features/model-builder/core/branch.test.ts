@@ -1,13 +1,12 @@
 /**
  * Branching — "New Model" at the prompt.
  *
- * A branch is **full duplex**: it carries a copy of
- * the projection at the cursor, a copy of the log *prefix*, the pending change as its own first
- * transaction, and an empty discard stack — while the source session is left bit-identical, log,
- * cursor and redo tail intact. Nothing is shared, so a branch replays its own diffs and needs no
- * parent to load.
+ * v2 model (`spec/history-v2.md` §1): the log is **append-only** and has no redo tail, so a branch
+ * takes the **whole log** as it stands — there is no cursor to slice at and no discard stack to
+ * leave behind. A branch is still full duplex: a copy of the projection, the log, and the pending
+ * change as its own first commit, while the source session is left bit-identical.
  *
- * Written failing first.
+ * Written failing first against the new design.
  */
 import { describe, it, expect } from "vitest";
 import { branch } from "./branch";
@@ -20,44 +19,41 @@ const WORKFLOW = { id: "wf-core", version: 3 };
 const MODEL_NAME_PATH = "/modelName";
 const PENDING = { op: "replace", path: MODEL_NAME_PATH, prev: "V1", next: "V3" } as const;
 
-/** A session with three transactions, sitting two in — so it has a redo tail to keep. */
+/** A session with three commits. */
 function session(): ReturnType<typeof createStore> {
   const store = createStore(seed());
   store.applyTransaction(
     [{ op: "replace", path: MODEL_NAME_PATH, prev: "Contract fixture", next: "V1" }],
     [],
-    { node: { id: "model-start" } },
+    { node: { id: "model-start", moduleId: "model-start" } },
   );
   store.applyTransaction([{ op: "replace", path: "/resolution", prev: 60, next: 30 }], [], {
-    node: { id: "settings" },
+    node: { id: "settings", moduleId: "settings" },
   });
   store.applyTransaction([{ op: "replace", path: MODEL_NAME_PATH, prev: "V1", next: "V2" }], [], {
-    node: { id: "rename" },
+    node: { id: "rename", moduleId: "rename" },
   });
-  store.undo(); // cursor 2 of 3: the tail stays behind
   return store;
 }
 
 const REQUEST = {
   parent: { modelId: 12, groupId: 7 },
-  pending: { primary: [PENDING], node: { id: "user-edit" } },
+  pending: { primary: [PENDING], node: { id: "user-edit", moduleId: "user-edit" } },
 } as const;
 
 
-describe("branch = state + prefix + the pending change", () => {
-  it("starts where the source sits, plus the pending change, with no discard stack", () => {
+describe("branch = state + log + the pending change", () => {
+  it("starts where the source sits, plus the pending change, carrying the whole log", () => {
     const store = session();
 
     const { store: branched, link } = branch({ store, ...REQUEST });
 
     expect(branched.data.modelName).toBe("V3"); // the edit is applied…
-    expect(branched.data.resolution).toBe(30); // …on top of the state at the cursor
-    expect(branched.log).toHaveLength(3); // the two-transaction prefix + the edit
-    expect(branched.cursor).toBe(3);
-    expect(branched.canRedo).toBe(false); // the source's redo tail is not carried
-    expect(branched.log[2]).toMatchObject({
-      revision: 3,
-      nodeId: "user-edit",
+    expect(branched.data.resolution).toBe(30); // …on top of the source's state
+    expect(branched.log).toHaveLength(4); // the three-commit log + the edit
+    expect(branched.log[3]).toMatchObject({
+      revision: 4,
+      node: { id: "user-edit", moduleId: "user-edit" },
       primary: [PENDING],
     });
 
@@ -69,47 +65,39 @@ describe("branch = state + prefix + the pending change", () => {
     const before = {
       data: fingerprint(store.data),
       logLength: store.log.length,
-      cursor: store.cursor,
-      canRedo: store.canRedo,
-      revisions: store.log.map((transaction) => transaction.revision),
+      revisions: store.log.map((commit) => commit.revision),
     };
 
     branch({ store, ...REQUEST });
 
     expect(fingerprint(store.data)).toBe(before.data);
-    expect(store.data.modelName).toBe("V1"); // the branch's edit did not leak into the source
+    expect(store.data.modelName).toBe("V2"); // the branch's edit did not leak into the source
     expect(store.log).toHaveLength(before.logLength);
-    expect(store.cursor).toBe(before.cursor);
-    expect(store.canRedo).toBe(before.canRedo);
-    expect(store.log.map((transaction) => transaction.revision)).toEqual(before.revisions);
+    expect(store.log.map((commit) => commit.revision)).toEqual(before.revisions);
   });
 
   it("replays its own diffs — loading a branch needs no parent", () => {
     const store = session();
     const { store: branched } = branch({ store, ...REQUEST });
 
-    const artefact = toArtefact({ store: branched, workflow: WORKFLOW, modelId: 99 });
+    const artefact = toArtefact({ store: branched, workflow: WORKFLOW, flow: [], modelId: 99 });
     const { store: loaded, divergence } = fromArtefact(artefact);
 
     expect(divergence).toBeUndefined();
-    expect(artefact.discarded).toEqual([]); // the source's tail never came along
-    expect(artefact.log.map((transaction) => transaction.revision)).toEqual([1, 2, 3]);
+    expect(artefact.log.map((commit) => commit.revision)).toEqual([1, 2, 3, 4]);
     expect(loaded.data).toEqual(branched.data);
-    expect(loaded.cursor).toBe(3);
   });
 
   it("keeps branching available mid-flow, not only at the end", () => {
     const store = createStore(seed());
     store.applyTransaction([{ op: "replace", path: "/resolution", prev: 60, next: 15 }], [], {
-      node: { id: "settings" },
+      node: { id: "settings", moduleId: "settings" },
     });
-    store.undo();
-    store.undo(); // back to the very start: the prefix is empty
 
     const { store: branched } = branch({ store, ...REQUEST });
 
-    expect(branched.log).toHaveLength(1);
-    expect(branched.log[0].nodeId).toBe("user-edit");
+    expect(branched.log).toHaveLength(2);
+    expect(branched.log[1].node?.id).toBe("user-edit");
     expect(branched.data.modelName).toBe("V3");
   });
 

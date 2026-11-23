@@ -115,7 +115,7 @@ export async function runInScratch(entry: ModuleUnderTest): Promise<{
 
   let error: Error | undefined;
   try {
-    await engine.runModule(entry.module, { id: entry.module.id });
+    await engine.runModule(entry.module, { id: entry.module.id, moduleId: entry.module.id });
   } catch (thrown) {
     error = thrown instanceof Error ? thrown : new Error(String(thrown));
   }

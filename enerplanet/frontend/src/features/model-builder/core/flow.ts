@@ -22,6 +22,7 @@
 
 import { requiredPorts, type Module } from "./module";
 import type { PortKey } from "./ports";
+import type { Transaction } from "./diff";
 
 /** One module placed at a position. `skippable` is a node property; `auto` is not — it belongs to the module (`Module.auto`). */
 export interface FlowNode {
@@ -31,8 +32,55 @@ export interface FlowNode {
   skippable?: boolean;
 }
 
-/** Immutable: a re-run moves the session's *position*, it never changes the flow. */
+/** Immutable: the transcript grows by appending re-runs, never by editing a placement in place (§3). */
 export type Flow = readonly FlowNode[];
+
+/**
+ * A placement's own name — its seed `id`, else its `moduleId` (§2).
+ *
+ * A placement id is `"<n>-<name>"`, so the name is recovered by stripping the leading count. The
+ * name, not the placement id, is what a workflow keys recommendations on (§6) and what a successor
+ * re-uses when a re-run appends: the placement id changes on every re-run, the name does not.
+ */
+export function nodeName(node: FlowNode): string {
+  const match = /^\d+-(.+)$/.exec(node.id);
+  if (match !== null) return match[1];
+  return node.id.length > 0 ? node.id : node.moduleId;
+}
+
+/**
+ * Mint a placement id: `"<n>-<name>"`, `n` counting up from `0` over every placement ever added
+ * (§2). `n` is monotonic and never reused — the flow never shrinks (a node is removed by an
+ * *edit to null*, which keeps its slot), so `n` is simply "how many placements exist so far",
+ * always derivable with nothing extra to persist.
+ */
+export function placementId(index: number, name: string): string {
+  return `${index}-${name}`;
+}
+
+/**
+ * The **transcript**: the flow actually enacted (§3).
+ *
+ * `placed` is the session's stored placed flow — the seed placements plus any appended ones,
+ * **including the nodes that have not run yet**. Append every commit's placement, in log order,
+ * whose id is not already placed. The committed part is a pure fold of the log; the uncommitted
+ * part is the stored flow. Every placement is unique by construction (§2), so "already placed"
+ * is an id check.
+ */
+export function transcript(placed: Flow, log: readonly Transaction[]): Flow {
+  const seen = new Set(placed.map((node) => node.id));
+  const appended: FlowNode[] = [];
+
+  for (const commit of log) {
+    const node = commit.node;
+    if (node === undefined) continue;
+    if (seen.has(node.id)) continue;
+    seen.add(node.id);
+    appended.push({ id: node.id, moduleId: node.moduleId });
+  }
+
+  return [...placed, ...appended];
+}
 
 /** Module id → module. The register is this map. */
 export type ModuleRegistry = Readonly<Record<string, Module>>;
