@@ -66,9 +66,9 @@ export interface Store {
   readonly data: Readonly<ModelData>;
   /** Every sealed commit, oldest first. Never rewritten — not even by undo. */
   readonly log: readonly Transaction[];
-  /** Whether any commit is currently revertible (an interactive, un-reverted commit exists). */
+  /** Whether any forward commit is currently revertible. Auto work is a target like any other. */
   readonly canUndo: boolean;
-  /** Whether any rollback commit is currently re-applicable. */
+  /** Whether a redo is available — true only while the session is **off the tip** (§4.1). */
   readonly canRedo: boolean;
   /**
    * A **change token**: it increments on *every* applied change, even one that leaves the projection
@@ -105,12 +105,16 @@ export interface Store {
   ): Transaction;
   /**
    * Resolve the model to the state before the newest revertible commit, by **appending a rollback**
-   * (§4.1). The target stays in the log and the transcript as a superseded occurrence.
+   * (§4.1). Auto commits are targets too — undo lands on an auto step's own page first, then on the
+   * interactive commit below it. The target stays in the log as a superseded occurrence.
    *
    * @returns the rollback commit it sealed, or `undefined` when there is nothing to undo.
    */
   undo(): Transaction | undefined;
-  /** The exact inverse of `undo` — append a rollback that re-applies the newest redoable commit. */
+  /**
+   * Re-apply the newest undone run by appending the inverse of a rollback (§4.1). Available only
+   * while the session is **off the tip**: an edit after an undo is the new tip and takes redo away.
+   */
   redo(): Transaction | undefined;
 }
 
@@ -160,6 +164,33 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
   /** Has the commit at 1-based `revision` already been reverted — does some commit roll it back? */
   const isReverted = (revision: number): boolean =>
     log.some((commit) => commit.rollback?.of === revision);
+
+  /** Index (0-based) of the newest commit carrying a placement, or `-1` when there is none. */
+  const tipIndex = (): number => {
+    for (let index = log.length - 1; index >= 0; index -= 1) {
+      if (log[index].node !== undefined) return index;
+    }
+    return -1;
+  };
+
+  /**
+   * The revision a redo should reverse, or `undefined`.
+   *
+   * A redo is available only while the session is **off the tip**: a backward rollback that no
+   * later commit re-applied, with **no placement commit after it**. An edit is the only thing a
+   * node does that moves the tip, and it supersedes the undone run — so once an edit lands, the
+   * undone commits can no longer be re-applied.
+   */
+  const redoTarget = (): number | undefined => {
+    const tip = tipIndex();
+    for (let revision = log.length; revision >= 1; revision -= 1) {
+      if (isForward(revision - 1)) continue;
+      if (isReverted(revision)) continue;
+      if (revision <= tip) continue;
+      return revision;
+    }
+    return undefined;
+  };
 
   const applyTransaction = (
     primary: readonly DiffOp[],
@@ -215,19 +246,16 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
     },
 
     get canUndo(): boolean {
-      // The newest forward, interactive commit that no commit has rolled back yet. A forward
-      // rollback — a redo — is itself revertible, which is what keeps undo/redo symmetric.
-      return log.some(
-        (commit, index) =>
-          isForward(index) && commit.auto !== true && !isReverted(index + 1),
-      );
+      // Any forward commit that no later commit has rolled back. Auto work is a target like any
+      // other: an undo lands on the auto step's own page first, and the next undo reverses the
+      // interactive commit below it. A forward rollback — a redo — is revertible too, so undo/redo
+      // stay symmetric.
+      return log.some((_commit, index) => isForward(index) && !isReverted(index + 1));
     },
 
     get canRedo(): boolean {
-      // The newest backward commit (a rollback of a forward commit) that no commit has re-applied yet.
-      return log.some(
-        (_commit, index) => !isForward(index) && !isReverted(index + 1),
-      );
+      // Redo is available only **off the tip** (see `redoTarget`).
+      return redoTarget() !== undefined;
     },
 
     get version(): number {
@@ -244,12 +272,10 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
     applyTransaction,
 
     undo(): Transaction | undefined {
-      // The newest forward, interactive commit that is not already reverted. Auto work is skipped:
-      // undo lands on the interactive boundary, never on a step the user did not press. A forward
-      // rollback (a redo) is a candidate too, so undo can take back a redo.
+      // The newest forward commit that is not already reverted. Auto commits are targets too: an
+      // undo lands on the auto step's own page first, then on the interactive commit below it.
       for (let revision = log.length; revision >= 1; revision -= 1) {
         if (!isForward(revision - 1)) continue;
-        if (log[revision - 1].auto === true) continue;
         if (isReverted(revision)) continue;
         return rollbackCommit(revision);
       }
@@ -257,14 +283,8 @@ export function createStore(initial: ModelData = {}, options: StoreOptions = {})
     },
 
     redo(): Transaction | undefined {
-      // The newest backward commit that is not already reverted. Inverting it seals a forward
-      // rollback that re-applies what the undo resolved away.
-      for (let revision = log.length; revision >= 1; revision -= 1) {
-        if (isForward(revision - 1)) continue;
-        if (isReverted(revision)) continue;
-        return rollbackCommit(revision);
-      }
-      return undefined;
+      const target = redoTarget();
+      return target === undefined ? undefined : rollbackCommit(target);
     },
   };
 }

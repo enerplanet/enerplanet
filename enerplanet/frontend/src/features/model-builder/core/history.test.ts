@@ -7,8 +7,9 @@
  * before it. The target stays in the log as a superseded occurrence, so nothing rewrites an entry.
  *
  * These lock: undo restores a commit's pre-values *exactly* (including cascade pruned values), a
- * new edit after an undo **appends** rather than truncating, redo re-applies, and undo skips auto
- * work.
+ * new edit after an undo **appends** rather than truncating, redo re-applies while the session is
+ * off the tip, and undo lands on auto work too (auto is a normal target — an undo reverses the auto
+ * step's page first, the one below it next).
  *
  * Written failing first against the new design.
  */
@@ -18,6 +19,8 @@ import { createEngine } from "./engine";
 import { defineModule } from "./module";
 import type { DiffOp } from "./diff";
 import { building, fc, seed } from "./fixtures";
+import { nodeStates } from "./position";
+import type { ModuleRegistry } from "./flow";
 
 /** The primary diff used throughout: a drawn area replacing the empty coordinates. */
 const COORDINATES_EDIT: DiffOp = {
@@ -161,8 +164,13 @@ describe("repeated undo walks back through history", () => {
 });
 
 
-describe("undo alone never produces writes, and skips auto work", () => {
-  it("does not re-run the auto node it skipped over", async () => {
+describe("undo lands on auto work too — auto is a normal target", () => {
+  /** `loader` (interactive) writes `region`; `autonode` (auto) reads `buildings`, writes `grids`. */
+  async function chain(): Promise<{
+    store: ReturnType<typeof createStore>;
+    registry: ModuleRegistry;
+    runs: () => number;
+  }> {
     const store = createStore(seed());
     const engine = createEngine(store);
     let autoRuns = 0;
@@ -190,16 +198,65 @@ describe("undo alone never produces writes, and skips auto work", () => {
 
     await engine.runModule(loader, { id: "loader", moduleId: "loader" });
     await engine.runModule(auto, { id: "autonode", moduleId: "autonode", auto: true });
-    expect(autoRuns).toBe(1);
-    const logLength = store.log.length;
+    return { store, registry: { loader, autonode: auto }, runs: () => autoRuns };
+  }
 
-    const rollback = store.undo();
+  it("an undo reverses the auto step first, the next the interactive step below it", async () => {
+    const { store, runs } = await chain();
+    expect(runs()).toBe(1);
+    // The commit is marked automatic, so the run can be read back from history later.
+    expect(store.log[1].auto).toBe(true);
 
-    // The auto commit at the tip is skipped: undo resolves the interactive `loader` below it.
-    expect(rollback?.rollback).toEqual({ of: 1 });
-    expect(store.log).toHaveLength(logLength + 1); // undo wrote only its own rollback commit
-    expect(autoRuns).toBe(1); // …and the auto module was never re-run
+    const first = store.undo();
+
+    expect(first?.rollback).toEqual({ of: 2 }); // the auto commit is the newest forward one
+    expect(store.data.grids).toBeUndefined(); // so its work is reversed…
+    expect(store.data.region).toEqual({ country: "DE", state: "BW" }); // …and the step below stands
+
+    const second = store.undo();
+    expect(second?.rollback).toEqual({ of: 1 });
     expect(store.data.region).toBeUndefined();
-    expect(store.data.grids).toEqual({ run: 1 }); // the auto work is untouched, not unwound
+
+    expect(runs()).toBe(1); // an undo never re-runs anything
+  });
+
+  it("a redo repopulates the auto step's data, so it reads done again", async () => {
+    const { store, registry } = await chain();
+    const flow = [
+      { id: "loader", moduleId: "loader" },
+      { id: "autonode", moduleId: "autonode" },
+    ];
+
+    store.undo();
+
+    expect(store.data.grids).toBeUndefined();
+    expect(nodeStates(flow, registry, store).autonode).toBe("stale"); // its work was reversed
+
+    store.redo();
+
+    // The data is back, so the placement reads its own commit as done — nothing has to re-run.
+    expect(store.data.grids).toEqual({ run: 1 });
+    expect(nodeStates(flow, registry, store).autonode).toBe("done");
+    expect(store.undo()).toBeDefined(); // and a redo is itself revertible
+  });
+});
+
+
+describe("an edit after an undo takes redo away", () => {
+  it("a new commit is the tip, so the undone run can no longer be re-applied", () => {
+    const store = createStore(seed());
+    store.applyTransaction([rename(INITIAL_NAME, "one")]);
+
+    store.undo();
+    expect(store.canRedo).toBe(true);
+
+    store.applyTransaction([rename(INITIAL_NAME, "two")], undefined, {
+      // An edit is a placement's work, so it carries a node — that is what moves the tip.
+      node: { id: "edit-name", moduleId: "editor" },
+    });
+
+    expect(store.canRedo).toBe(false);
+    expect(store.redo()).toBeUndefined();
+    expect(store.data.modelName).toBe("two");
   });
 });
