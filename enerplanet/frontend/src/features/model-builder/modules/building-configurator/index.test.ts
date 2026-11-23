@@ -183,13 +183,13 @@ describe("building-configurator's run", () => {
     const engine = createEngine(store);
 
     holdEdit("b1", { params: { yearlyKwh: 15_000 } });
-    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id });
+    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id, moduleId: buildingConfiguratorModule.module.id });
     expect(store.data.buildingParams?.[ELECTRICITY]?.b1?.yearlyKwh).toBe(15_000);
 
     // Nothing is held now. A run that committed anyway would produce a new projection; identity is the proof
     // that it did nothing at all.
     const before = store.data.buildingParams;
-    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id });
+    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id, moduleId: buildingConfiguratorModule.module.id });
     expect(store.data.buildingParams).toBe(before);
   });
 
@@ -202,7 +202,7 @@ describe("building-configurator's run", () => {
 
     holdEdit("b1", { params: { yearlyKwh: 15_000 } });
     holdEdit("b2", { params: { yearlyKwh: 9_000 } });
-    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id });
+    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id, moduleId: buildingConfiguratorModule.module.id });
 
     expect(store.data.buildingParams?.[ELECTRICITY]?.b1?.yearlyKwh).toBe(15_000);
     expect(store.data.buildingParams?.[ELECTRICITY]?.b2?.yearlyKwh).toBe(9_000);

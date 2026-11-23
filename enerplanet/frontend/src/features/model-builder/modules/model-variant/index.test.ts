@@ -118,7 +118,7 @@ describe("model-variant's run", () => {
     expect(store.data.modelVariant).toEqual(variant({ variantModelId: 11, rootModelId: 1 }));
     // One record, one transaction — both ports, stamped on this node.
     expect(store.log).toHaveLength(1);
-    expect(store.log[0]?.nodeId).toBe(NODE);
+    expect(store.log[0]?.node?.id).toBe(NODE);
     expect(store.log[0]?.primary.map((op) => op.path).sort()).toEqual(["/modelId", "/modelVariant"]);
   });
 
@@ -127,7 +127,7 @@ describe("model-variant's run", () => {
     setModelVariantGateway(gateway);
 
     const store = createStore({ ...modelVariant.mock, modelVariant: variant() });
-    await createEngine(store).runModule(modelVariant.module, { id: NODE });
+    await createEngine(store).runModule(modelVariant.module, { id: NODE, moduleId: modelVariant.module.id });
 
     // The read-before-write guard: a recorded variant means the copy was already made, so pressing the control
     // again must not fork a second time.

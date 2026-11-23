@@ -184,7 +184,7 @@ describe("the session the node reads", () => {
     bindModelSaveSession(null);
     const store = createStore({ ...modelSave.mock });
 
-    await expect(createEngine(store).runModule(modelSave.module, { id: NODE })).rejects.toBeInstanceOf(
+    await expect(createEngine(store).runModule(modelSave.module, { id: NODE, moduleId: modelSave.module.id })).rejects.toBeInstanceOf(
       NoSessionBound,
     );
     expect(store.log).toEqual([]); // and nothing was sealed
@@ -195,7 +195,7 @@ describe("the session the node reads", () => {
     const store = createStore({ ...modelSave.mock });
     bindModelSaveSession(sessionFor(store, payloads));
 
-    await createEngine(store).runModule(modelSave.module, { id: NODE });
+    await createEngine(store).runModule(modelSave.module, { id: NODE, moduleId: modelSave.module.id });
 
     expect(payloads).toHaveLength(1);
     expect(payloads[0].status).toBe("draft");

@@ -177,7 +177,7 @@ describe("run-meme-calliope's run", () => {
     setMemeRunGateway(gateway);
 
     const store = createStore({ ...runMemeCalliope.mock, memeRun: run("running") });
-    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE });
+    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id });
 
     // The backend refuses a duplicate live run and the submit is idempotent, so a second POST would be both
     // wrong and wasteful: an existing record means read, never resubmit.
@@ -190,7 +190,7 @@ describe("run-meme-calliope's run", () => {
     setMemeRunGateway(gateway);
 
     const store = createStore({ ...runMemeCalliope.mock, memeRun: run("running") });
-    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE });
+    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id });
 
     expect(store.data.memeRun).toEqual(run("completed"));
     expect(issuesFor(store.data)).toEqual([]);
@@ -201,7 +201,7 @@ describe("run-meme-calliope's run", () => {
     setMemeRunGateway(gateway);
 
     const store = createStore({ ...runMemeCalliope.mock, memeRun: run("running") });
-    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE });
+    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id });
 
     expect(store.data.memeRun).toEqual(run("failed", FAILURE));
     const issues = issuesFor(store.data);
@@ -215,7 +215,7 @@ describe("run-meme-calliope's run", () => {
     setMemeRunGateway(gateway);
 
     const store = createStore({ ...runMemeCalliope.mock, memeRun: run("failed", "boom") });
-    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE });
+    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id });
 
     // A terminal failure is the one case that submits on top of an existing record: the backend allows a fresh
     // dispatch then (`MemeRunFinished`), and speaking to the dead run again would only repeat its failure.
@@ -228,7 +228,7 @@ describe("run-meme-calliope's run", () => {
     setMemeRunGateway(gateway);
 
     const store = createStore({ ...runMemeCalliope.mock, memeRun: run("running") });
-    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE });
+    await createEngine(store).runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id });
 
     // One trace, a zero-diff transaction: the run was already there and had not moved.
     expect(store.log).toHaveLength(1);
@@ -242,7 +242,7 @@ describe("run-meme-calliope's run", () => {
 
     const store = createStore({ ...runMemeCalliope.mock });
     const engine = createEngine(store);
-    await engine.runModule(runMemeCalliope.module, { id: NODE }); // arrival: submits `pending`
+    await engine.runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id }); // arrival: submits `pending`
 
     // The run advances as an ordinary change to the port — what a poll's commit would seal.
     store.applyTransaction([
@@ -251,7 +251,7 @@ describe("run-meme-calliope's run", () => {
 
     // The second run rewrites `memeRun`, which the first left holding a value. A blind write would be rejected
     // as `clobber`; succeeding is the proof that run() read the port first.
-    await engine.runModule(runMemeCalliope.module, { id: NODE });
+    await engine.runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id });
     expect(store.data.memeRun).toEqual(run("completed"));
   });
 

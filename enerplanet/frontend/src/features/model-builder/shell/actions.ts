@@ -4,13 +4,10 @@
  * Every control maps onto an operation the core already has — "*the bar only has to call
  * them*" — so this module is deliberately thin. It exists for the two places where "just call it" is not enough:
  *
- * - **Module movement is a position move, not an undo** (which supersedes the earlier
- *   "module movement is undo/redo" framing). A move seals a `jump` transaction with an **empty cascade**: it
- *   rests the session on its target and **discards nothing**. The preview prune a jump once
- *   carried goes with it — with nothing discarded there is nothing to preview, so the zero-diff jump is the
- *   ordinary case rather than the one documented exception. It is a `jump` and not the store's `undo` because
- *   undo leaves a redo tail: a move that produced one would make "step back to look at something" mutate the
- *   session, when the whole point is that it must not.
+ * - **Movement is a view, not a commit** (§4). A move sets the viewed placement in the shell's session state
+ *   and writes **nothing**: there is no `jump` transaction, no discard preview, and no redo tail (undo/redo
+ *   are rollback commits, `core/store.ts`). The shell owns the view and the bar/steps panel drive it, which is
+ *   why there is no `moveToNode` here any more.
  * - **The bar's save is always `incomplete`.** The *full* save — the real `model.json`, promoted to
  *   `draft` so that a run accepts it — belongs to the save **node**, behind its completeness gate. A bar button
  *   that wrote a finished model on a complete flow would be bypassing that gate, which is why the status is
@@ -22,51 +19,9 @@ import { position } from "../core/position";
 import { isAutoModule } from "../core/module";
 import type { Engine } from "../core/engine";
 import type { Store } from "../core/store";
-import { currentId } from "../core/rerun";
-import { JumpNotBackwards } from "../core/errors";
-import type { Transaction } from "../core/diff";
 import type { WorkflowRef } from "../core/artefact";
 import { saveModel, type SaveOutcome } from "../save/saveModel";
 import type { ModelGateway } from "../save/gateway";
-
-/**
- * Move the session back to an earlier node: a **pure position move** — a `jump`
- * transaction with an empty cascade, resting the session on its target and discarding nothing.
- *
- * The empty cascade is the whole point. A move is not a change: it must not prune a single port, however far
- * downstream, or a navigation that altered nothing would force the tail to re-run. Nothing a move does makes a
- * node stale — the target stays `done`, and the session only *rests* on it (`position.ts`), which is what lets
- * a user look at a node they have no intention of changing. What goes stale is decided by *influence*,
- * when a node actually runs — never by how far the bar moved. The worked case: in
- * `A → B → C → D`, changing A makes B and D stale while **C is untouched**, because the closure reaches C's
- * ports through nothing.
- *
- * It never moves *forward*: a later node is reached by **running** it, which is what `Continue` does, so a
- * target ahead of the session is refused — the same rule the core's `jumpTo` states, for the same reason. The
- * bar only ever offers targets that are behind.
- *
- * @returns the sealed jump, so a caller can see the move and everything it discarded — which is nothing.
- */
-export function moveToNode(
-  flow: Flow,
-  registry: ModuleRegistry,
-  store: Store,
-  targetId: string,
-): Transaction {
-  const index = flow.findIndex((node) => node.id === targetId);
-  if (index < 0) throw new Error(`[model-builder] no node "${targetId}" in this flow`);
-  if (index > position(flow, registry, store).index) throw new JumpNotBackwards(targetId);
-
-  const targetModule = registry[flow[index].moduleId];
-  return store.applyTransaction([], [], {
-    node: {
-      id: targetId,
-      ...(targetModule !== undefined && isAutoModule(targetModule) ? { auto: true } : {}),
-    },
-    kind: "jump",
-    jump: { from: currentId(flow, registry, store) ?? targetId, to: targetId },
-  });
-}
 
 /**
  * Walk forward one interactive step: run the node the session sits on, and keep going while the flow lands on
@@ -82,7 +37,7 @@ export function moveToNode(
  *
  * It never moves backwards, and the loop is bounded by the flow's length so a malformed flow cannot spin.
  *
- * @returns the node ids it ran, in order — the shell says what happened rather than guessing.
+ * @returns the placement ids it ran, in order — the shell says what happened rather than guessing.
  */
 export async function continueStep(request: {
   flow: Flow;
@@ -101,7 +56,11 @@ export async function continueStep(request: {
     const module = registry[node.moduleId];
     if (module === undefined) break;
 
-    await engine.runModule(module, { id: node.id, ...(isAutoModule(module) ? { auto: true } : {}) });
+    await engine.runModule(module, {
+      id: node.id,
+      moduleId: node.moduleId,
+      ...(isAutoModule(module) ? { auto: true } : {}),
+    });
     ran.push(node.id);
 
     // An automatic module is not a place anyone can act, so the walk continues past it. An interactive one is.

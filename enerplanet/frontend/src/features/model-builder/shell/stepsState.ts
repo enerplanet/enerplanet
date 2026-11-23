@@ -4,14 +4,15 @@
  * The panel asks a different question from the bar: not "where am I" but "what is the state of every step",
  * which is why it derives its own answer instead of reading the bar's wider. Everything comes from
  * `positionReport` — done / stale / pending per node, plus what a node wrote that is gone and which required
- * ports are missing *right now* — with one addition of its own: which node the session sits on, because the
- * panel marks it and `positionReport` has no reason to know.
+ * ports are missing *right now* — with one addition of its own: which node the session is **looking at**,
+ * because the panel marks it and `positionReport` has no reason to know.
+ *
+ * **A view is not a commit** (§4). The session keeps the viewed placement as state; moving merely selects
+ * another placement to look at and writes nothing. So the viewed node is passed in (`view`) rather than read
+ * from the log, and it defaults to the frontier — the first node that is not done (`position()`).
  *
  * `blocked` and `pruned` are carried through deliberately. They are the *reason* behind a step that is not
  * done, and a panel that showed only the colour would tell the user something is wrong without saying what.
- *
- * Note the difference from the bar on a finished flow: there is no current step, so nothing is marked, where
- * the bar names the last step so it has something to show. Both are right for their question.
  */
 
 import type { PortKey } from "@model-builder/core";
@@ -26,21 +27,16 @@ export interface StepRow {
   label: string;
   state: DerivedState;
   /**
-   * The node the session sits on — `position()`'s resting place, which is the jump's target after a move and
-   * the frontier otherwise. False for every step once the flow is complete with no move outstanding.
+   * The node the session is looking at — the `view` when one is set, the frontier otherwise. False for
+   * every step once the flow is complete and no view is set.
    */
   current: boolean;
   /**
-   * A click here can **move** the session, so this step is a control.
+   * A click here can **move** the view, so this step is a control.
    *
-   * `index <= at.index` — the frontier is **inclusive**, which is the whole point: `at.index` is the first node
-   * that is not done, and `moveToNode` allows a target *up to and including* it. So the reachable set is every
-   * step from the start to the frontier. In the worked case — the session resting on B after editing it, D and
-   * F invalidated by that edit — the frontier is D, and this offers A, C and D while refusing E and F, because
-   * past D the values are reading across a broken link.
-   *
-   * The resting step itself is excluded. It is where the session already is, so clicking it would seal a jump
-   * that moves nothing; the bar's rule is that a step is a control only when clicking it can move the session.
+   * `index <= at.index` — the frontier is **inclusive**: at.index is the first node that is not done, and
+   * movement may go as far as it, because past it the values would be read across a broken link. The viewed
+   * step itself is excluded, since clicking it would move nowhere.
    */
   movable: boolean;
   /** Ports this step wrote that are gone — why it reads stale. */
@@ -49,22 +45,35 @@ export interface StepRow {
   blocked: readonly PortKey[];
 }
 
-export function stepsState(flow: Flow, registry: ModuleRegistry, store: Store): StepRow[] {
+export function stepsState(
+  flow: Flow,
+  registry: ModuleRegistry,
+  store: Store,
+  view?: string,
+): StepRow[] {
   const at = position(flow, registry, store);
+  const viewed = viewIndex(flow, view) ?? (at.complete ? undefined : at.index);
 
   return positionReport(flow, registry, store).map((entry, index) => ({
     nodeId: entry.nodeId,
     moduleId: entry.moduleId,
     label: flow[index].label ?? entry.moduleId,
     state: entry.state,
-    // The session's resting place, not `at.index`: a move is a pure position move, so after a jump the
-    // session sits on the target — which stays `done` — while the frontier can be *ahead* of it. When the flow
-    // is complete and no jump is current, `restingIndex` is undefined and no step is current.
-    current: at.restingIndex !== undefined && index === at.restingIndex,
-    // The frontier is reachable; a later step is not (see `movable`). The resting step is excluded because a
-    // click there would move nothing.
-    movable: index <= at.index && index !== at.restingIndex,
+    current: viewed !== undefined && index === viewed,
+    // The frontier is reachable and the viewed step is not (see `movable`); past the frontier the values
+    // would be read across a broken link, so those steps are not controls.
+    movable: index <= at.index && index !== viewed,
     pruned: entry.pruned,
     blocked: entry.blocked,
   }));
+}
+
+/**
+ * The index of the viewed placement, or `undefined` when no view is set or it names nothing in this flow.
+ * A caller that wants the frontier when there is no view adds it (see `stepsState`).
+ */
+function viewIndex(flow: Flow, view: string | undefined): number | undefined {
+  if (view === undefined) return undefined;
+  const index = flow.findIndex((node) => node.id === view);
+  return index >= 0 ? index : undefined;
 }

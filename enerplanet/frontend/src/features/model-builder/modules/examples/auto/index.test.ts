@@ -111,8 +111,8 @@ describe("example-auto's behaviour", () => {
     const store = createStore({ ...exampleAuto.mock });
     const engine = createEngine(store);
 
-    await engine.runModule(exampleAuto.module, { id: NODE });
-    await engine.runModule(exampleAuto.module, { id: NODE });
+    await engine.runModule(exampleAuto.module, { id: NODE, moduleId: exampleAuto.module.id });
+    await engine.runModule(exampleAuto.module, { id: NODE, moduleId: exampleAuto.module.id });
 
     // Two runs, two traces — the second is a zero-diff transaction: the summary was already there, so the
     // deterministic source commits nothing.
@@ -124,7 +124,7 @@ describe("example-auto's behaviour", () => {
     const store = createStore({ coordinates: MOCK_RINGS });
     const engine = createEngine(store);
 
-    await engine.runModule(exampleAuto.module, { id: NODE });
+    await engine.runModule(exampleAuto.module, { id: NODE, moduleId: exampleAuto.module.id });
     const first = store.data.advancedParams?.[AREA_SUMMARY_KEY];
 
     // A new area arrives as an ordinary change to the input port — what a redraw would seal.
@@ -134,7 +134,7 @@ describe("example-auto's behaviour", () => {
 
     // The second run rewrites `advancedParams`, which the first run left holding a value. A blind write would
     // be rejected as `clobber`; succeeding is the proof that run() read the port first.
-    await engine.runModule(exampleAuto.module, { id: NODE });
+    await engine.runModule(exampleAuto.module, { id: NODE, moduleId: exampleAuto.module.id });
     const second = store.data.advancedParams?.[AREA_SUMMARY_KEY];
 
     expect(first).toMatchObject({ ringCount: 2 });

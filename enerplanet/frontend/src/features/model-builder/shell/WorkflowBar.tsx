@@ -33,7 +33,6 @@
 import { Save } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { barState, type BarStep } from "./barState";
-import { moveToNode } from "./actions";
 import type { FrameMode } from "./frameMode";
 import type { Workflow } from "./workflow";
 import type { Store } from "../core/store";
@@ -97,10 +96,17 @@ interface Props {
   /** What the last save did, shown beside the button. A failed save goes to the frame's error strip. */
   saveNotice?: string;
   /**
-   * The node a run is holding the frame on. The bar derives its position from the store, so without this it would
-   * name the node the session has *reached* while the frame still shows the one it is leaving.
+   * The placement the session is looking at (§4). The bar derives its position from the store, so without this
+   * it would name the frontier while the session is looking elsewhere — and during a run the shell holds it on
+   * the node leaving the screen, so the bar does not name the node the session has *reached* while the frame
+   * still shows the one it is leaving.
    */
   hold?: string;
+  /**
+   * Move the view to a placement behind it — the shell's session state, which writes nothing (§4). The prior
+   * control is offered only when this is given.
+   */
+  onMove?: (nodeId: string) => void;
 }
 
 export const WorkflowBar: React.FC<Props> = ({
@@ -114,6 +120,7 @@ export const WorkflowBar: React.FC<Props> = ({
   saving,
   saveNotice,
   hold,
+  onMove,
 }) => {
   const { t } = useTranslation();
   const bar = barState(workflow.flow, workflow.registry, store, hold);
@@ -135,12 +142,9 @@ export const WorkflowBar: React.FC<Props> = ({
               <Step
                 label={t("modelBuilder.bar.prior")}
                 step={bar.prior}
-                {...(bar.prior === undefined
+                {...(bar.prior === undefined || onMove === undefined
                   ? {}
-                  : {
-                      onClick: () =>
-                        moveToNode(workflow.flow, workflow.registry, store, bar.prior!.id),
-                    })}
+                  : { onClick: () => onMove(bar.prior!.id) })}
               />
               <Step label={t("modelBuilder.bar.current")} step={bar.current} />
               {/* Next: always plain text — there is no forward control; a module advances by running itself. */}

@@ -245,6 +245,7 @@ export async function saveModel(
   const artefact = toArtefact({
     store,
     workflow: request.workflow,
+    flow: request.flow,
     modelId,
   });
   try {

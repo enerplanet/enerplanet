@@ -112,7 +112,7 @@ describe("area-draw's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: TWO_RINGS });
-    await engine.runModule(areaDraw.module, { id: NODE });
+    await engine.runModule(areaDraw.module, { id: NODE, moduleId: areaDraw.module.id });
 
     expect(store.data.coordinates).toEqual(TWO_RINGS);
     expect(store.log).toHaveLength(1);
@@ -126,7 +126,7 @@ describe("area-draw's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: ONE_RING });
-    await engine.runModule(areaDraw.module, { id: NODE });
+    await engine.runModule(areaDraw.module, { id: NODE, moduleId: areaDraw.module.id });
 
     expect(store.data.coordinates).toEqual(ONE_RING);
   });
@@ -136,7 +136,7 @@ describe("area-draw's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: [] });
-    await engine.runModule(areaDraw.module, { id: NODE });
+    await engine.runModule(areaDraw.module, { id: NODE, moduleId: areaDraw.module.id });
 
     expect(store.data.coordinates).toEqual([]);
     expect(store.log).toHaveLength(1);
@@ -149,7 +149,7 @@ describe("area-draw's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: ONE_RING });
-    const sealed = await engine.runModule(areaDraw.module, { id: NODE });
+    const sealed = await engine.runModule(areaDraw.module, { id: NODE, moduleId: areaDraw.module.id });
 
     // Sealed, but carrying no ops: the trace is the point, not a diff.
     expect(sealed?.primary).toHaveLength(0);

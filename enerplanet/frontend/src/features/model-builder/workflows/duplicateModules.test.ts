@@ -163,7 +163,7 @@ describe("the same module at two positions", () => {
     const engine = createEngine(store);
     // Awaited in order: a fire-and-forget loop interleaves the runs and the store mutates out of order.
     for (const node of flow) {
-      await engine.runModule(registry[node.moduleId], { id: node.id });
+      await engine.runModule(registry[node.moduleId], { id: node.id, moduleId: registry[node.moduleId].id });
     }
 
     const states = nodeStates(flow, registry, store);

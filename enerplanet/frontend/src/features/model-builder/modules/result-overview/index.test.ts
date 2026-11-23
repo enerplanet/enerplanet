@@ -124,7 +124,7 @@ describe("result-overview's run", () => {
 
   it("is left behind after its run even on a store it does not touch", async () => {
     const store = createStore({ ...resultOverview.mock });
-    const sealed = await createEngine(store).runModule(resultOverview.module, { id: NODE });
+    const sealed = await createEngine(store).runModule(resultOverview.module, { id: NODE, moduleId: resultOverview.module.id });
 
     // The trace exists (so a jump's re-arm clears), and it carries no ops.
     expect(sealed?.primary).toHaveLength(0);

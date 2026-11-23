@@ -66,8 +66,8 @@ const FLOW: Flow = [
 async function completeStore(): Promise<ReturnType<typeof createStore>> {
   const store = createStore(seed({ coordinates: [] }));
   const engine = createEngine(store);
-  await engine.runModule(start, { id: "start" });
-  await engine.runModule(draw, { id: "draw" });
+  await engine.runModule(start, { id: "start", moduleId: start.id });
+  await engine.runModule(draw, { id: "draw", moduleId: draw.id });
   return store;
 }
 
@@ -232,8 +232,7 @@ describe("the save is two calls, A first", () => {
     expect(artefact?.workflow).toEqual(WORKFLOW);
     expect(artefact?.modelId).toBe(42);
     expect(artefact?.projection).toEqual(store.data);
-    expect(artefact?.cursor).toBe(2); // both transactions
-    expect(artefact?.discarded).toEqual([]);
+    expect(artefact?.flow).toEqual(FLOW); // the placed flow the artefact carries
     expect(artefact?.fingerprint).toBeTypeOf("string");
   });
 

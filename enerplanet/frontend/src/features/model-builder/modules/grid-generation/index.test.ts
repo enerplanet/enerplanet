@@ -206,7 +206,7 @@ describe("grid-generation's run", () => {
     setGridEngine(recordingEngine(empty));
 
     const store = createStore({ ...DRAWN });
-    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id });
+    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id, moduleId: gridGeneration.module.id });
 
     expect(store.data.buildings?.features).toHaveLength(0); // it did write — the result is real
     // Asked *after* the run, which is when this judgement has anything to judge: the same call the position
@@ -222,7 +222,7 @@ describe("grid-generation's run", () => {
     setGridEngine(recordingEngine());
 
     const store = createStore({ ...DRAWN });
-    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id });
+    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id, moduleId: gridGeneration.module.id });
 
     expect(gridGeneration.module.validate?.({ store: store.data })).toEqual([]);
   });

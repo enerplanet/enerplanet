@@ -75,7 +75,7 @@ describe("the example module's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: "  Karlsruhe  ", resolution: 15 });
-    await engine.runModule(exampleInteractive.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
 
     expect(store.data.modelName).toBe("Karlsruhe"); // trimmed on the way in
     expect(store.data.resolution).toBe(15);
@@ -90,7 +90,7 @@ describe("the example module's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: [[[8.6, 49.4], [8.7, 49.4], [8.7, 49.5]]] });
-    await engine.runModule(exampleInteractive.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
 
     expect(store.data.coordinates).toEqual([[[8.6, 49.4], [8.7, 49.4], [8.7, 49.5]]]);
     expect(store.log).toHaveLength(1);
@@ -102,7 +102,7 @@ describe("the example module's behaviour", () => {
 
     hold(NODE, { modelName: "Karlsruhe" });
     hold(NODE, { resolution: 15 });
-    await engine.runModule(exampleInteractive.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
 
     expect(store.data.modelName).toBe("Karlsruhe");
     expect(store.data.resolution).toBe(15);
@@ -117,7 +117,7 @@ describe("the example module's behaviour", () => {
     // value is dropped — not merged, and never committed against a node that did not collect it.
     hold("an-earlier-node", { modelName: "  Wrong node  " });
     hold(NODE);
-    await engine.runModule(exampleInteractive.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
 
     // The run had nothing to commit, but it still leaves a trace: one zero-diff transaction, so a node the
     // session jumped back to can clear its re-arm without an edit.
@@ -131,9 +131,9 @@ describe("the example module's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: "First" });
-    await engine.runModule(exampleInteractive.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
     hold(NODE, { modelName: "Second" });
-    await engine.runModule(exampleInteractive.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
 
     // A blind second write would be rejected as `clobber`. Two transactions is the proof that run() read
     // the port before overwriting it.
@@ -147,13 +147,13 @@ describe("the example module's behaviour", () => {
 
     // The mock's name is padded, so committing it trims to a value the store does not hold yet: a real change.
     hold(NODE, { modelName: MOCK_NAME });
-    await engine.runModule(exampleInteractive.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
     expect(store.log).toHaveLength(1);
 
     // The same value again — already trimmed this time: nothing differs, so the transaction carries no ops.
     // It is sealed all the same, so a jump's re-arm cannot outlive a forward press that edited nothing.
     hold(NODE, { modelName: MOCK_NAME.trim() });
-    await engine.runModule(exampleInteractive.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
     expect(store.log).toHaveLength(2);
     expect(store.log[1].primary).toHaveLength(0);
     expect(store.data.modelName).toBe(MOCK_NAME.trim());
@@ -165,7 +165,7 @@ describe("the example module's behaviour", () => {
 
     // A bare run: a region that called run() with nothing held — a button pressed with no edit behind it.
     // It seals one zero-diff transaction, so returning to this node and continuing clears the re-arm.
-    await engine.runModule(exampleInteractive.module, { id: NODE });
+    await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
 
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary).toHaveLength(0);

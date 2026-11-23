@@ -52,9 +52,8 @@ function artefact(): Artefact {
     modelId: 7,
     initial: {},
     projection: { modelName: "Demo" },
+    flow: [{ id: "start", moduleId: "start" }],
     log: [{ revision: 1, primary: [], cascade: [] }],
-    discarded: [],
-    cursor: 1,
     fingerprint: "fp-abc",
   };
 }
@@ -132,9 +131,8 @@ describe("httpGateway — Call B", () => {
       workflow_version: 3,
       initial: {},
       projection: { modelName: "Demo" },
+      flow: [{ id: "start", moduleId: "start" }],
       log: [{ revision: 1, primary: [], cascade: [] }],
-      discarded: [],
-      cursor: 1,
       fingerprint: "fp-abc",
     });
   });
@@ -147,9 +145,8 @@ describe("httpGateway — Call B", () => {
         workflow_version: 3,
         initial: {},
         projection: { modelName: "Demo" },
+        flow: [{ id: "start", moduleId: "start" }],
         log: [{ revision: 1, primary: [], cascade: [] }],
-        discarded: [],
-        cursor: 1,
         fingerprint: "fp-abc",
       },
     }));

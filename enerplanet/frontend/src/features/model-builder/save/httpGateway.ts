@@ -22,6 +22,7 @@
 import axios from "@/lib/axios";
 import { ARTEFACT_VERSION, type Artefact, type WorkflowRef } from "../core/artefact";
 import type { Transaction } from "../core/diff";
+import type { FlowNode } from "../core/flow";
 import type { CreateContext, LegacyModelPayload, ModelGateway } from "./gateway";
 
 /** The slice of the axios client this adapter uses. */
@@ -38,9 +39,8 @@ interface SessionBody {
   workflow_version: number;
   initial: Record<string, unknown>;
   projection: Record<string, unknown>;
+  flow: FlowNode[];
   log: Transaction[];
-  discarded: Transaction[];
-  cursor: number;
   fingerprint: string;
 }
 
@@ -87,9 +87,8 @@ export function createHttpGateway(client: HttpClient = axios): ModelGateway {
         workflow_version: workflow.version,
         initial: artefact.initial,
         projection: artefact.projection,
+        flow: artefact.flow,
         log: artefact.log,
-        discarded: artefact.discarded,
-        cursor: artefact.cursor,
         fingerprint: artefact.fingerprint,
       });
     },
@@ -114,9 +113,8 @@ export function createHttpGateway(client: HttpClient = axios): ModelGateway {
         modelId: body.model_id,
         initial: body.initial,
         projection: body.projection,
+        flow: body.flow,
         log: body.log,
-        discarded: body.discarded,
-        cursor: body.cursor,
         fingerprint: body.fingerprint,
       };
     },

@@ -107,7 +107,7 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME, fromDate: FROM, toDate: TO, resolution: 15 });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.modelName).toBe(NAME.trim()); // trimmed on the way in
     expect(store.data.fromDate).toBe(FROM);
@@ -138,7 +138,7 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { region: REGION });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.region).toEqual(REGION);
   });
@@ -150,7 +150,7 @@ describe("model-start's behaviour", () => {
     // Declared, but never written: a form does not invent a workspace, and overwriting one would be this
     // module overreaching. An untouched port is the proof.
     hold(NODE, { modelName: NAME });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.workspaceId).toBe(7);
     expect(store.data.userId).toBe("abc");
@@ -172,7 +172,7 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary).toHaveLength(0);
@@ -187,7 +187,7 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { region: REGION });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.resolution).toBe(60);
     // And the region the user chose landed in the same transaction, rather than being lost to the refusal.
@@ -201,7 +201,7 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, {});
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.log[0].primary.map((op) => op.path)).not.toContain("/resolution");
   });
@@ -218,14 +218,14 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME, fromDate: FROM, toDate: TO, region: REGION });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
     expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
 
     // The form omits whatever the user did not retype, so coming back to this node and pressing Apply again
     // holds *nothing*. That must not un-finish work the store already holds — the node is still done, and the
     // user is not asked to retype what they already set.
     hold(NODE, {});
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
     expect(store.data.modelName).toBe(NAME.trim());
@@ -236,13 +236,13 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME, fromDate: FROM, toDate: TO, region: REGION });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
     expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
 
     // Coming back to swap the region changes one field. The name and period are untouched and already in the
     // store, so the node must stay finished — the user should not have to retype what they already set.
     hold(NODE, { region: { country: "NL", state: "ZH" } });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
   });
@@ -310,7 +310,7 @@ describe("model-start's period range", () => {
 
     // A range is picked through the module's own hold/run path, exactly as the panel's buttons do.
     hold(NODE, periodDates(Q2, Q4) ?? {});
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.fromDate).toBe(Q2_START);
     expect(store.data.toDate).toBe(YEAR_END);

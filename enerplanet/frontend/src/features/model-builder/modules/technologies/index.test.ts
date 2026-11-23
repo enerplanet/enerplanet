@@ -146,9 +146,9 @@ describe("technologies's run", () => {
     const engine = createEngine(store);
 
     holdType(NODE, "pv_supply");
-    await engine.runModule(technologies.module, { id: NODE });
+    await engine.runModule(technologies.module, { id: NODE, moduleId: technologies.module.id });
     holdType(NODE, "pv_supply");
-    await engine.runModule(technologies.module, { id: NODE });
+    await engine.runModule(technologies.module, { id: NODE, moduleId: technologies.module.id });
 
     expect(techsOf(store)).toHaveLength(1);
   });

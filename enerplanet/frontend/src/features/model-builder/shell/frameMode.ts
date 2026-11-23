@@ -20,7 +20,7 @@
  */
 
 import { isAutoModule, type ModelData } from "@model-builder/core";
-import { currentId } from "../core/rerun";
+import { position } from "../core/position";
 import type { Store } from "../core/store";
 import type { BuilderModule } from "./contract";
 import type { Workflow } from "./workflow";
@@ -39,6 +39,8 @@ export interface FrameView {
   labelId: string;
   /** The node a run is stamped with. Absent in test mode: there is no position to stamp. */
   nodeId?: string;
+  /** The module of the node on screen — what a run stamps alongside the placement id (`NodeRef.moduleId`). */
+  moduleId?: string;
   /**
    * Whether the module on screen is an **automatic** step (`autoRun.ts`). The module declares it
    * (`Module.auto`), so this is read from `entry.module` — the frame forces the full-screen slot open for one,
@@ -76,10 +78,13 @@ export function frameView(
     };
   }
 
-  // The session's resting node (`currentId`'s rule): the frontier, a jump's target when a move put the session
-  // there, or — when the flow is complete and no jump is current — the last node, so the frame stays on the
-  // module that finished rather than emptying out.
-  const nodeId = hold ?? currentId(workflow.flow, workflow.registry, store);
+  // The session's frontier (`position()`): the first node that is not done, or — when the flow is complete —
+  // the last node, so the frame stays on the module that finished rather than emptying out.
+  const at = position(workflow.flow, workflow.registry, store);
+  const derivedId = at.complete
+    ? workflow.flow[workflow.flow.length - 1]?.id
+    : workflow.flow[at.index]?.id;
+  const nodeId = hold ?? derivedId;
   const node = workflow.flow.find((candidate) => candidate.id === nodeId);
   if (node === undefined) return { labelId: "", seed: workflow.initial };
 
@@ -89,6 +94,7 @@ export function frameView(
     ...(entry === undefined ? {} : { entry }),
     labelId: node.id,
     nodeId: node.id,
+    moduleId: node.moduleId,
     ...(entry !== undefined && isAutoModule(entry.module) ? { auto: true } : {}),
     seed: workflow.initial,
   };

@@ -5,16 +5,15 @@
  * am I in this workflow" at a glance and then get out of the way. The rail keeps the state legible as a dot
  * even when there is no room for words, so collapsing costs context but not information.
  *
- * **A step behind the session is a control; nothing else is.** Clicking one **moves** there — a pure position
- * move, the same `moveToNode` the bar's prior control calls, which seals a `jump` with an empty cascade: it
- * rests the session on the node it lands on — leaving that node `done`, not stale — and discards nothing. What
- * goes stale is decided by *influence* when a node actually runs, never by how far the panel moved, so a
- * move cannot invalidate anything by itself.
+ * **A step behind the session is a control; nothing else is.** Clicking one **moves** the view there — the
+ * shell's session state, which writes nothing (§4): a view is a read-only selection, so it cannot invalidate
+ * anything by itself. What goes stale is decided by *influence* when a node actually runs, never by how far
+ * the panel looked.
  *
- * Steps **ahead** of the session are deliberately not clickable, and that is the core's rule rather than a UI
- * preference: `moveToNode` refuses a forward target (`JumpNotBackwards`), because a later node is reached by
- * *running* it, not by standing on it. Rendering an unreachable step as a button would offer something that
- * throws.
+ * Steps **ahead** of the frontier are deliberately not clickable, and that is the core's rule rather than a UI
+ * preference: movement reaches only as far as the first node that is not done, because a later node is reached
+ * by *running* it, not by standing on it. Rendering an unreachable step as a button would offer something the
+ * session cannot honour.
  *
  * This panel was info-only while jumping was deferred, and the reason recorded for that deferral was that a
  * jump "deserves the discard preview it ought to show before it commits". That reason dissolved when movement
@@ -50,7 +49,12 @@ interface Props {
   registry: ModuleRegistry;
   store: Store;
   /**
-   * Move the session to a step behind it. Absent in test mode, where there is no position to move — and a step
+   * The placement the session is looking at (§4). A view is a read-only selection — the panel marks the
+   * viewed step and offers the steps a click can move the view to. Absent, the frontier is what is marked.
+   */
+  view?: string;
+  /**
+   * Move the view to a step behind it. Absent in test mode, where there is no position to move — and a step
    * with nowhere to move to is plain text, which is the honest rendering: a disabled button still looks like
    * something you are being kept from.
    */
@@ -94,11 +98,11 @@ const StepBody: React.FC<{ step: StepRow; open: boolean }> = ({ step, open }) =>
   );
 };
 
-export const StepsPanel: React.FC<Props> = ({ flow, registry, store, onMove }) => {
+export const StepsPanel: React.FC<Props> = ({ flow, registry, store, view, onMove }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
-  const steps = stepsState(flow, registry, store);
+  const steps = stepsState(flow, registry, store, view);
 
   return (
     <aside

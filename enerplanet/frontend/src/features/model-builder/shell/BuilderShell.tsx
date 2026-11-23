@@ -65,9 +65,10 @@ import { pylovoDemandSource } from "./demandSource";
 import { backendCatalogueSource } from "./catalogueSource";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
+import type { Flow } from "../core/flow";
 import { createHttpGateway } from "../save/httpGateway";
 import { loadSession } from "../load/loader";
-import { moveToNode, saveSession } from "./actions";
+import { saveSession } from "./actions";
 import { autoRunFor, createAutoGuard } from "./autoRun";
 import { createVariantSessionGuard, persistVariantSession } from "./variantSession";
 import { useStoreVersion } from "./useStoreVersion";
@@ -83,6 +84,8 @@ import type { BuilderModule, ModuleViewProps, OverlayControl, Region } from "./c
 interface Session {
   store: Store;
   engine: Engine;
+  /** The placed flow this session carries — the seed's, or a loaded artefact's (§3.1). */
+  flow: Flow;
 }
 
 /** The auto node the session is on and where its run stands — what the module that shows it is handed. */
@@ -129,7 +132,7 @@ function sessionFor(workflow: Workflow, seed: Readonly<ModelData>, identity: Ses
     },
     { deriveCascade: createInvalidator(workflow.flow, workflow.registry) },
   );
-  return { store, engine: createEngine(store) };
+  return { store, engine: createEngine(store), flow: workflow.flow };
 }
 
 /**
@@ -222,6 +225,13 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
    */
   const [held, setHeld] = useState<string | undefined>(undefined);
 
+  /**
+   * The placement the session is **looking at** (§4) — a view, not a commit. Moving sets it and writes nothing;
+   * the bar and the steps panel read it to mark the viewed step. Absent, the frontier (`position()`) is what is
+   * marked. It is cleared when a run lands (the view snaps to the tip) and when the session is replaced.
+   */
+  const [viewed, setViewed] = useState<string | undefined>(undefined);
+
   // ── the load: `?model=<id>`, the way the dashboard hands a model over ──────────────────────────────
   //
   // A loaded session *replaces* the one on screen rather than seeding it: the artefact is a store's whole
@@ -262,7 +272,6 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
         const outcome = await loadSession({
           gateway,
           modelId,
-          flow: workflow.flow,
           registry: workflow.registry,
         });
         if (cancelled) return;
@@ -274,7 +283,12 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
           return;
         }
 
-        setSession({ store: outcome.session.store, engine: createEngine(outcome.session.store) });
+        setSession({
+          store: outcome.session.store,
+          engine: createEngine(outcome.session.store),
+          flow: outcome.session.flow,
+        });
+        setViewed(undefined);
         setError(null);
         // The artefact check's verdict, when it had one: the stored projection disagreed with its own log,
         // so the log was replayed. Nothing is repaired in place — this is what the user is owed for that.
@@ -324,7 +338,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
       gateway,
       store: session.store,
       workflow: workflow.ref,
-      flow: workflow.flow,
+      flow: session.flow,
       registry: workflow.registry,
       // Rebound when the identity changes, so a workspace that loads after the session was created still
       // reaches the save as a live value rather than whatever the seed happened to know at mount.
@@ -368,11 +382,18 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     const entry = view.entry;
     if (entry === undefined) return;
     const at = view.nodeId;
+    const moduleId = view.moduleId;
     try {
-      if (at !== undefined) setHeld(at);
-      // In a workflow the transaction is stamped with the *node* id — history names positions, and a module
-      // can be placed more than once. In test mode there is no position, so nothing is stamped.
-      await session.engine.runModule(entry.module, at === undefined ? undefined : { id: at });
+      if (at !== undefined && moduleId !== undefined) setHeld(at);
+      // In a workflow the transaction is stamped with the *node* id **and its module** — a placement id names
+      // the position, and the module is what lets a replay rebuild the placement without the plan (§2). In test
+      // mode there is no position, so nothing is stamped.
+      await session.engine.runModule(
+        entry.module,
+        at === undefined || moduleId === undefined ? undefined : { id: at, moduleId },
+      );
+      // The view snaps to the tip: a run is a change, so the session stops looking at an older placement.
+      setViewed(undefined);
       setError(null);
     } catch (thrown) {
       // A rejected write, a missing required port, a save refusal: all of them mean nothing was sealed, and
@@ -439,6 +460,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     const next = frameView(target, workflow, MODULES, session.store);
     setMode(target);
     setHeld(undefined);
+    setViewed(undefined);
     setSession(sessionFor(workflow, next.seed, identity));
     setError(null);
     setSaveNotice(undefined);
@@ -481,10 +503,11 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
         flow={workflow.flow}
         registry={workflow.registry}
         store={session.store}
-        // The same primitive the bar's prior control calls: a pure position move that discards nothing, so a
-        // click here cannot invalidate anything. It refuses a forward target, which is why `stepsState` only
-        // marks steps *behind* the session as moveable — the panel offers exactly what the core will do.
-        onMove={(nodeId) => moveToNode(workflow.flow, workflow.registry, session.store, nodeId)}
+        // The view is a read-only selection in the shell's session state (§4) — a move sets it and writes
+        // nothing, so a click here cannot invalidate anything. The panel offers only what the session can
+        // honour: steps up to the frontier, minus the one already being looked at.
+        view={viewed}
+        onMove={setViewed}
       />
     );
 
@@ -505,7 +528,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
       setHeld(nodeId);
       void (async () => {
         try {
-          await session.engine.runModule(module, { id: nodeId, auto: true });
+          await session.engine.runModule(module, { id: nodeId, moduleId: module.id, auto: true });
           setAutoStatus((current) =>
             current?.id === nodeId ? { id: nodeId, state: "done" } : current,
           );
@@ -566,6 +589,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
       gateway,
       store: session.store,
       workflow: workflow.ref,
+      flow: session.flow,
       variantModelId: plan.variantModelId,
     }).catch((thrown: unknown) => {
       // The model and its copy exist; only the copy's session row is missing. Report it — the switch is already
@@ -593,7 +617,10 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
       onSave={save}
       saving={saving}
       saveNotice={saveNotice}
-      hold={held}
+      // The bar names the viewed placement — the held node while a run is landing, else the session's view
+      // (§4) — and its prior control moves that view.
+      hold={held ?? viewed}
+      onMove={setViewed}
     />
   );
 

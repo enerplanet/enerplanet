@@ -119,7 +119,7 @@ describe("compare-variant's run", () => {
 
   it("is left behind after its run even on a store it does not touch", async () => {
     const store = createStore({ ...compareVariant.mock });
-    const sealed = await createEngine(store).runModule(compareVariant.module, { id: NODE });
+    const sealed = await createEngine(store).runModule(compareVariant.module, { id: NODE, moduleId: compareVariant.module.id });
 
     // The trace exists (so a jump's re-arm clears), and it carries no ops.
     expect(sealed?.primary).toHaveLength(0);

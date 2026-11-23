@@ -184,7 +184,7 @@ describe("run-meme-pypsa's run", () => {
     setMemePypsaLegGateway(gateway);
 
     const store = createStore({ ...runMemePypsa.mock, memePypsaLeg: leg("running") });
-    await createEngine(store).runModule(runMemePypsa.module, { id: NODE });
+    await createEngine(store).runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id });
 
     // The backend refuses a duplicate live leg and, for the same reason, a second POST would be wrong: an
     // existing record means read, never resubmit.
@@ -197,7 +197,7 @@ describe("run-meme-pypsa's run", () => {
     setMemePypsaLegGateway(gateway);
 
     const store = createStore({ ...runMemePypsa.mock, memePypsaLeg: leg("running") });
-    await createEngine(store).runModule(runMemePypsa.module, { id: NODE });
+    await createEngine(store).runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id });
 
     expect(store.data.memePypsaLeg).toEqual(leg("completed"));
     expect(issuesFor(store.data)).toEqual([]);
@@ -208,7 +208,7 @@ describe("run-meme-pypsa's run", () => {
     setMemePypsaLegGateway(gateway);
 
     const store = createStore({ ...runMemePypsa.mock, memePypsaLeg: leg("running") });
-    await createEngine(store).runModule(runMemePypsa.module, { id: NODE });
+    await createEngine(store).runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id });
 
     expect(store.data.memePypsaLeg).toEqual(leg("failed", FAILURE));
     const issues = issuesFor(store.data);
@@ -222,7 +222,7 @@ describe("run-meme-pypsa's run", () => {
     setMemePypsaLegGateway(gateway);
 
     const store = createStore({ ...runMemePypsa.mock, memePypsaLeg: leg("failed", "boom") });
-    await createEngine(store).runModule(runMemePypsa.module, { id: NODE });
+    await createEngine(store).runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id });
 
     // A terminal failure is the one case that submits on top of an existing record: the backend allows a fresh
     // dispatch once a leg is terminal (`MemeRunFinished`), and re-reading the dead leg would only repeat it.
@@ -235,7 +235,7 @@ describe("run-meme-pypsa's run", () => {
     setMemePypsaLegGateway(gateway);
 
     const store = createStore({ ...runMemePypsa.mock, memePypsaLeg: leg("running") });
-    await createEngine(store).runModule(runMemePypsa.module, { id: NODE });
+    await createEngine(store).runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id });
 
     // One trace, a zero-diff transaction: the leg was already there and had not moved.
     expect(store.log).toHaveLength(1);
@@ -249,7 +249,7 @@ describe("run-meme-pypsa's run", () => {
 
     const store = createStore({ ...runMemePypsa.mock });
     const engine = createEngine(store);
-    await engine.runModule(runMemePypsa.module, { id: NODE }); // arrival: submits `pending`
+    await engine.runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id }); // arrival: submits `pending`
 
     // The leg advances as an ordinary change to the port — what a poll's commit would seal.
     store.applyTransaction([
@@ -258,7 +258,7 @@ describe("run-meme-pypsa's run", () => {
 
     // The second run rewrites `memePypsaLeg`, which the first left holding a value. A blind write would be
     // rejected as `clobber`; succeeding is the proof that run() read the port first.
-    await engine.runModule(runMemePypsa.module, { id: NODE });
+    await engine.runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id });
     expect(store.data.memePypsaLeg).toEqual(leg("completed"));
   });
 
@@ -276,7 +276,7 @@ describe("run-meme-pypsa's run", () => {
     // A merely present run is not enough: the backend derives the leg from a *completed* run's results.
     const store = createStore({ modelId: 1, memeRun: calliope("running") });
     await expect(
-      createEngine(store).runModule(runMemePypsa.module, { id: NODE }),
+      createEngine(store).runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id }),
     ).rejects.toThrow(/completed Calliope run/);
 
     expect(gateway.submitted).toEqual([]);

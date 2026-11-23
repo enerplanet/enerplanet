@@ -113,14 +113,14 @@ describe("createSaveNode", () => {
     const store = createStore(seed({ coordinates: [RING] }));
     const node = saveNodeFor(store, payloads);
 
-    await createEngine(store).runModule(node, { id: NODE_ID });
+    await createEngine(store).runModule(node, { id: NODE_ID, moduleId: node.id });
 
     expect(payloads).toHaveLength(1);
     expect(payloads[0].title).toBe("Contract fixture");
     expect(store.data.modelId).toBe(42);
     expect(store.data.saveResult).toEqual({ modelId: 42, created: true });
     expect(store.log).toHaveLength(1);
-    expect(store.log[0].nodeId).toBe(NODE_ID);
+    expect(store.log[0].node?.id).toBe(NODE_ID);
   });
 
   it("puts the model id and the result inside the artefact this save writes", async () => {
@@ -133,7 +133,7 @@ describe("createSaveNode", () => {
     const store = createStore(seed({ coordinates: [RING] }));
     const node = saveNodeFor(store, payloads, {}, sessions);
 
-    await createEngine(store).runModule(node, { id: NODE_ID });
+    await createEngine(store).runModule(node, { id: NODE_ID, moduleId: node.id });
 
     expect(sessions).toHaveLength(1);
     const artefact = sessions[0].artefact;
@@ -156,9 +156,9 @@ describe("createSaveNode", () => {
     const payloads: LegacyModelPayload[] = [];
     const sessions: Session[] = [];
     const store = createStore(seed({ coordinates: [RING] }));
-    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID, moduleId: upstream.id });
     const node = saveNodeFor(store, payloads, {}, sessions);
-    await createEngine(store).runModule(node, { id: NODE_ID });
+    await createEngine(store).runModule(node, { id: NODE_ID, moduleId: node.id });
 
     const loaded = fromArtefact(sessions[0].artefact);
     // The node is registered by the frame, not by this file's `registry` — pass it so the state can be derived.
@@ -168,7 +168,7 @@ describe("createSaveNode", () => {
     // deliberately thin, so the node's own gate reports the ports it persists as missing and it reads `stale` —
     // correct, and independent of the bug. `pending` is the state a missing log entry produces, which is what a
     // reload used to show.
-    expect(loaded.store.log.map((t) => (t as { nodeId?: string }).nodeId)).toContain(NODE_ID);
+    expect(loaded.store.log.map((t) => t.node?.id)).toContain(NODE_ID);
     expect(nodeStates(FLOW, withNode, loaded.store)[NODE_ID]).not.toBe("pending");
   });
 
@@ -181,7 +181,7 @@ describe("createSaveNode", () => {
 
     // The boundary refuses a blind overwrite, so the node has to read both ports first. A second run
     // is the case that proves it: on the first save they are absent.
-    await expect(createEngine(store).runModule(node, { id: NODE_ID })).resolves.toBeDefined();
+    await expect(createEngine(store).runModule(node, { id: NODE_ID, moduleId: node.id })).resolves.toBeDefined();
 
     // …and because a modelId is already there, this is an UPDATE of that model, not a second create.
     expect(payloads).toHaveLength(1);
@@ -194,7 +194,7 @@ describe("createSaveNode", () => {
     const store = createStore(seed({ coordinates: [] })); // nothing drawn
     const node = saveNodeFor(store, payloads);
 
-    await expect(createEngine(store).runModule(node, { id: NODE_ID })).rejects.toBeInstanceOf(SaveRefused);
+    await expect(createEngine(store).runModule(node, { id: NODE_ID, moduleId: node.id })).rejects.toBeInstanceOf(SaveRefused);
     expect(payloads).toEqual([]); // nothing was sent
     expect(store.log).toEqual([]); // and nothing was sealed
   });
@@ -207,9 +207,9 @@ describe("the status this node earns", () => {
     // and no run would take it.
     const payloads: LegacyModelPayload[] = [];
     const store = createStore(seed({ coordinates: [RING] }));
-    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID, moduleId: upstream.id });
 
-    await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID });
+    await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(payloads[0].status).toBe("draft");
   });
@@ -220,10 +220,10 @@ describe("the status this node earns", () => {
     // guards above all had the save last, which is why none of them caught it.
     const payloads: LegacyModelPayload[] = [];
     const store = createStore(seed({ coordinates: [RING] }));
-    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID, moduleId: upstream.id });
 
     const flow: Flow = [...FLOW, { id: "run-calliope", moduleId: "run-calliope" }];
-    await createEngine(store).runModule(saveNodeFor(store, payloads, {}, [], flow), { id: NODE_ID });
+    await createEngine(store).runModule(saveNodeFor(store, payloads, {}, [], flow), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(payloads[0].status).toBe("draft");
   });
@@ -231,9 +231,9 @@ describe("the status this node earns", () => {
   it("saves a finished flow again as `modified`, not a second `draft`", async () => {
     const payloads: LegacyModelPayload[] = [];
     const store = createStore(seed({ coordinates: [RING], modelId: 12 }));
-    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID, moduleId: upstream.id });
 
-    await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID });
+    await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(payloads[0].status).toBe("modified");
   });
@@ -245,9 +245,9 @@ describe("the session's identity", () => {
     // dashboard, which lists models *within* a workspace. The live answer is the one that matters.
     const payloads: LegacyModelPayload[] = [];
     const store = createStore(seed({ coordinates: [RING], workspaceId: 1 }));
-    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID, moduleId: upstream.id });
 
-    await createEngine(store).runModule(saveNodeFor(store, payloads, { workspaceId: 9 }), { id: NODE_ID });
+    await createEngine(store).runModule(saveNodeFor(store, payloads, { workspaceId: 9 }), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(payloads[0].workspace_id).toBe(9);
   });
@@ -255,9 +255,9 @@ describe("the session's identity", () => {
   it("falls back to the store when the host has nothing to say", async () => {
     const payloads: LegacyModelPayload[] = [];
     const store = createStore(seed({ coordinates: [RING], workspaceId: 1 }));
-    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID });
+    await createEngine(store).runModule(upstream, { id: UPSTREAM_ID, moduleId: upstream.id });
 
-    await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID });
+    await createEngine(store).runModule(saveNodeFor(store, payloads), { id: NODE_ID, moduleId: NODE_ID });
 
     expect(payloads[0].workspace_id).toBe(1);
   });
@@ -313,7 +313,7 @@ describe("the completeness gate", () => {
     const store = createStore(seed({ coordinates: [RING] }));
     const node = saveNodeFor(store, payloads);
 
-    await createEngine(store).runModule(node, { id: NODE_ID });
+    await createEngine(store).runModule(node, { id: NODE_ID, moduleId: node.id });
 
     expect(missingPorts(store.data).length).toBeGreaterThan(0);
     expect(payloads).toHaveLength(1);
@@ -348,7 +348,7 @@ describe("the configuration the save persists", () => {
     const withNode = { ...modules };
 
     // Save once: the node records the model id and the result.
-    await createEngine(store).runModule(node, { id: NODE_ID });
+    await createEngine(store).runModule(node, { id: NODE_ID, moduleId: node.id });
     expect(nodeStates(FLOW, withNode, store)[NODE_ID]).toBe("done");
     expect(store.data.modelId).toBe(42);
 

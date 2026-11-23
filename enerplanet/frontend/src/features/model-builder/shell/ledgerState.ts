@@ -1,18 +1,16 @@
 /**
  * The ledger bar's state.
  *
- * The ledger is `store.log` — append-only, and never rewritten even by undo, which is what makes it a ledger
- * rather than a scratch buffer — read together with the cursor, the one thing that says how much of it is
- * applied. Everything here is derived from those two, so there is **no discard stack structure anywhere**:
- * the discard stack *is* the tail beyond the cursor. A second source of truth would drift from the
- * `discarded` blob a saved session restores, which is exactly the failure the derived-position design exists
- * to avoid.
+ * The ledger is `store.log` — **append-only**, and never rewritten even by undo, which is a rollback commit
+ * like any other rather than a cursor move (§4.1). With v2 there is no cursor and no discard stack: every
+ * entry in the log is applied, and a rollback is simply the newest entry that resolves the model backwards.
+ * So the ledger is a pure reading of the log — no second source of truth to drift from.
  *
- * This module is deliberately presentation-free: rows newest first, signed ports, and one flag saying whether
- * an entry is still applied. The bar decides how that looks.
+ * This module is deliberately presentation-free: rows newest first, signed ports, and nothing else. The bar
+ * decides how that looks.
  */
 
-import type { DiffOp, PortKey, Transaction, TransactionKind } from "@model-builder/core";
+import type { DiffOp, PortKey, Transaction } from "@model-builder/core";
 
 /** One changed port on a ledger line. */
 export interface LedgerChange {
@@ -23,49 +21,35 @@ export interface LedgerChange {
 
 export interface LedgerRow {
   revision: number;
-  /** `"action"` or `"jump"` — a transaction that does not say reads as an action. */
-  kind: TransactionKind;
+  /** The placement the commit belongs to, absent on a rollback (which resolves the model, not a placement). */
   nodeId?: string;
   auto: boolean;
   /** The ports this transaction touched: its primary writes, plus what it pruned. */
   changes: readonly LedgerChange[];
-  /** Beyond the cursor: it happened, but it is not applied. This is the discard stack, item by item. */
-  discarded: boolean;
 }
 
 export interface LedgerSummary {
-  /** The most recent transaction that is *applied* — not the newest in the log. */
+  /** The newest transaction in the log — every entry is applied now. */
   last?: LedgerRow;
-  /** How many entries sit beyond the cursor. */
-  discarded: number;
 }
 
-/** Every entry in the log, newest first, each marked with whether it is still applied. */
-export function ledgerRows(log: readonly Transaction[], cursor: number): LedgerRow[] {
-  return log.map((transaction, index) => rowOf(transaction, index >= cursor)).reverse();
+/** Every entry in the log, newest first. */
+export function ledgerRows(log: readonly Transaction[]): LedgerRow[] {
+  return log.map(rowOf).reverse();
 }
 
-/** The collapsed bar's line: the last applied transaction, and how deep the discard tail is. */
-export function ledgerSummary(log: readonly Transaction[], cursor: number): LedgerSummary {
-  const rows = ledgerRows(log, cursor);
-  const last = rows.find((entry) => !entry.discarded);
-
-  return {
-    ...(last === undefined ? {} : { last }),
-    discarded: rows.filter((entry) => entry.discarded).length,
-  };
+/** The collapsed bar's line: the newest transaction. */
+export function ledgerSummary(log: readonly Transaction[]): LedgerSummary {
+  const last = ledgerRows(log)[0];
+  return last === undefined ? {} : { last };
 }
 
-function rowOf(transaction: Transaction, discarded: boolean): LedgerRow {
+function rowOf(transaction: Transaction): LedgerRow {
   return {
     revision: transaction.revision,
-    kind: transaction.kind ?? "action",
-    ...(transaction.nodeId === undefined ? {} : { nodeId: transaction.nodeId }),
+    ...(transaction.node === undefined ? {} : { nodeId: transaction.node.id }),
     auto: transaction.auto === true,
-    // Primary first, then what it pruned: both changed a port, and a jump carries its discards in `cascade`
-    // because its `primary` is empty by design.
     changes: [...transaction.primary, ...transaction.cascade].map(changeOf),
-    discarded,
   };
 }
 

@@ -32,6 +32,7 @@
  */
 
 import { toArtefact, type WorkflowRef } from "../core/artefact";
+import type { Flow } from "../core/flow";
 import type { Store } from "../core/store";
 import type { ModelGateway } from "../save/gateway";
 
@@ -84,6 +85,8 @@ export interface VariantSessionRequest {
   /** The live session, read *after* the switch has sealed. */
   store: Store;
   workflow: WorkflowRef;
+  /** The session's placed flow — what the artefact carries (`core/artefact.ts`). */
+  flow: Flow;
   /** The copy's model id — the row's key, and the model the artefact names. */
   variantModelId: number;
 }
@@ -99,7 +102,7 @@ export interface VariantSessionRequest {
  *         is nothing local to write.
  */
 export async function persistVariantSession(request: VariantSessionRequest): Promise<void> {
-  const { gateway, store, workflow, variantModelId } = request;
-  const artefact = toArtefact({ store, workflow, modelId: variantModelId });
+  const { gateway, store, workflow, flow, variantModelId } = request;
+  const artefact = toArtefact({ store, workflow, flow, modelId: variantModelId });
   await gateway.saveSession(variantModelId, artefact, workflow);
 }

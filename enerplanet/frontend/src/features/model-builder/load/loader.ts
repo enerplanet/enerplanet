@@ -1,13 +1,12 @@
 /**
  * The Loader — opening a session from the backend.
  *
- * Loading is the mirror of the save: the artefact comes back from its own call, `fromArtefact`
- * rebuilds the session **without replaying** (the stored projection is adopted and its fingerprint
- * checked; replay is only the recovery path), and the flow is then **reattached by reference** — the
- * caller looks the flow up from `workflowId`/`workflowVersion` rather than the artefact carrying a
- * copy of it. Node states and the position re-derive from `(projection, log, cursor)` exactly as they
- * do live, which is why this returns them rather than leaving them to the caller
- * to remember.
+ * Loading is the mirror of the save: the artefact comes back from its own call, `fromArtefact` rebuilds the
+ * session **without replaying** (the stored projection is adopted and its fingerprint checked; replay is only
+ * the recovery path), and it returns the **placed flow** the artefact carried (§3.1) — the flow is a stored
+ * fact now, not reconstructed from the plan. Node states and the position re-derive from
+ * `(flow, projection, log)` exactly as they do live, which is why this returns them rather than leaving them to
+ * the caller to remember.
  *
  * A model with **no session** is a normal answer, not an error: every legacy model is in that state,
  * as is a builder model that has never been saved. What to do about that is deliberately left to the
@@ -23,6 +22,8 @@ import type { ModelGateway } from "../save/gateway";
 
 export interface LoadedSession {
   store: Store;
+  /** The placed flow the artefact carried — the store itself does not hold it. */
+  flow: Flow;
   /** Set when the stored projection disagreed with its fingerprint and the log was replayed. */
   divergence?: Divergence;
   /** Where the session sits in its flow, re-derived from the log. */
@@ -38,8 +39,7 @@ export type LoadOutcome =
 export interface LoadRequest {
   gateway: ModelGateway;
   modelId: number;
-  /** The flow, reattached by reference after the load — never copied from the artefact. */
-  flow: Flow;
+  /** The registry the states and position are re-derived with; the flow itself comes from the artefact. */
   registry: ModuleRegistry;
 }
 
@@ -47,15 +47,16 @@ export async function loadSession(request: LoadRequest): Promise<LoadOutcome> {
   const artefact = await request.gateway.loadSession(request.modelId);
   if (artefact === undefined) return { kind: "none" };
 
-  const { store, divergence } = fromArtefact(artefact);
+  const { store, flow, divergence } = fromArtefact(artefact);
 
   return {
     kind: "session",
     session: {
       store,
+      flow,
       ...(divergence === undefined ? {} : { divergence }),
-      position: position(request.flow, request.registry, store),
-      states: nodeStates(request.flow, request.registry, store),
+      position: position(flow, request.registry, store),
+      states: nodeStates(flow, request.registry, store),
     },
   };
 }

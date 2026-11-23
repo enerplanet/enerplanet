@@ -4,11 +4,10 @@
  * The mapping is deliberately thin: the bar calls operations the core already has, so what is worth testing
  * here is the two places the bar must *not* be thin —
  *
- * 1. **movement is a pure position move, not an undo.** A prior click seals a `jump` with an **empty
- *    cascade**: it rests the session on the node it lands on and **discards nothing**, so no redo tail is ever
- *    produced. The cases below pin that a move prunes not a single port *and marks nothing stale* —
- *    invalidation is by *influence* when a node runs, never by how far the bar moved — and that it refuses
- *    to move *forward*, because forward is `Continue` running the node.
+ * 1. **movement is a view, not a commit** (§4). There is no `jump`: "step back to look at something" sets the
+ *    viewed placement and writes **nothing**, so no redo tail is ever produced. The cases below pin that a
+ *    view prunes not a single port *and marks nothing stale* — invalidation is by *influence* when a node runs,
+ *    never by where the session looked — and that the reachable set stops at the frontier.
  * 2. **the bar's save is always `incomplete`.** Finishing a model — writing the real `model.json` and
  *    promoting to `draft` — is the save *node*'s job, behind its completeness gate. So the bar's save pins the
  *    status rather than letting completeness derive it, which is exactly the case below that a complete flow
@@ -20,10 +19,11 @@ import { defineModule, type PortKey } from "@model-builder/core";
 import { position, nodeStates } from "../core/position";
 import { createStore, type Store } from "../core/store";
 import { createInvalidator } from "../core/invalidate";
-import { JumpNotBackwards } from "../core/errors";
 import { portPath, type DiffOp } from "../core/diff";
 import type { Flow, ModuleRegistry } from "../core/flow";
-import { moveToNode, saveSession } from "./actions";
+import { barState } from "./barState";
+import { stepsState } from "./stepsState";
+import { saveSession } from "./actions";
 import { toWorkflow, type Workflow } from "./workflow";
 import example from "./fixtures";
 import type { BuilderModule } from "./contract";
@@ -73,33 +73,29 @@ function add(port: PortKey, next: unknown): DiffOp {
 
 /** Seal one transaction per node, so the flow reads complete without running a module. */
 function completeFlow(store: Store): void {
-  store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: { id: "first" } });
-  store.applyTransaction([replace("modelName", "One", "Two")], [], { node: { id: "second" } });
+  store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], {
+    node: { id: "first", moduleId: example.module.id },
+  });
+  store.applyTransaction([replace("modelName", "One", "Two")], [], {
+    node: { id: "second", moduleId: example.module.id },
+  });
 }
 
-/** The last entry in the log — what a move just sealed. */
-function lastSealed(store: Store) {
-  return store.log[store.log.length - 1];
-}
-
-describe("moving back a node at a time", () => {
-  it("a prior click jumps to the target — one transaction, empty cascade, nothing discarded", () => {
+describe("looking back at an earlier node — a view, not a commit", () => {
+  it("a prior look selects the target and seals nothing", () => {
     const workflow = workflowOf();
     const store = createStore(workflow.initial);
     completeFlow(store);
     const before = store.log.length;
 
-    const jump = moveToNode(workflow.flow, workflow.registry, store, "first");
+    const bar = barState(workflow.flow, workflow.registry, store, "first");
 
-    // The assertion that matters is the *move*: the session rests on the target, and one transaction recorded
-    // it — a `jump` whose cascade is empty. Nothing was discarded, so no redo tail exists for the bar to walk.
-    // The frontier is untouched by the move (both nodes stay done), so `index` is `flow.length`: only the
-    // resting place follows the jump.
-    expect(position(workflow.flow, workflow.registry, store)).toMatchObject({ index: 2, restingIndex: 0 });
-    expect(store.log.length).toBe(before + 1);
-    expect(jump.kind).toBe("jump");
-    expect(jump.cascade).toEqual([]);
-    expect(jump.jump).toEqual({ from: "second", to: "first" });
+    // The assertion that matters is that a *view* writes nothing: the log is unchanged, the frontier is past
+    // the whole flow (both nodes stay done), and only where the session looks follows the selection. There is
+    // no jump transaction and therefore no redo tail for the bar to walk.
+    expect(position(workflow.flow, workflow.registry, store)).toMatchObject({ index: 2, complete: true });
+    expect(store.log.length).toBe(before);
+    expect(bar.current).toEqual({ id: "first", label: "First", state: "done" });
     expect(store.canRedo).toBe(false);
   });
 
@@ -108,11 +104,11 @@ describe("moving back a node at a time", () => {
     const store = createStore(workflow.initial);
     completeFlow(store);
 
-    moveToNode(workflow.flow, workflow.registry, store, "first");
+    barState(workflow.flow, workflow.registry, store, "first");
 
-    // The move discards nothing *and* marks nothing: both nodes stay done. This is the whole point of a position
-    // move over an undo — nothing the tail produced is lost, and nothing the target produced is called into
-    // question merely because the session looked at it.
+    // A view discards nothing *and* marks nothing: both nodes stay done. This is the whole point of a view over
+    // an undo — nothing the tail produced is lost, and nothing the target produced is called into question
+    // merely because the session looked at it.
     expect(nodeStates(workflow.flow, workflow.registry, store)).toEqual({
       first: "done",
       second: "done",
@@ -120,45 +116,47 @@ describe("moving back a node at a time", () => {
     expect(store.data.modelName).toBe("Two");
   });
 
-  it("a complete flow sits *past* its last node, so returning to it is a real move back", () => {
+  it("a complete flow sits *past* its last node, so looking at it is a real selection back", () => {
     const workflow = workflowOf();
     const store = createStore(workflow.initial);
     completeFlow(store);
 
     // Worth pinning because it is the opposite of what "the session is at the last node" suggests: the position
-    // of a complete flow is `flow.length`, so the last node is genuinely behind it and one move brings the
-    // session onto that node. `moveToNode` landing there is correct, not a forward step.
-    moveToNode(workflow.flow, workflow.registry, store, "second");
-
-    expect(position(workflow.flow, workflow.registry, store)).toMatchObject({ index: 2, restingIndex: 1 });
-    expect(store.canRedo).toBe(false);
+    // of a complete flow is `flow.length`, so the last node is genuinely behind the frontier and reachable.
+    expect(position(workflow.flow, workflow.registry, store)).toMatchObject({ index: 2, complete: true });
+    const steps = stepsState(workflow.flow, workflow.registry, store);
+    expect(steps.map((step) => step.movable)).toEqual([true, true]);
   });
 
-  it("never moves forward: a target ahead of the session is refused, writing nothing", () => {
+  it("the reachable set stops at the frontier — a step past it is not a control", () => {
     const workflow = workflowOf();
     const store = createStore(workflow.initial);
 
-    // Going forward is running a node (`Continue`), never declaring the session there, so a jump refuses the
-    // target before anything is sealed. The bar only ever offers targets that are behind, so this is a guard.
-    expect(() => moveToNode(workflow.flow, workflow.registry, store, "second")).toThrow(JumpNotBackwards);
-    expect(store.log).toHaveLength(0);
-  });
+    // Nothing has run: the frontier is the first node, so the first is where the session looks (not a control)
+    // and the second is past the frontier (not reachable) — there is nowhere to move.
+    expect(stepsState(workflow.flow, workflow.registry, store).map((step) => step.movable)).toEqual([
+      false,
+      false,
+    ]);
 
-  it("refuses a node that is not in this flow", () => {
-    const workflow = workflowOf();
-    const store = createStore(workflow.initial);
-
-    expect(() => moveToNode(workflow.flow, workflow.registry, store, "nope")).toThrow(/no node "nope"/);
+    // The first runs: the session looks at the second (the frontier), and the first becomes reachable.
+    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], {
+      node: { id: "first", moduleId: example.module.id },
+    });
+    expect(stepsState(workflow.flow, workflow.registry, store).map((step) => step.movable)).toEqual([
+      true,
+      false,
+    ]);
   });
 });
 
 /**
  * The worked case, at the shell's boundary: `A → B → C → D` with B requiring A and D
- * requiring B, and C writing a port nothing reads. A move discards nothing; a *change* invalidates by
+ * requiring B, and C writing a port nothing reads. A view writes nothing; a *change* invalidates by
  * influence. So changing A leaves B and D stale while **C is untouched** — the closure never reaches C — and
  * that must survive the movement change, which is the reason these cases exist.
  */
-describe("a move discards nothing; a change invalidates by influence", () => {
+describe("a view writes nothing; a change invalidates by influence", () => {
   /** A drawn ring, in the store's coordinate type — and two more, to stand in for A changing its value. */
   const AREA_0: [number, number][][] = [[[9.7, 50.5], [9.71, 50.5], [9.71, 50.51]]];
   const AREA_1: [number, number][][] = [[[9.8, 50.6], [9.81, 50.6], [9.81, 50.61]]];
@@ -217,19 +215,25 @@ describe("a move discards nothing; a change invalidates by influence", () => {
 
   /** Every node has run: each wrote its own port, so the flow reads complete. */
   function runChain(store: Store): void {
-    store.applyTransaction([replace("coordinates", AREA_0, AREA_1)], [], { node: { id: "a" } });
-    store.applyTransaction([add("buildings", { type: "FeatureCollection", features: [] })], [], {
-      node: { id: "b" },
+    store.applyTransaction([replace("coordinates", AREA_0, AREA_1)], [], {
+      node: { id: "a", moduleId: "src" },
     });
-    store.applyTransaction([add("advancedParams", { note: "g1" })], [], { node: { id: "c" } });
-    store.applyTransaction([add("technologies", { electricity: [] })], [], { node: { id: "d" } });
+    store.applyTransaction([add("buildings", { type: "FeatureCollection", features: [] })], [], {
+      node: { id: "b", moduleId: "beta" },
+    });
+    store.applyTransaction([add("advancedParams", { note: "g1" })], [], {
+      node: { id: "c", moduleId: "clean" },
+    });
+    store.applyTransaction([add("technologies", { electricity: [] })], [], {
+      node: { id: "d", moduleId: "delta" },
+    });
   }
 
   // ── the acceptance case: A → B → C → D → E → F ──────────────────────────────
   //
-  // A change at **B** invalidates D and F by influence, so movement must be bounded by the first node that is
-  // not done — **D** — and not reach E or F, however far down the flow they sit; once D is done again, F is
-  // reachable. A move to B first, being a pure position move, marks nothing stale.
+  // A change at **B** invalidates D and F by influence, so the reachable set is bounded by the first node that
+  // is not done — **D** — and does not reach E or F, however far down the flow they sit; once D is done again,
+  // F is reachable. Looking at B first, being a view, marks nothing stale.
 
   const SIX: readonly BuilderModule[] = [
     influenceModule("src", "coordinates"), // A — writes coordinates
@@ -270,22 +274,23 @@ describe("a move discards nothing; a change invalidates by influence", () => {
 
   /** Every node has run: each wrote its own port, so the flow reads complete. */
   function runSix(store: Store): void {
-    store.applyTransaction([replace("coordinates", AREA_0, AREA_1)], [], { node: { id: "a" } });
-    store.applyTransaction([add("buildings", BUILDINGS_1)], [], { node: { id: "b" } });
-    store.applyTransaction([add("advancedParams", { note: "g1" })], [], { node: { id: "c" } });
-    store.applyTransaction([add("technologies", { electricity: [] })], [], { node: { id: "d" } });
-    store.applyTransaction([add("transformers", BUILDINGS_1)], [], { node: { id: "e" } });
-    store.applyTransaction([add("saveResult", { modelId: 1, created: true })], [], { node: { id: "f" } });
+    store.applyTransaction([replace("coordinates", AREA_0, AREA_1)], [], { node: { id: "a", moduleId: "src" } });
+    store.applyTransaction([add("buildings", BUILDINGS_1)], [], { node: { id: "b", moduleId: "beta" } });
+    store.applyTransaction([add("advancedParams", { note: "g1" })], [], { node: { id: "c", moduleId: "clean" } });
+    store.applyTransaction([add("technologies", { electricity: [] })], [], { node: { id: "d", moduleId: "delta" } });
+    store.applyTransaction([add("transformers", BUILDINGS_1)], [], { node: { id: "e", moduleId: "extra" } });
+    store.applyTransaction([add("saveResult", { modelId: 1, created: true })], [], {
+      node: { id: "f", moduleId: "final" },
+    });
   }
 
-  it("the acceptance case: at B, a change bounds movement to D — not E or F — until D is done again", () => {
+  it("the acceptance case: at B, a change bounds the reachable set to D — not E or F — until D is done again", () => {
     const { store, flow, registry } = sixSession();
     runSix(store);
 
-    // Move to B: a pure position move. It marks nothing stale — every node stays done — and the session rests on
-    // B while the frontier stays past the whole flow (a move cannot move the frontier).
-    moveToNode(flow, registry, store, "b");
-    expect(position(flow, registry, store)).toMatchObject({ index: 6, restingIndex: 1 });
+    // Look at B: a view (§4). It writes nothing — every node stays done — and the frontier is past the whole
+    // flow, so looking at B cannot move it.
+    expect(position(flow, registry, store)).toMatchObject({ index: 6, complete: true });
     expect(nodeStates(flow, registry, store)).toEqual({
       a: "done",
       b: "done",
@@ -298,7 +303,7 @@ describe("a move discards nothing; a change invalidates by influence", () => {
     // B then commits a change: `buildings` affects `technologies` (D) and, through it, `saveResult` (F) — never
     // `advancedParams` (C) or `transformers` (E). So D and F go stale, and C and E are untouched.
     store.applyTransaction([replace("buildings", BUILDINGS_1, BUILDINGS_2)], undefined, {
-      node: { id: "b" },
+      node: { id: "b", moduleId: "beta" },
     });
     expect(nodeStates(flow, registry, store)).toEqual({
       a: "done",
@@ -309,28 +314,35 @@ describe("a move discards nothing; a change invalidates by influence", () => {
       f: "stale",
     });
 
-    // The frontier is now D — the first node that is not done — so movement reaches D and nothing past it: E and
-    // F are both refused, however far down the flow they sit.
+    // The frontier is now D — the first node that is not done — so the reachable set from B stops there: E and
+    // F are not controls, however far down the flow they sit.
     expect(position(flow, registry, store).index).toBe(3);
-    expect(() => moveToNode(flow, registry, store, "d")).not.toThrow();
-    expect(() => moveToNode(flow, registry, store, "e")).toThrow(JumpNotBackwards);
-    expect(() => moveToNode(flow, registry, store, "f")).toThrow(JumpNotBackwards);
+    expect(stepsState(flow, registry, store, "b").map((step) => step.movable)).toEqual([
+      true, // a
+      false, // b (where the session looks)
+      true, // c
+      true, // d (the frontier, inclusive)
+      false, // e
+      false, // f
+    ]);
 
     // D is marked done again — it re-derives its output, resolving F's requirement — and F becomes reachable.
-    store.applyTransaction([add("technologies", { electricity: [] })], [], { node: { id: "d" } });
+    store.applyTransaction([add("technologies", { electricity: [] })], [], {
+      node: { id: "d", moduleId: "delta" },
+    });
     expect(position(flow, registry, store).index).toBe(5);
-    expect(() => moveToNode(flow, registry, store, "f")).not.toThrow();
+    expect(stepsState(flow, registry, store, "b")[5].movable).toBe(true); // f
   });
 
-  it("a move prunes nothing and marks nothing stale — every node keeps its data and its done state", () => {
+  it("a view prunes nothing and marks nothing stale — every node keeps its data and its done state", () => {
     const { store, flow, registry } = chainSession();
     runChain(store);
+    const before = store.log.length;
 
-    moveToNode(flow, registry, store, "a");
-
-    // The move seals one empty-cascade jump: all four ports are still there, and every node is still done —
-    // nothing a move does makes a node stale.
-    expect(lastSealed(store).cascade).toEqual([]);
+    // Look at A: a view writes nothing, so all four ports are still there, every node is still done, and the
+    // log did not grow — nothing a view does makes a node stale.
+    barState(flow, registry, store, "a");
+    expect(store.log.length).toBe(before);
     expect(nodeStates(flow, registry, store)).toEqual({
       a: "done",
       b: "done",
@@ -346,10 +358,12 @@ describe("a move discards nothing; a change invalidates by influence", () => {
     const { store, flow, registry } = chainSession();
     runChain(store);
 
-    // A change, not a move: the cascade is *omitted*, so it derives from A's `affect` closure — coordinates
+    // A change, not a view: the cascade is *omitted*, so it derives from A's `affect` closure — coordinates
     // reaches buildings (B's edge) and technologies (D's edge), but never advancedParams, because nothing
     // declares an edge to it.
-    store.applyTransaction([replace("coordinates", AREA_1, AREA_2)], undefined, { node: { id: "a" } });
+    store.applyTransaction([replace("coordinates", AREA_1, AREA_2)], undefined, {
+      node: { id: "a", moduleId: "src" },
+    });
 
     expect(nodeStates(flow, registry, store)).toEqual({
       a: "done",
