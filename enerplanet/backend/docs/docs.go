@@ -3114,7 +3114,7 @@ const docTemplate = `{
             "in": "cookie"
         },
         "SpatialHubBearer": {
-            "description": "Bearer \u003cRENvolveIT access token\u003e issued to the toolbox client with the EnerPlanET audience. Read-only; acts as the EnerPlanET account linked to the RENvolveIT user.",
+            "description": "Bearer \u003cRENvolveIT access token\u003e issued to the toolbox client. Read-only; acts as the EnerPlanET account linked to the RENvolveIT user.",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

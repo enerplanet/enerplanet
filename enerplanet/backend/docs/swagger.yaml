@@ -2267,9 +2267,8 @@ securityDefinitions:
     name: session_id
     type: apiKey
   SpatialHubBearer:
-    description: Bearer <RENvolveIT access token> issued to the toolbox client with
-      the EnerPlanET audience. Read-only; acts as the EnerPlanET account linked to
-      the RENvolveIT user.
+    description: Bearer <RENvolveIT access token> issued to the toolbox client. Read-only;
+      acts as the EnerPlanET account linked to the RENvolveIT user.
     in: header
     name: Authorization
     type: apiKey

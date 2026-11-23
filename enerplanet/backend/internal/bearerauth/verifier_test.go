@@ -41,6 +41,46 @@ func TestProfileClaimsNotRequired(t *testing.T) {
 	require.NoError(t, err, "the account comes from the identity provider link, not from token claims")
 }
 
+func TestAudienceOptional(t *testing.T) {
+	f := testutil.NewOIDCFixture(t)
+	opts := testOptions(f)
+	opts.Audience = ""
+	v, err := New(opts)
+	require.NoError(t, err)
+	for name, aud := range map[string]any{"other audience": []string{"account"}, "no audience": nil} {
+		t.Run(name, func(t *testing.T) {
+			claims := f.Claims("partner-user")
+			if aud == nil {
+				delete(claims, "aud")
+			} else {
+				claims["aud"] = aud
+			}
+			_, err := v.Verify(context.Background(), f.Sign(t, claims))
+			require.NoError(t, err)
+		})
+	}
+	claims := f.Claims("partner-user")
+	claims["azp"] = "other-client"
+	_, err = v.Verify(context.Background(), f.Sign(t, claims))
+	require.ErrorIs(t, err, ErrClaims, "the client check stays without an audience")
+}
+
+func TestRejectedClaimsReportClientAndLifetime(t *testing.T) {
+	f := testutil.NewOIDCFixture(t)
+	v, err := New(testOptions(f))
+	require.NoError(t, err)
+	claims := f.Claims("partner-user")
+	claims["azp"] = "real-toolbox"
+	claims["exp"] = time.Now().Add(30 * time.Minute).Unix()
+	_, err = v.Verify(context.Background(), f.Sign(t, claims))
+	var rejected *RejectedClaims
+	require.ErrorAs(t, err, &rejected)
+	require.ErrorIs(t, err, ErrClaims)
+	require.Equal(t, "real-toolbox", rejected.ClientID)
+	require.Equal(t, []string{"enerplanet", "account"}, rejected.Audience)
+	require.InDelta(t, (30 * time.Minute).Seconds(), rejected.Lifetime.Seconds(), 2)
+}
+
 func TestRejectionCategories(t *testing.T) {
 	f := testutil.NewOIDCFixture(t)
 	v, err := New(testOptions(f))
@@ -196,6 +236,7 @@ func TestOptionsFailClosed(t *testing.T) {
 		{Issuer: "http://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute},
 		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit"},
 		{Issuer: "https://issuer/realms/partner", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute},
+		{Issuer: "https://issuer/realms/partner", IdentityProvider: "renvolveit", CacheTTL: time.Minute},
 		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, JWKSURL: "http://keys/certs"},
 		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, JWKSURL: "https://attacker.example/certs"},
 		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, JWKSURL: "https://issuer:8443/certs"},

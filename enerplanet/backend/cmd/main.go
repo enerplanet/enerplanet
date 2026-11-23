@@ -138,7 +138,7 @@ const (
 // @securityDefinitions.apikey SpatialHubBearer
 // @in header
 // @name Authorization
-// @description Bearer <RENvolveIT access token> issued to the toolbox client with the EnerPlanET audience. Read-only; acts as the EnerPlanET account linked to the RENvolveIT user.
+// @description Bearer <RENvolveIT access token> issued to the toolbox client. Read-only; acts as the EnerPlanET account linked to the RENvolveIT user.
 
 func main() {
 	// Set GIN to release mode to disable debug messages

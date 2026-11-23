@@ -293,15 +293,15 @@ of a `whf_` token. These tokens:
 | `403 Token does not permit this operation` | Not a `GET`, or the route is not open to toolbox tokens | No |
 | `503 Account lookup unavailable` | The account lookup failed | Yes |
 
-**For operators:** the RENvolveIT access token must carry the audience set in
-`KEYCLOAK_API_AUDIENCE`, and its lifespan must not exceed
+**For operators:** the RENvolveIT access token lifespan must not exceed
 `KEYCLOAK_API_MAX_TOKEN_LIFETIME_SECONDS` (900 seconds). Longer tokens are
-rejected.
+rejected. A correctly signed token that fails a claim check is logged with its
+`azp`, `aud` and lifetime, never the token itself.
 
 | Variable | Value |
 | --- | --- |
 | `KEYCLOAK_API_ISSUER` | Issuer URL of the RENvolveIT realm |
-| `KEYCLOAK_API_AUDIENCE` | Audience RENvolveIT adds to toolbox tokens |
+| `KEYCLOAK_API_AUDIENCE` | Optional. Required audience; empty skips the audience check |
 | `KEYCLOAK_API_CLIENT_ID` | RENvolveIT toolbox client id (the `azp` claim) |
 | `KEYCLOAK_API_IDP_ALIAS` | Alias of the RENvolveIT identity provider in the `spatialhub` realm |
 

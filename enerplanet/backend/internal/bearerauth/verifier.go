@@ -33,7 +33,8 @@ var (
 )
 
 type Options struct {
-	Issuer   string
+	Issuer string
+	// Optional; empty skips the audience check.
 	Audience string
 	ClientID string
 	// Alias of the partner identity provider in the local realm, used to find
@@ -51,8 +52,8 @@ func (o Options) Validate() error {
 	if o.Issuer == "" && o.Audience == "" && o.ClientID == "" && o.IdentityProvider == "" && o.JWKSURL == "" {
 		return nil
 	}
-	if o.Issuer == "" || o.Audience == "" || o.ClientID == "" || o.IdentityProvider == "" {
-		return errors.New("bearer authentication requires issuer, API audience, toolbox client ID and identity provider alias")
+	if o.Issuer == "" || o.ClientID == "" || o.IdentityProvider == "" {
+		return errors.New("bearer authentication requires issuer, toolbox client ID and identity provider alias")
 	}
 	if o.CacheTTL <= 0 {
 		return errors.New("bearer JWKS cache TTL must be positive")
@@ -90,6 +91,19 @@ type Identity struct {
 	TokenID string
 }
 
+// RejectedClaims reports the claims of a correctly signed token that failed a
+// claim or lifetime check, so the partner's client id and token lifespan can
+// be read from the log.
+type RejectedClaims struct {
+	Reason   error
+	ClientID string
+	Audience []string
+	Lifetime time.Duration
+}
+
+func (r *RejectedClaims) Error() string { return r.Reason.Error() }
+func (r *RejectedClaims) Unwrap() error { return r.Reason }
+
 // Account is the local user linked to a partner Identity.
 type Account struct {
 	ID          string
@@ -109,7 +123,7 @@ func New(opts Options) (*Verifier, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, err
 	}
-	if opts.Audience == "" {
+	if opts.Issuer == "" {
 		return nil, nil
 	}
 	if opts.MaxTokenLifetime == 0 {
@@ -122,7 +136,7 @@ func New(opts Options) (*Verifier, error) {
 	}
 	keys := &expiringKeySet{client: client, url: opts.keysURL(), ttl: opts.CacheTTL}
 	return &Verifier{opts: opts, keys: keys, verifier: oidc.NewVerifier(opts.Issuer, keys, &oidc.Config{
-		ClientID: opts.Audience, SupportedSigningAlgs: []string{oidc.RS256},
+		ClientID: opts.Audience, SkipClientIDCheck: opts.Audience == "", SupportedSigningAlgs: []string{oidc.RS256},
 	})}, nil
 }
 
@@ -150,16 +164,20 @@ func (v *Verifier) Verify(ctx context.Context, raw string) (*Identity, error) {
 	if err := token.Claims(&claims); err != nil {
 		return nil, ErrClaims
 	}
+	rejected := func(reason error) error {
+		return &RejectedClaims{Reason: reason, ClientID: claims.ClientID, Audience: token.Audience,
+			Lifetime: token.Expiry.Sub(token.IssuedAt)}
+	}
 	now := time.Now()
 	if token.Issuer != v.opts.Issuer || strings.TrimSpace(token.Subject) == "" ||
 		claims.Type != "Bearer" || claims.ClientID != v.opts.ClientID ||
 		!now.Before(token.Expiry) || token.IssuedAt.After(now.Add(30*time.Second)) ||
 		time.Unix(claims.NotBefore, 0).After(now.Add(30*time.Second)) {
-		return nil, ErrClaims
+		return nil, rejected(ErrClaims)
 	}
 	// Bound token lifetime.
 	if token.IssuedAt.IsZero() || token.Expiry.Sub(token.IssuedAt) > v.opts.MaxTokenLifetime {
-		return nil, ErrLifetime
+		return nil, rejected(ErrLifetime)
 	}
 	return &Identity{Issuer: token.Issuer, Subject: token.Subject, TokenID: claims.TokenID}, nil
 }

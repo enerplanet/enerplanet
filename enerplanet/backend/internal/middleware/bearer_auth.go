@@ -66,7 +66,7 @@ func BearerAuth(verifier BearerVerifier, accounts PartnerAccountResolver) gin.Ha
 		}
 		identity, err := verifier.Verify(c.Request.Context(), fields[1])
 		if err != nil || identity == nil {
-			rejectBearer(c, rejectReason(err))
+			rejectVerification(c, err)
 			return
 		}
 		if c.Request.Method != http.MethodGet || !toolboxReadRoute(c.FullPath()) {
@@ -139,6 +139,17 @@ func bearerLog(c *gin.Context) *logrus.Entry {
 		"method": c.Request.Method,
 		"path":   c.FullPath(),
 	})
+}
+
+// rejectVerification logs the claims of a signed token that failed a claim
+// check, never the token itself, then rejects the request.
+func rejectVerification(c *gin.Context, err error) {
+	var claims *bearerauth.RejectedClaims
+	if errors.As(err, &claims) {
+		bearerLog(c).WithFields(map[string]any{"azp": claims.ClientID, "aud": claims.Audience,
+			"lifetime_seconds": int(claims.Lifetime.Seconds())}).Warn("signed bearer token failed claim checks")
+	}
+	rejectBearer(c, rejectReason(err))
 }
 
 func rejectBearer(c *gin.Context, reason string) {
