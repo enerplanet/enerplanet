@@ -45,7 +45,12 @@ help:
 	@echo "$(CYAN)EnerPlanET Management$(NC)"
 	@echo ""
 	@echo "$(YELLOW)SECTION 1: CORE COMMANDS$(NC)"
-	@echo "  make setup              Full system installation and configuration"
+	@echo "  make setup              Full system installation and configuration (alias for make local)"
+	@echo "  make build              Build the env-agnostic EnerPlanET image only (no deps, no .env)"
+	@echo "  make local              Full local environment: reuse GHCR image for the current commit,"
+	@echo "                          else build it; then boot everything in Docker (old make setup)"
+	@echo "  make dependencies       Boot every dependency (platform-core, heat stack, DB), migrate/seed;"
+	@echo "                          leaves backend + frontend to run via the .vscode tasks"
 	@echo "  make update             Pull latest changes and update environment"
 	@echo ""
 	@echo "$(YELLOW)SECTION 2: ADMIN & DEVELOPER TOOLS$(NC)"
@@ -110,9 +115,96 @@ example-models:
 smoke:
 	$(call run_script,enerplanet/backend,scripts/smoke/heat_workflow_smoke.sh)
 
-.PHONY: setup
-setup: git-credential-cache setup-repos env-setup pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack coati fixtures up example-models
-	@echo "$(GREEN)Setup complete! Open http://localhost:8000 and sign in as admin@example.de / 12345678$(NC)"
+# ----------------------------------------------------------------------------
+# The three default workflows. `make setup` keeps working as an alias for
+# `make local` (the full in-Docker environment).
+#
+#   make build         Env-detached image build only (Dockerfile.ci). No deps,
+#                      no .env. Prints what you need to boot the image.
+#   make local         Full local setup, all in Docker (the old `make setup`).
+#   make dependencies  Boot every dependency (platform-core, tentacron stack,
+#                      DB) and migrate/seed — then leave backend + frontend to
+#                      run via the .vscode tasks (live host dev).
+# ----------------------------------------------------------------------------
+
+.PHONY: setup local
+setup: local
+local: git-credential-cache setup-repos env-setup pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack coati fixtures resolve-image up-app example-models
+	@echo "$(GREEN)Local setup complete! Open http://localhost:8000 and sign in as admin@example.de / 12345678$(NC)"
+
+# Env-detached image build: builds ONLY the enerplanet runtime image from
+# Dockerfile.ci. No dependency services, no .env, no compose up — the image is
+# environment-agnostic (frontend reads /config.js at runtime), so nothing is
+# baked. After the build, prints exactly what is required to boot it.
+.PHONY: build
+build: image-prebuild
+	@echo "$(GREEN)Image built: enerplanet:latest (env-agnostic).$(NC)"
+	@echo ""
+	@echo "$(CYAN)To boot this image you need:$(NC)"
+	@echo "  1. A root .env (REDIS_PASSWORD + platform vars) and backend/.env"
+	@echo "  2. The platform stack: postgres, redis, keycloak (make up-db / up-keycloak / init-keycloak / up-services)"
+	@echo "  3. Migrated + seeded DB (make migrate, make seed)"
+	@echo "  4. The app container: make up  (or:  make local  does 1-4)"
+	@echo ""
+	@echo "Backend connects to: DB_HOST=postgres DB_PORT=5432, REDIS, keycloak —"
+	@echo "all via docker-compose on the spatialhub-net network."
+
+# Internal: the actual image build step (npm/go deps + docker build). Does NOT
+# require .env — the image is env-agnostic.
+.PHONY: image-prebuild
+image-prebuild: install
+	@echo "$(CYAN)Building the EnerPlanET runtime image (env-detached)...${NC}"
+	# Build context MUST be the repo root (Dockerfile.ci copies infrastructure/,
+	# libs/, submodules/Coati and initial-data).
+	docker build --provenance=false --sbom=false -t enerplanet:latest -f Dockerfile.ci .
+	@echo "$(GREEN)Runtime image built: enerplanet:latest$(NC)"
+
+# Boot all dependencies and leave backend + frontend to the .vscode tasks.
+# This is the old `make up-deps` + setup minus the app container: every service
+# the host-run backend/frontend needs is up and migrated/seeded, but neither
+# `energy-backend` nor `example-models` is started (the developer runs
+# `npm run dev` + `go run` in the editor).
+.PHONY: dependencies
+dependencies: git-credential-cache setup-repos env-setup pull-images up-db db-create up-keycloak init-keycloak up-services migrate seed pylovo-fixture pylovo tentacron-stack coati fixtures
+	@echo "$(GREEN)All dependencies are up and migrated/seeded.$(NC)"
+	@echo ""
+	@echo "$(CYAN)Backend + frontend are yours to run now:$(NC)"
+	@echo "  Backend:  .vscode task 'Backend'  (go run cmd/main.go)"
+	@echo "  Frontend: .vscode task 'Frontend' (npm run dev)"
+	@echo "  Reach them at http://localhost:8000 (api) / http://localhost:3000 (vite)"
+
+# ----------------------------------------------------------------------------
+# Image resolution: reuse a published GHCR image for the current commit if one
+# exists, else build locally. `docker-publish.yml` tags every release commit as
+# `ghcr.io/enerplanet/enerplanet:sha-<short>` (metadata-action type=sha,
+# format=short), so a commit that was published is available under that tag.
+# We pull it and retag as local `enerplanet:latest`; if the short-sha tag is
+# missing (unpublished commit or image not public without auth), we build.
+# ----------------------------------------------------------------------------
+GHCR_IMAGE_REPO  := ghcr.io/enerplanet/enerplanet
+LOCAL_IMAGE_NAME := enerplanet:latest
+GIT_SHORT        := $(shell git rev-parse --short HEAD)
+
+.PHONY: resolve-image
+resolve-image:
+	@tag="$(GHCR_IMAGE_REPO):sha-$(GIT_SHORT)"; \
+	if docker manifest inspect "$${tag}" >/dev/null 2>&1; then \
+		echo "$(CYAN)Publishing exists: using $(GIT_SHORT) from GHCR...${NC}"; \
+		docker pull "$${tag}" >/dev/null; \
+		docker tag "$${tag}" $(LOCAL_IMAGE_NAME); \
+	else \
+		echo "$(YELLOW)No published image for $(GIT_SHORT); building locally${NC}"; \
+		$(MAKE) image-prebuild; \
+	fi
+
+# Bring up the app container WITHOUT forcing an image rebuild. `local` uses this
+# after resolve-image so it boots the resolved enerplanet:latest (pulled from
+# GHCR or freshly built) instead of always rebuilding.
+.PHONY: up-app
+up-app: .env
+	@docker network create spatialhub-net 2>/dev/null || true
+	@docker compose $(ENERPLANET_COMPOSE) up -d energy-backend
+	@echo "$(GREEN)energy-backend up (image: $(LOCAL_IMAGE_NAME)).$(NC)"
 
 
 .PHONY: dev-bg list-bg clean-bg clean-docker
