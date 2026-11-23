@@ -327,6 +327,51 @@ describe("the workflow a requested id names", () => {
   });
 });
 
+describe("the loader refuses a malformed recommended map (§6)", () => {
+  /** A well-formed section: the map is untrusted input, so what it accepts is pinned beside what it refuses. */
+  const GOOD_SECTION = {
+    key: "insulate",
+    label: "Insulate",
+    description: "Add insulation and re-run.",
+    nodes: [{ id: "example", moduleId: "example" }],
+  };
+
+  it("accepts a well-formed map and carries the document through", () => {
+    const document = { ...DEFINITION, recommended: { example: [GOOD_SECTION] } };
+
+    const workflow = toWorkflow(document, ENTRIES, noLookup, SEED);
+
+    expect(workflow.document.recommended?.example?.[0]?.key).toBe("insulate");
+  });
+
+  it("refuses a blank terminal name", () => {
+    const document = { ...DEFINITION, recommended: { "": [GOOD_SECTION] } };
+
+    expect(() => toWorkflow(document, ENTRIES, noLookup, SEED)).toThrow(
+      /malformed recommended map.*blank terminal name/,
+    );
+  });
+
+  it("refuses two sections sharing a key", () => {
+    const document = { ...DEFINITION, recommended: { example: [GOOD_SECTION], other: [{ ...GOOD_SECTION }] } };
+
+    expect(() => toWorkflow(document, ENTRIES, noLookup, SEED)).toThrow(
+      /malformed recommended map.*share the key "insulate"/,
+    );
+  });
+
+  it("refuses a section whose node fails the discriminant", () => {
+    const document = {
+      ...DEFINITION,
+      recommended: { example: [{ ...GOOD_SECTION, nodes: [{ id: "x" }] }] },
+    };
+
+    expect(() => toWorkflow(document, ENTRIES, noLookup, SEED)).toThrow(
+      /malformed recommended map.*malformed node/,
+    );
+  });
+});
+
 describe("the shipped dev-flow fixture", () => {
   it("is walkable against the seed it names, so the fixture stays true as modules are added", () => {
     // No longer the builder's source (Stage 2), but it is the document the backend seeds, so it must stay

@@ -79,6 +79,8 @@ import { StepsPanel } from "./StepsPanel";
 import { MAP_PROVIDER, MODULES, bindModelSaveSession } from "./moduleRegistry";
 import { frameView, type FrameMode } from "./frameMode";
 import { loadDefaultWorkflow, type Workflow } from "./workflow";
+import { appendRecommended, recommendedFor } from "../workflows/recommended";
+import type { RecommendedSection } from "../workflows/types";
 import { createInvalidator } from "../core/invalidate";
 import type { BuilderModule, ModuleViewProps, OverlayControl, Region } from "./contract";
 
@@ -381,6 +383,25 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   // panel all walk it like any node. Derived once here and threaded through, rather than each consumer reading
   // the seed (`workflow.flow`) and leaving the successor invisible.
   const flow = transcript(session.flow, session.store.log);
+
+  /**
+   * The follow-up sections a finished run offers for its terminal (§6), derived from the effective flow: the
+   * terminal is the newest done placement, `[]` while a run is unfinished or the terminal offers nothing.
+   *
+   * The decision is a pure call (`recommendedFor`), not a local derivation, so the JSX below is only a
+   * rendering of it and there is no DOM-level logic to test.
+   */
+  const recommendations = recommendedFor(flow, session.store, workflow.document);
+
+  /**
+   * Take a recommended section: grow the **session's placed flow** by the section's nodes as fresh placements
+   * (§6). A **plan addition** — nothing runs; the appended nodes are `pending` until a module runs them. The
+   * placed flow on the session is what the artefact persists, so the append is applied there, not to a local.
+   */
+  const takeSection = useCallback((section: RecommendedSection): void => {
+    setSession((current) => ({ ...current, flow: appendRecommended(current.flow, section) }));
+    setViewed(undefined);
+  }, []);
 
   // What the mode says to show, and what a session should start from. The seed is taken from here rather than
   // from the mode branch directly, so "which module" and "which data" cannot disagree.
@@ -739,6 +760,34 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
         {/* Starts the 3D preparation for the grid on screen, once, beside the bars. The package draws a building
             from City2TABULA's geometry, and that geometry only exists once this run has been asked for. */}
         <BuildingPreparation />
+
+        {/* The follow-up sections a finished run offers (§6). Each is a **plan addition**: taking one appends
+            its nodes to the placed flow as `pending` placements — nothing runs until a module does. The list
+            is `recommendedFor`'s answer, so this is only its rendering. */}
+        {recommendations.length > 0 && (
+          <div className="relative z-50 shrink-0 border-t border-border bg-card px-6 py-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              {t("modelBuilder.recommended.title", "Suggested next steps")}
+            </p>
+            <ul className="flex flex-wrap gap-2">
+              {recommendations.map((section) => (
+                <li
+                  key={section.key}
+                  className="max-w-xs rounded-lg border border-border bg-background p-3"
+                >
+                  <button
+                    type="button"
+                    onClick={() => takeSection(section)}
+                    className="rounded-md bg-primary px-2.5 py-1 text-sm font-medium text-primary-foreground hover:opacity-90"
+                  >
+                    {section.label}
+                  </button>
+                  <p className="mt-1.5 text-xs text-muted-foreground">{section.description}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <LedgerBar store={session.store} />
 

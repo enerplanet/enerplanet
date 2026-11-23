@@ -18,7 +18,7 @@ import { Copy, ExternalLink, Layers, Pencil, Plus, Trash2, Workflow as WorkflowI
 import { MODULES } from "../shell/moduleRegistry";
 import { copyPayload, documentWithNodes, newDocument, slugify } from "./document";
 import { workflowService } from "./service";
-import type { WorkflowDocument, WorkflowNodeDocument, WorkflowSummary } from "./types";
+import { documentProblem, type WorkflowDocument, type WorkflowNodeDocument, type WorkflowSummary } from "./types";
 import { WorkflowEditor } from "./WorkflowEditor";
 
 /**
@@ -111,6 +111,15 @@ const WorkflowsPage: React.FC = () => {
 
   const save = useCallback(async (): Promise<void> => {
     if (editing === null) return;
+    // The recommended map is untrusted the moment it leaves the editor, so it is refused here — the same rule
+    // the loader applies when the row comes back — rather than persisted and read back malformed after a run.
+    const problem = documentProblem(editing.document);
+    if (problem !== undefined) {
+      setSaveError(
+        t("modelBuilder.workflows.error.save", "The workflow could not be saved: {{reason}}", { reason: problem }),
+      );
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {

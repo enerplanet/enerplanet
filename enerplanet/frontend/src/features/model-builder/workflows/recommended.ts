@@ -2,17 +2,20 @@
  * Recommended sections (§6): the follow-up node groups a workflow offers once a run finishes, and how taking
  * one grows the placed flow.
  *
- * Pure — no store, no commit, no run. `sectionsFor` answers what a terminal node offers; `appendRecommended`
- * returns a new `Flow` with a section's nodes appended as **fresh placements**. Appending is a **plan
- * addition**: it grows the transcript of what will be enacted, so the appended nodes are `pending` until a
- * module runs them. The flow is immutable (`core/flow.ts`), so this returns a new list rather than editing the
- * one it is given.
+ * Pure — no commit, no run. `sectionsFor` answers what a terminal node offers; `appendRecommended` returns a
+ * new `Flow` with a section's nodes appended as **fresh placements**; `recommendedFor` is the whole decision —
+ * which sections are on offer *right now*. Appending is a **plan addition**: it grows the transcript of what
+ * will be enacted, so the appended nodes are `pending` until a module runs them. The flow is immutable
+ * (`core/flow.ts`), so `appendRecommended` returns a new list rather than editing the one it is given.
  *
  * The lookup key is the terminal node's **stable name** — a module's `moduleId`, or a seed node's own `id` —
  * never the placement id (`"<n>-<name>"`), which changes on every re-run (`nodeName`, `core/flow.ts`).
  */
 
-import { placementId, type Flow, type FlowNode } from "../core/flow";
+import { nodeName, placementId, type Flow, type FlowNode } from "../core/flow";
+import type { PortKey } from "../core/ports";
+import { lastActionOf, writtenPortsOf } from "../core/replay";
+import type { Store } from "../core/store";
 import { isSubflowNode, type RecommendedSection, type WorkflowDocument, type WorkflowNodeDocument } from "./types";
 
 /**
@@ -59,4 +62,49 @@ export function appendRecommended(flow: Flow, section: RecommendedSection): Flow
     return flowNode;
   });
   return [...flow, ...appended];
+}
+
+/**
+ * Whether a placement has finished: it has its own commit and the work that commit wrote still stands in the
+ * store (nothing downstream of it has since pruned the values away).
+ *
+ * This is the store-only half of position.ts's `done` — the half that needs no registry, which is all a
+ * recommendation decision needs. A placement whose commit wrote nothing (a run against an untouched store) is
+ * still finished, so an empty written set counts as done.
+ */
+function isDone(node: FlowNode, store: Store): boolean {
+  if (lastActionOf(store.log, node.id) === undefined) return false;
+  return (writtenPortsOf(store.log, node.id) as PortKey[]).every((port) => store.data[port] !== undefined);
+}
+
+/**
+ * The sections on offer **right now** — the workflow's follow-ups for the terminal that has finished running,
+ * or `[]` when there is none to offer.
+ *
+ * The **terminal is the newest done placement of the transcript** (§6): its stable name (`nodeName`) keys the
+ * document's `recommended` map, so a run's follow-ups are specific to that node and survive the flow growing.
+ * The decision is made here, not in the shell's JSX, so it can be exercised without a DOM.
+ *
+ * Nothing is offered while a run is **unfinished**: the offer waits until the newest done placement is the
+ * transcript's **tip** — any placement after it is still `pending` or `stale`, so the flow has not reached a
+ * settled end. That is also why the offer disappears the moment a section is appended: the appended nodes are
+ * `pending`, so the tip is no longer the finished terminal (the appending flow returns it to `[]`).
+ */
+export function recommendedFor(flow: Flow, store: Store, document: WorkflowDocument): RecommendedSection[] {
+  if (flow.length === 0) return [];
+
+  let terminal: FlowNode | undefined;
+  for (let index = flow.length - 1; index >= 0; index -= 1) {
+    if (isDone(flow[index], store)) {
+      terminal = flow[index];
+      break;
+    }
+  }
+  if (terminal === undefined) return [];
+
+  // A run has finished only when that terminal stands at the tip — nothing after it is still to run or to
+  // repair. (An appended-but-unrun placement, or a stale tail, both fail this and offer nothing.)
+  if (terminal !== flow[flow.length - 1]) return [];
+
+  return sectionsFor(document, nodeName(terminal));
 }
