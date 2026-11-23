@@ -940,6 +940,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.POST(routeModelByID+"/series/claim-draft", modelHandler.ClaimDraftSeries)
 	api.GET(routeModelByID+"/results", resultHandler.GetModelResults)
 	api.GET(routeModelByID+"/results/structured", resultHandler.GetStructuredResults)
+	api.GET(routeModelByID+"/kpis", resultHandler.GetModelKPIs)
 	api.GET(routeModelByID+"/results/carrier-timeseries", resultHandler.GetCarrierTimeSeries)
 	api.GET(routeModelByID+"/results/location/:location", resultHandler.GetLocationTimeSeries)
 	api.GET(routeModelByID+"/results/pypsa", resultHandler.GetPyPSAResults)

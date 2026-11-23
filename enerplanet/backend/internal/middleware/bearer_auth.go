@@ -166,7 +166,7 @@ func rejectBearer(c *gin.Context, reason string) {
 // RENvolveIT API documentation (enerplanet/openapi.yaml).
 func toolboxReadRoute(route string) bool {
 	switch route {
-	case "/api/auth/whoami", "/api/models", "/api/models/:id":
+	case "/api/auth/whoami", "/api/models", "/api/models/:id", "/api/models/:id/kpis":
 		return true
 	}
 	return false
