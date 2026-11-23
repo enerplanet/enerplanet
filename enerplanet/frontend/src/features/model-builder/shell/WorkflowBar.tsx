@@ -35,6 +35,7 @@ import { useTranslation } from "@spatialhub/i18n";
 import { barState, type BarStep } from "./barState";
 import type { FrameMode } from "./frameMode";
 import type { Workflow } from "./workflow";
+import type { Flow } from "../core/flow";
 import type { Store } from "../core/store";
 
 /** Semantic theme pairs rather than raw hues, so the states read correctly in dark mode too. */
@@ -84,6 +85,8 @@ const Step: React.FC<{
 
 interface Props {
   workflow: Workflow;
+  /** The effective flow the bar walks — the session's transcript, so an appended placement is a step like any. */
+  flow: Flow;
   store: Store;
   mode: FrameMode;
   /** The module ids a developer can point the frame at in test mode. */
@@ -111,6 +114,7 @@ interface Props {
 
 export const WorkflowBar: React.FC<Props> = ({
   workflow,
+  flow,
   store,
   mode,
   moduleIds,
@@ -123,7 +127,7 @@ export const WorkflowBar: React.FC<Props> = ({
   onMove,
 }) => {
   const { t } = useTranslation();
-  const bar = barState(workflow.flow, workflow.registry, store, hold);
+  const bar = barState(flow, workflow.registry, store, hold);
 
   // Read the discriminant once, as a value: the chip, the select's value and its options all need it, and a
   // boolean alias would have to re-narrow the union at every use.

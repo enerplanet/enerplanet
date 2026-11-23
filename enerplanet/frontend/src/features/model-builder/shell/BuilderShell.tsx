@@ -66,6 +66,7 @@ import { backendCatalogueSource } from "./catalogueSource";
 import { createEngine, type Engine } from "../core/engine";
 import { createStore, type Store } from "../core/store";
 import type { Flow } from "../core/flow";
+import { transcript } from "../core/flow";
 import { createHttpGateway } from "../save/httpGateway";
 import { loadSession } from "../load/loader";
 import { saveSession } from "./actions";
@@ -374,9 +375,16 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   // The frame reads the store; the store tells it when it changed — a seal, an undo, a redo.
   useStoreVersion(session.store);
 
+  // The **effective flow** the frame walks: the session's placed flow over the store's log (§3). Today the
+  // placed flow and the seed are identical, so this is the seed until something appends — but once a re-run
+  // appends a successor placement, that placement is in the transcript and the frame, the bar and the steps
+  // panel all walk it like any node. Derived once here and threaded through, rather than each consumer reading
+  // the seed (`workflow.flow`) and leaving the successor invisible.
+  const flow = transcript(session.flow, session.store.log);
+
   // What the mode says to show, and what a session should start from. The seed is taken from here rather than
   // from the mode branch directly, so "which module" and "which data" cannot disagree.
-  const view = frameView(mode, workflow, MODULES, session.store, held);
+  const view = frameView(mode, workflow, MODULES, session.store, flow, held);
 
   const run = async (): Promise<void> => {
     const entry = view.entry;
@@ -457,7 +465,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
    * run — undo is built now — but it is still how a scratch session is dropped and a node started over.
    */
   const switchTo = (target: FrameMode): void => {
-    const next = frameView(target, workflow, MODULES, session.store);
+    const next = frameView(target, workflow, MODULES, session.store, flow);
     setMode(target);
     setHeld(undefined);
     setViewed(undefined);
@@ -500,7 +508,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   const stepsPanel =
     mode.kind === "test" ? null : (
       <StepsPanel
-        flow={workflow.flow}
+        flow={flow}
         registry={workflow.registry}
         store={session.store}
         // The view is a read-only selection in the shell's session state (§4) — a move sets it and writes
@@ -558,7 +566,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   const storeVersion = session.store.version;
   useEffect(() => {
     if (mode.kind !== "workflow") return;
-    const plan = autoRunFor(workflow.flow, workflow.registry, session.store);
+    const plan = autoRunFor(flow, workflow.registry, session.store);
     if (plan === undefined) return;
     if (!autoGuard.current.claim(plan)) return;
     launchAuto(plan.id, plan.module);
@@ -609,6 +617,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   const bar = (
     <WorkflowBar
       workflow={workflow}
+      flow={flow}
       store={session.store}
       mode={mode}
       moduleIds={moduleIds}

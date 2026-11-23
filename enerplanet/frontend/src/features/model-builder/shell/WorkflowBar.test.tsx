@@ -42,6 +42,7 @@ function render(): string {
   return renderToStaticMarkup(
     <WorkflowBar
       workflow={workflow}
+      flow={workflow.flow}
       store={createStore(workflow.initial)}
       mode={{ kind: "workflow" }}
       moduleIds={[example.module.id]}

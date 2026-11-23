@@ -21,6 +21,7 @@
 
 import { isAutoModule, type ModelData } from "@model-builder/core";
 import { position } from "../core/position";
+import type { Flow } from "../core/flow";
 import type { Store } from "../core/store";
 import type { BuilderModule } from "./contract";
 import type { Workflow } from "./workflow";
@@ -57,6 +58,13 @@ export function frameView(
   entries: readonly BuilderModule[],
   store: Store,
   /**
+   * The effective flow the frame walks — the session's placed flow over its log (`transcript()`), not the
+   * seed. Deriving it in the shell and passing it here is what makes an **appended successor placement** an
+   * ordinary node: the frame, the bar and the steps panel all walk what was actually enacted, and a re-run
+   * that appends a placement shows up like any other.
+   */
+  flow: Flow,
+  /**
    * A node to show instead of the derived one, while its run is in flight and until its effects have landed.
    *
    * The position is *derived* — the first node that is not done — so a run would move the frame off the node that
@@ -80,12 +88,10 @@ export function frameView(
 
   // The session's frontier (`position()`): the first node that is not done, or — when the flow is complete —
   // the last node, so the frame stays on the module that finished rather than emptying out.
-  const at = position(workflow.flow, workflow.registry, store);
-  const derivedId = at.complete
-    ? workflow.flow[workflow.flow.length - 1]?.id
-    : workflow.flow[at.index]?.id;
+  const at = position(flow, workflow.registry, store);
+  const derivedId = at.complete ? flow[flow.length - 1]?.id : flow[at.index]?.id;
   const nodeId = hold ?? derivedId;
-  const node = workflow.flow.find((candidate) => candidate.id === nodeId);
+  const node = flow.find((candidate) => candidate.id === nodeId);
   if (node === undefined) return { labelId: "", seed: workflow.initial };
 
   const entry = byModuleId.get(node.moduleId);
