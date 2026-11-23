@@ -2,6 +2,14 @@
 
 Status: planning / pre-action. **Do not flip the package visibility public until the steps below are done and verified.**
 
+> **State after the `dev` merge.** `docker-build-process` was rebased onto `dev`
+> (320 commits ahead of `main`), so the image this branch publishes is `dev`'s
+> code plus the six build/migration commits — the env-agnostic property is
+> unchanged (`Dockerfile.ci` still bakes no `VITE_*`), and `dev`'s submodule pins
+> (`infrastructure`, `libs`, `submodules/Coati`) ride along in the build context.
+> Nothing in the merge weakens the "current image is key-free" claim; the risk
+> this doc governs is still entirely historical (pre-refactor images).
+
 ## Why this exists
 
 The repo ships an environment-agnostic runtime image (`Dockerfile.ci`): the frontend reads its
@@ -35,8 +43,10 @@ only then is the public surface limited to the env-agnostic images we keep.
 - `make local` has a `resolve-image` step: it checks GHCR for an image tagged
   `sha-<short>` for the current commit and reuses it if present, else builds locally.
   That pull path currently needs `docker login ghcr.io` because the package is private.
-- Going public removes the login requirement for the pull path (see `.local/Makefile.docker`
-  note and the `resolve-image` target in the root `Makefile`).
+- Going public removes the login requirement for the pull path (see the
+  `resolve-image` target and `GHCR_IMAGE_REPO` in the root `Makefile`, and the
+  `docker-publish.yml` workflow — added by this branch — that tags each release
+  commit as `ghcr.io/enerplanet/enerplanet:sha-<short>`).
 
 ---
 
