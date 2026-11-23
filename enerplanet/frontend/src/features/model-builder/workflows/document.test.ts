@@ -146,3 +146,37 @@ describe("a saved document", () => {
     expect(saved.nodes).toEqual([{ id: "n", moduleId: "m" }]);
   });
 });
+
+describe("a copy of a document with recommended sections", () => {
+  const SECTION = {
+    key: "insulate",
+    label: "Insulate",
+    description: "Add insulation.",
+    nodes: [{ id: "b", moduleId: "building-configurator" }],
+  };
+  const doc: WorkflowDocument = {
+    id: "dev-flow",
+    version: 1,
+    label: "Development flow",
+    nodes: [{ id: "model-start", moduleId: "model-start" }],
+    recommended: { "model-start": [SECTION] },
+  };
+
+  it("round-trips the recommended map, so a copy pastes back with its follow-ups intact", () => {
+    const round = JSON.parse(copyPayload(doc)) as WorkflowDocument;
+    expect(round.recommended).toEqual(doc.recommended);
+  });
+
+  it("orders the map after nodes and each section's own keys, rather than trusting arrival order", () => {
+    const shuffled = JSON.parse(
+      '{"id":"x","version":1,"label":"X","nodes":[],"recommended":{"m":[{"description":"D","label":"L","nodes":[{"moduleId":"m","id":"b"}],"key":"k"}]}}',
+    ) as WorkflowDocument;
+    const round = JSON.parse(copyPayload(shuffled)) as Record<string, unknown> & {
+      recommended: { m: Array<Record<string, unknown> & { nodes: Array<Record<string, unknown>> }> };
+    };
+
+    expect(Object.keys(round)).toEqual(["id", "version", "label", "nodes", "recommended"]);
+    expect(Object.keys(round.recommended.m[0])).toEqual(["key", "label", "description", "nodes"]);
+    expect(Object.keys(round.recommended.m[0].nodes[0])).toEqual(["id", "moduleId"]);
+  });
+});

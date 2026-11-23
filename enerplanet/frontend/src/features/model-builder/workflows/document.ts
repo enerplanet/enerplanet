@@ -63,13 +63,16 @@ export function documentWithNodes(
  * `description` and `isSubflow` sit where a person writes them — after `label`, before `seed` — because the
  * seed file places them there; putting them anywhere else would reshuffle the file on the first paste.
  */
-const DOCUMENT_KEY_ORDER = ["id", "version", "label", "description", "isSubflow", "seed", "nodes"] as const;
+const DOCUMENT_KEY_ORDER = ["id", "version", "label", "description", "isSubflow", "seed", "nodes", "recommended"] as const;
 
 /** The same, per node, for a module node. A node carries no execution flags — `auto` is the module's (`Module.auto`). */
 const NODE_KEY_ORDER = ["id", "moduleId", "label"] as const;
 
 /** The same, per node, for a subflow node: its kind's fields, ordered as a person writes them. */
 const SUBFLOW_NODE_KEY_ORDER = ["id", "workflows", "label"] as const;
+
+/** The same, per recommended section: its fields, ordered as the workflow builder writes them. */
+const SECTION_KEY_ORDER = ["key", "label", "description", "nodes"] as const;
 
 /**
  * Keys in `order` first, then anything else in the order it arrived.
@@ -98,12 +101,37 @@ function ordered(record: Record<string, unknown>, order: readonly string[]): Rec
  */
 export function copyPayload(document: WorkflowDocument): string {
   // Each node is ordered by its kind: the two kinds carry different fields, so one list cannot place both.
-  const nodes = (document.nodes ?? []).map((node) => {
+  const orderedNode = (node: WorkflowNodeDocument): Record<string, unknown> => {
     const record = node as unknown as Record<string, unknown>;
     return ordered(record, isSubflowNode(node) ? SUBFLOW_NODE_KEY_ORDER : NODE_KEY_ORDER);
-  });
+  };
+  const nodes = (document.nodes ?? []).map(orderedNode);
+  // A recommended section nests nodes of its own, so it is ordered in turn — the same reason the top-level
+  // nodes are: an unchanged workflow must paste back byte-identically, follow-ups and all. The terminal-name
+  // keys of the map are left in arrival order, since the map is a lookup rather than a written sequence.
+  const recommended =
+    document.recommended === undefined
+      ? undefined
+      : Object.fromEntries(
+          Object.entries(document.recommended).map(([terminalName, sections]) => [
+            terminalName,
+            sections.map((section) =>
+              ordered(
+                {
+                  ...(section as unknown as Record<string, unknown>),
+                  nodes: (section.nodes ?? []).map(orderedNode),
+                },
+                SECTION_KEY_ORDER,
+              ),
+            ),
+          ]),
+        );
   const canonical = ordered(
-    { ...(document as unknown as Record<string, unknown>), nodes },
+    {
+      ...(document as unknown as Record<string, unknown>),
+      nodes,
+      ...(recommended === undefined ? {} : { recommended }),
+    },
     DOCUMENT_KEY_ORDER,
   );
   return `${JSON.stringify(canonical, null, 2)}\n`;

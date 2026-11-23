@@ -58,6 +58,79 @@ export function nodeProblem(node: WorkflowNodeDocument): string | undefined {
   return undefined;
 }
 
+/**
+ * A follow-up node group a workflow offers **after a run finishes** — the malleable-flow side of "we start
+ * with a predefined workflow and add to it". Appending one is a **plan addition** (§6): it grows the placed
+ * flow by these nodes as fresh placements, and nothing runs until a module does.
+ *
+ * A section's `key` is unique **within its own workflow only** — not globally — because it is a local handle
+ * the workflow builder assigns and the user picks one of. Its `description` states the goal, so the user knows
+ * *why* to append it rather than only *what* it is.
+ */
+export interface RecommendedSection {
+  /** A workflow-local handle for this section; unique within the document, not across documents. */
+  key: string;
+  /** A short title, e.g. for the button that offers it. */
+  label: string;
+  /** The goal, so the user knows why to append it. */
+  description: string;
+  /** The nodes appended as one unit when the section is taken. */
+  nodes: WorkflowNodeDocument[];
+}
+
+/**
+ * Why a document's `recommended` map is malformed, or `undefined` when it is well-formed.
+ *
+ * The map is **untrusted input** the moment the document stops being a local literal — it arrives over the
+ * wire with everything else — so it is checked the way a node is (`nodeProblem`), not trusted because the
+ * editor happened to author it. Four ways it fails, each named:
+ *
+ * - a **blank terminal name**: the map is keyed by a node's stable name, and an empty key names nothing;
+ * - a value that is **not a list of sections**: the shape is a list per terminal, by construction;
+ * - a section whose own **`key` is blank or repeats another's** in the same workflow — the key is a
+ *   workflow-local handle the user picks one of, so a blank one names nothing and a duplicate is ambiguous;
+ * - a section naming a **node the discriminant refuses** (`nodeProblem`).
+ *
+ * Every section's key is compared against every other's, across the whole map, because the rule is
+ * "unique within its workflow" and a workflow is the whole document.
+ */
+export function documentProblem(document: WorkflowDocument): string | undefined {
+  const recommended = document.recommended;
+  if (recommended === undefined) return undefined;
+
+  const seenKeys = new Set<string>();
+  for (const [terminalName, sections] of Object.entries(recommended)) {
+    if (terminalName.trim().length === 0) {
+      return "a recommended map has a blank terminal name; sections are keyed by a node's stable name";
+    }
+    if (!Array.isArray(sections)) {
+      return `recommended["${terminalName}"] is not a list of sections`;
+    }
+    for (const section of sections) {
+      const key = typeof section?.key === "string" ? section.key : "";
+      if (key.trim().length === 0) {
+        return `a recommended section for "${terminalName}" has a blank key; a section's key is how a user picks it`;
+      }
+      if (seenKeys.has(key)) {
+        return `two recommended sections share the key "${key}"; a section key is unique within its workflow`;
+      }
+      seenKeys.add(key);
+
+      const nodes = section.nodes;
+      if (!Array.isArray(nodes)) {
+        return `recommended section "${key}" has no nodes`;
+      }
+      for (const node of nodes) {
+        const problem = nodeProblem(node);
+        if (problem !== undefined) {
+          return `recommended section "${key}" has a malformed node: ${problem}`;
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
 export interface WorkflowDocument {
   id: string;
   version: number;
@@ -79,6 +152,16 @@ export interface WorkflowDocument {
    */
   seed?: string;
   nodes: WorkflowNodeDocument[];
+  /**
+   * The follow-up node groups a run of this workflow may offer, keyed by the terminal node's **stable name**
+   * (§6). Each value is the list of sections offered for that terminal.
+   *
+   * The key is the terminal node's **stable name** — a module's `moduleId`, or a seed node's own `id` — the
+   * same name `nodeName` recovers from a placement (`core/flow.ts`). It is deliberately **not** the placement
+   * id (`"<n>-<name>"`), which changes on every re-run: a recommendation must survive the flow growing.
+   * Optional; absent means the workflow offers no follow-ups.
+   */
+  recommended?: Record<string, RecommendedSection[]>;
 }
 
 /**
