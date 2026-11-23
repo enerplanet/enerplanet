@@ -140,3 +140,25 @@ toolbox tokens are rejected and personal tokens and sessions work as before.
 
 The RENvolveIT side needs no change: the toolbox sends the access token it
 already receives at sign-in.
+
+### Required Keycloak settings
+
+RENvolveIT does not verify email addresses, and model shares and workspace
+invites match accounts by email without checking verification. The
+`spatialhub` realm therefore has to verify the email of every account a
+RENvolveIT sign-in creates.
+
+| Setting | Value |
+| --- | --- |
+| Identity providers, `renvolveit`, Trust Email | Off |
+| Realm settings, Login, Verify email | On |
+| Realm settings, Email | SMTP configured, so the verification code can be sent |
+
+!!! danger "Keep Trust Email off"
+    With Trust Email on, unverified RENvolveIT addresses count as verified,
+    and email-matched shares and invites can reach the wrong account.
+
+!!! warning "Verify email applies realm-wide"
+    Every account whose email is unverified must confirm it at its next
+    sign-in. This includes accounts created in the EnerPlanET user
+    administration, which the backend creates with `emailVerified: false`.
