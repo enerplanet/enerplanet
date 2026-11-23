@@ -47,6 +47,63 @@ npx tsc -p tsconfig.app.json --noEmit      # typecheck
 npx eslint src/features/model-builder --ext .ts,.tsx
 ```
 
+## History — a move is a view, a run is a commit
+
+The feature's history is **commit-oriented** (`spec/history-v2.md`). Three things, and each owns
+exactly one fact:
+
+- the **commit log** is append-only: every entry (`core/diff.ts`'s `Transaction`) is enacted work with
+  a diff, and nothing rewrites an entry in place;
+- the **view** is where the session is *looking* — a read-only pointer, never a commit;
+- the **transcript** is the flow actually enacted: the session's placed flow, plus every commit's
+  placement, in log order (`core/flow.ts`'s `transcript`).
+
+What follows from that:
+
+- **A move writes nothing.** Stepping back to look at an earlier node sets the view; there is no
+  `jump` transaction, so nothing goes stale and no redo tail is produced. The module on screen then
+  renders **the state that node was committed with** (`shell/viewedProjection.ts` replays the log up
+  to that commit's revision), while everything else — the position, the steps panel — keeps
+  describing the current world. Acting snaps the view back to the tip, so a run reads the live state.
+- **A run appends a placement.** A run targets a placement: one with no commit is **filled**, one
+  that already ran gets a **successor placement** with a fresh id — `"<n>-<name>"`, `n` counting up
+  from `0` over every placement ever added and never reused (`core/rerun.ts`). The flow *grows*: the
+  transcript of a change-and-repair loop is `A B C D E C D E`, the earlier occurrences kept as the
+  superseded ones. A completed run that wrote nothing still leaves its zero-diff trace, because a
+  placement is `done` only once it has a commit (`core/engine.ts`).
+- **Undo and redo are rollback commits.** An undo appends a commit whose `primary` is the inverse of
+  the target's change + cascade, carrying `rollback: { of }` and no placement; a redo inverts a
+  rollback. Nothing is truncated and nothing is rewritten — the log only ever gains an entry
+  (`core/store.ts`).
+- **The flow is a transcript, not a fixed plan.** "The history presents the final flow that was
+  enacted on a model" is literal: `workflow.json` defines only the starting point.
+
+Everything the shell shows derives from `(flow, registry, store)` — the workflow bar, the steps
+panel, and the ledger (which reads `store.log`, newest first). None of them holds history of its own.
+
+## The session artefact
+
+A session persists as an **artefact** (`core/artefact.ts`):
+`{ version, workflow, modelId?, initial, projection, flow, log, fingerprint }`. The **`flow`** field
+is the **placed flow** — the session's seed placements plus any appended ones, **including the nodes
+that have not run yet** — written on save and read back on load, so the run-side never re-derives the
+plan. There is no `cursor` and no `discarded` section: a move is not persisted, and there is no redo
+tail to record. The `projection` is the fast path and the `log` the recovery path; the fingerprint
+stops the two from lying to each other silently.
+
+## Recommended sections
+
+A workflow may declare **recommended sections** (`workflows/types.ts`): follow-up node groups offered
+to the user to **append** once a run (or a compare) has finished — the malleable-flow side of "we
+start with a predefined workflow and add to it". They are keyed by the terminal node's **stable
+name** (a `moduleId`, or a seed node's own id — never the placement id, which changes on every
+re-run), and each section carries a workflow-local `key` and a `description` stating its goal.
+
+Appending one is a **plan addition** (`workflows/recommended.ts`): it grows the placed flow by fresh
+placements, validated like any other, so a recommendation can never append a broken node.
+`recommendedFor` decides what is on offer, and only when the newest done placement stands at the
+transcript's tip — a run still in flight offers nothing.
+
 ## The flows this feature runs
 
 Two stored workflows are seeded (`cmd/seed/`), and the editor authors more.
@@ -66,15 +123,16 @@ Two stored workflows are seeded (`cmd/seed/`), and the editor authors more.
 
 Planned, and known rather than hidden:
 
+- **The seed flow's placement ids are not yet `"<n>-<name>"`.** Every placement should get a counted
+  id (`spec/history-v2.md` §2), but today a **seed** node keeps the id the workflow document gave it
+  (namespaced by its container for a composed one), and only an **appended** placement is minted in
+  the counted form. Closing the gap is what makes `n` mean "how many placements exist so far" over
+  the whole transcript rather than only the appended tail.
 - **`grid-editor`** — moving and deleting transformers. The generated grid is what we validate against.
 - **Loading an existing model** — the data layer is done (`load/unfold.ts` lifts a saved config back
   into the store's ports, round-trip tested); the UI to browse saved models is not there.
 - **Several candidates at one position.** A subflow node's `workflows` is a list; the editor renders
-  the first and computes verdicts per position, but the tabbed multi-candidate choice and the ask at
-  run time are not built — the verdict function is already the seam.
+  the first and computes verdicts per position (`workflows/gate.ts`), but the tabbed multi-candidate
+  choice and the ask at run time are not built — the verdict function is already the seam.
 - **`skippable`** — declared in the core's node shape and read by nothing. It is what an optional step
   needs, and the second `result-overview` pass is its first customer.
-- **A run's record is not tied to what was persisted.** A run reads `modelId`, which a configuration
-  edit never moves, so editing and re-saving *after* a run finished does not invalidate that run. The
-  flows that exist put the run after the save, so it does not bite; closing it means the save
-  publishing a revision of what it persisted, which the run nodes then require.

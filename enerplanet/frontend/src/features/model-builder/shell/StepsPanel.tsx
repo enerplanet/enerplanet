@@ -15,11 +15,11 @@
  * by *running* it, not by standing on it. Rendering an unreachable step as a button would offer something the
  * session cannot honour.
  *
- * This panel was info-only while jumping was deferred, and the reason recorded for that deferral was that a
- * jump "deserves the discard preview it ought to show before it commits". That reason dissolved when movement
- * was built as a pure position move — there is no discard to preview. What the deferral was guarding against
- * is handled by the direction rule above instead, which is a shape the user can see rather than a dialog they
- * must answer.
+ * This panel was info-only while clicking a step was deferred, and the reason recorded for that deferral was
+ * that a move "deserves the discard preview it ought to show before it commits". That reason dissolved when
+ * movement was built as a **view** — a read-only selection that writes nothing, so there is no discard to
+ * preview. What the deferral was guarding against is handled by the direction rule above instead, which is a
+ * shape the user can see rather than a dialog they must answer.
  *
  * Colours come from the theme's semantic pairs rather than raw hues, so the states survive dark mode.
  */

@@ -144,7 +144,7 @@ describe("area-draw's behaviour", () => {
 
   it("records the re-apply without changing anything", async () => {
     // The area is already there, so the run proposes nothing — but it still seals its zero-diff trace, which is
-    // what lets a user jump back to this node and leave again without inventing an edit.
+    // what lets this placement read `done` rather than staying `pending`.
     const store = createStore({ region: REGION, coordinates: ONE_RING });
     const engine = createEngine(store);
 

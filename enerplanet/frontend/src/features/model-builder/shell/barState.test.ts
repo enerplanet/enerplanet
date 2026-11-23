@@ -5,7 +5,7 @@
  * prior is the node before the position, current is the node the session sits on, next is the one after.
  * These cases pin the derivation, including the two readings that are easy to get wrong — a flow that has
  * finished still names the last node (that is what is on screen), and a node the session *moved* back to is
- * where the bar rests (the jump's target) yet stays **done**, because a move changes no data.
+ * where the bar rests yet stays **done**, because a view writes no data.
  *
  * Most cases build history directly through the store, because the bar is a pure derivation over history:
  * "given history shaped like this, the bar reads that". The one case that runs a real node does so to prove

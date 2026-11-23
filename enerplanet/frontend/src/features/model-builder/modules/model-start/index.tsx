@@ -318,7 +318,8 @@ const module = defineModule({
     const proposed: Partial<ModelData> = {};
 
     // Read before you write — the anti-clobber rule — and commit only what actually changes. Proposing nothing
-    // is fine: the run still seals its zero-diff trace, which is what lets a jumped-back node be left alone.
+    // is fine: the run still seals its zero-diff trace, which is what lets the placement settle as `done`
+    // rather than staying `pending`.
     if (collected.modelName !== undefined) {
       const current = ctx.read("modelName");
       const trimmed = collected.modelName.trim();

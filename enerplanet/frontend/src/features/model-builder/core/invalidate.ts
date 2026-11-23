@@ -16,8 +16,9 @@
  * reads in the order things became affected.
  *
  * **Where it runs.** At seal, through the store's `deriveCascade` seam when a caller omits the
- * cascade; at redo, re-derived against the current projection. A caller that passes a cascade —
- * including `[]` — gets exactly what it passed, which is how a pure position move opts out.
+ * cascade. A caller that passes a cascade — including `[]` — gets exactly what it passed, which is
+ * how a rollback opts out: an undo or a redo is a complete inverse of its own (§4.1), so it passes
+ * `[]` rather than deriving a second cascade.
  *
  * **Coarseness worth knowing:** the granularity is the *port*, not the nested path. A write under
  * `/buildingParams/gas` prunes the whole `buildingParams` port, so a module reading only

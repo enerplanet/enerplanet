@@ -39,7 +39,7 @@ export interface Engine {
    *
    * @param node the workflow node this run belongs to. `auto` records whether the run was an automatic
    *             step's — sourced from the module's own `auto` flag (`Module.auto`) — and is stamped on the
-   *             transaction so history can skip it.
+   *             transaction so history can tell an automatic run from an interactive one.
    * @returns the last sealed transaction, or `undefined` when the run changed nothing.
    * @throws {PortWriteRejected} when the module writes outside its declared surface, or
    * blind-overwrites a port it never read.
@@ -63,14 +63,14 @@ export function createEngine(store: Store): Engine {
       /**
        * Turn the buffered writes into one sealed transaction.
        *
-       * **A run always leaves a trace** — one transaction, even when nothing changed. It has to: a jump re-arms
-       * its target and the re-arm clears on a *newer transaction*, so a node the user jumped back to
-       * would otherwise read `stale` forever unless they invented an edit. Going back to look at something is
-       * not an edit, and pressing the forward action has to be enough to leave.
+       * **A run always leaves a trace** — one transaction, even when nothing changed. It has to: a
+       * placement is `done` only once it has a commit, so a completed run that wrote no value (an editing
+       * step whose values are already in the store, a run against an untouched projection) would otherwise
+       * read `pending` forever and the frontier could never advance past it. The trace is what lets a run
+       * settle its own placement.
        *
-       * The writes still become ops only when they differ (above), so a no-op run carries an empty primary —
-       * the same zero-diff transaction a jump with an empty cascade seals, and for the same reason: the move is
-       * the fact worth recording, not the diff.
+       * The writes still become ops only when they differ (above), so a no-op run carries an empty primary:
+       * the run is the fact worth recording, not the diff.
        */
       const flush = (): void => {
         // Nothing buffered and something already sealed: this flush has nothing to add. A `per-commit` module
@@ -128,8 +128,8 @@ export function createEngine(store: Store): Engine {
       if (module.run) await module.run(ctx);
 
       // Every run ends with a flush, `per-commit` included — see `flush`. A module that committed nothing, or a
-      // `per-commit` one whose writes were all no-ops, still seals its zero-diff trace here; without it a jump
-      // back to the node would have no way to clear its re-arm.
+      // `per-commit` one whose writes were all no-ops, still seals its zero-diff trace here; without it the
+      // placement would read `pending` forever and the frontier could never advance past it.
       flush();
 
       return sealed;

@@ -39,7 +39,9 @@ export interface Transaction {
   readonly node?: NodeRef;
   /**
    * The commit was produced by an **auto** module (`Module.auto`), stamped at seal time so
-   * history never has to consult the workflow to know which commits it may skip when undoing.
+   * history can tell an automatic run from an interactive one without consulting the workflow.
+   * Auto work is a normal undo/redo target — the flag records what the run *was*, not a class of
+   * commit to skip (§4.1).
    */
   readonly auto?: boolean;
   /** What the run changed. Empty for a commit that resolved the model without a diff of its own. */

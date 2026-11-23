@@ -10,8 +10,9 @@
  * *write* (`core/ports.ts`), and a viewer has nothing to commit. So the two ports it reads are declared and no
  * port is invented to give it one: `modelId` and `memeRun`, both `required`, which is also what places this
  * node *after* the run that produced the results — the port requirement is the ordering, by construction. Its
- * `run()` therefore commits nothing; it seals the zero-diff transaction an interactive step needs to be left
- * behind, which is exactly the trace a jump's re-arm clears.
+ * `run()` therefore commits nothing; it seals the zero-diff transaction a placement needs to be left behind —
+ * a placement is `done` only once it has a commit, so a viewer that wrote nothing would otherwise read
+ * `pending` forever.
  *
  * **Where the numbers come from.** The summary arrives through a slot the host installs (`./source.ts`,
  * `setResultOverviewGateway`); the module never learns the endpoint. There is no default: a missing gateway is

@@ -121,7 +121,7 @@ describe("compare-variant's run", () => {
     const store = createStore({ ...compareVariant.mock });
     const sealed = await createEngine(store).runModule(compareVariant.module, { id: NODE, moduleId: compareVariant.module.id });
 
-    // The trace exists (so a jump's re-arm clears), and it carries no ops.
+    // The trace exists (so the placement reads `done`), and it carries no ops.
     expect(sealed?.primary).toHaveLength(0);
   });
 });

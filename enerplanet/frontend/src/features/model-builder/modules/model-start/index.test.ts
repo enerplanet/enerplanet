@@ -158,8 +158,8 @@ describe("model-start's behaviour", () => {
 
   it("changes no data but still records the run when the hold would change nothing", async () => {
     // The store is seeded with the same defaults the module writes, so the only thing this run *could* say is
-    // what the hold says — and that changes nothing. It still seals one zero-diff transaction: a node revisited
-    // after a jump has to be able to clear its re-arm without inventing an edit.
+    // what the hold says — and that changes nothing. It still seals one zero-diff transaction: a placement is
+    // `done` only once it has a commit, so a no-op run must still leave its trace.
     const store = createStore({
       modelName: NAME.trim(),
       // 60, because that is the one resolution this module accepts and it will otherwise correct the store — a

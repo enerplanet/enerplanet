@@ -50,8 +50,9 @@ export interface NodeRef {
   moduleId: string;
   /**
    * Whether the run was an **automatic** step's — the module's own flag (`Module.auto`), carried here so the
-   * engine can stamp it on the transaction and history can skip it. A different fact from the node's
-   * identity: the id names a position, `auto` says the work ran with no forward action.
+   * engine can stamp it on the transaction and history can tell an automatic run from an interactive one. A
+   * different fact from the node's identity: the id names a position, `auto` says the work ran with no forward
+   * action. Auto work is a normal undo/redo target (§4.1), not a class of commit to skip.
    */
   auto?: boolean;
 }

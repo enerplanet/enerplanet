@@ -124,7 +124,7 @@ describe("weather's run", () => {
 
   it("changes no data but still records the run when the choice would change nothing", async () => {
     // Clicking the option that is already chosen must not change a value — the module compares instead of
-    // trusting the click. The run still seals one zero-diff transaction, so a jump's re-arm can clear.
+    // trusting the click. The run still seals one zero-diff transaction, so the placement reads `done`.
     choose({ provider: null, choice: "p50" });
 
     const { store } = await runInScratch({ module: weather.module, mock: READY });

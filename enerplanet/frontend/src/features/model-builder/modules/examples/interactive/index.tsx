@@ -158,7 +158,7 @@ const module = defineModule({
 
     // Read before you write — the anti-clobber rule — and commit only what was collected actually changes.
     // Committing nothing is fine: the run still seals one transaction either way, a zero-diff one when nothing
-    // changed, because a jump re-arms its target and the re-arm has to be clearable without inventing an edit.
+    // changed — a placement is `done` only once it has a commit, so the trace is what lets a no-op run settle.
     if (collected.modelName !== undefined) {
       const current = ctx.read("modelName");
       const trimmed = collected.modelName.trim();

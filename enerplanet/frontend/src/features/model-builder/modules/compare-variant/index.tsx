@@ -11,8 +11,9 @@
  * port is invented to give it one: `modelVariant`, `required`, which is also what places this node *after* the
  * variant by construction. The compared models come from that record — `rootModelId` and `variantModelId` — so
  * `modelId` is not declared at all: reading it would tell the node nothing the pair does not already carry. Its
- * `run()` therefore commits nothing; it seals the zero-diff transaction an interactive step needs to be left
- * behind (`result-overview` draws the same line), which is exactly the trace a jump's re-arm clears.
+ * `run()` therefore commits nothing; it seals the zero-diff transaction a placement needs to be left behind
+ * (`result-overview` draws the same line) — a placement is `done` only once it has a commit, so a viewer that
+ * wrote nothing would otherwise read `pending` forever.
  *
  * **Where the numbers come from.** Both sides arrive through one slot the host installs (`./source.ts`,
  * `setCompareVariantGateway`); the module never learns the endpoint. There is no default: a missing gateway is

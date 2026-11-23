@@ -119,8 +119,8 @@ describe("the example module's behaviour", () => {
     hold(NODE);
     await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
 
-    // The run had nothing to commit, but it still leaves a trace: one zero-diff transaction, so a node the
-    // session jumped back to can clear its re-arm without an edit.
+    // The run had nothing to commit, but it still leaves a trace: one zero-diff transaction, so the placement
+    // reads `done` rather than staying `pending`.
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary).toHaveLength(0);
     expect(store.data.modelName).toBe(MOCK_NAME);
@@ -151,7 +151,7 @@ describe("the example module's behaviour", () => {
     expect(store.log).toHaveLength(1);
 
     // The same value again — already trimmed this time: nothing differs, so the transaction carries no ops.
-    // It is sealed all the same, so a jump's re-arm cannot outlive a forward press that edited nothing.
+    // It is sealed all the same, so the placement still reads `done` after a press that edited nothing.
     hold(NODE, { modelName: MOCK_NAME.trim() });
     await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
     expect(store.log).toHaveLength(2);
@@ -164,7 +164,7 @@ describe("the example module's behaviour", () => {
     const engine = createEngine(store);
 
     // A bare run: a region that called run() with nothing held — a button pressed with no edit behind it.
-    // It seals one zero-diff transaction, so returning to this node and continuing clears the re-arm.
+    // It seals one zero-diff transaction, so the placement reads `done` rather than staying `pending`.
     await engine.runModule(exampleInteractive.module, { id: NODE, moduleId: exampleInteractive.module.id });
 
     expect(store.log).toHaveLength(1);

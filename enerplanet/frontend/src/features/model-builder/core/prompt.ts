@@ -1,17 +1,21 @@
 /**
  * The edit-while-behind prompt.
  *
- * The trigger is the seal itself: the **first transaction after an undo** is what raises the
- * question, because sealing is what would silently destroy the discard stack. So `needsPrompt` is
- * nothing more than "is there a tail", and the shell asks before it seals.
+ * The trigger is the seal itself: editing while the session is **off the tip** — while a rollback
+ * is available to redo (§4.1) — is what raises the question, because sealing here is a one-way
+ * step. An edit is a **placement commit**, the only thing that moves the tip, so once it lands the
+ * undone run can no longer be re-applied. So `needsPrompt` is nothing more than "is there a
+ * rollback available to redo", and the shell asks before it seals.
  *
  * There are exactly three outcomes and no fourth path — the union below is the guarantee, since a
  * switch over it has nothing left to fall through to:
  *
- * - **discard-redo** — drop the tail and continue *here* (the seal truncates it);
+ * - **discard-redo** — continue *here*: the edit is appended at the tip, which is what takes the
+ *   redo away. Nothing is dropped — the log only ever grows (the name records the v1 shape, when
+ *   the tail was truncated);
  * - **new-model** — branch and hand the shell the family link;
  * - **cancel** — write nothing, so the shell can re-render the node from the store's own data and
- *   the redo stack keeps working.
+ *   the redo stays available.
  *
  * ## The shell's half of "new model"
  *
@@ -22,8 +26,8 @@
  *    one on the server, so the current work is persisted on the way through, and the user
  *    must never be surprised by what an action triggers;
  * 2. **save the current model** — `previewOf(store, pending)` is the payload. It must *not* be a
- *    transaction: `POST`/`PUT` straight from the adapter, because sealing here would eat the very
- *    discard stack this prompt exists to protect;
+ *    transaction: `POST`/`PUT` straight from the adapter, because sealing here would move the tip
+ *    and take away the very redo this prompt exists to protect;
  * 3. **copy it into the family** — `POST /api/models` with `is_copy: true`, `parent_model_id` and
  *    `group_id`, sending the same payload. There is no separate copy endpoint; a copy is a create
  *    that names its family (`model_family.go`: *"copies record the root original in
@@ -35,8 +39,8 @@
  * Two consequences worth having in writing:
  *
  * - because steps 2 and 3 leave the session alone, a **failed** save or copy (Nominatim geocoding
- *   can fail) lands the user in exactly the state `cancel` would — nothing sealed, the tail intact,
- *   the pending edit still in hand. The prompt survives without losing the
+ *   can fail) lands the user in exactly the state `cancel` would — nothing sealed, the redo still
+ *   available, the pending edit still in hand. The prompt survives without losing the
  *   pending change, and that falls out rather than needing care;
  * - the new tab's session is *not* the branch store returned here unless the shell carries it over.
  *   Opening a tab is a page load; the branch store is the local session for the model that was just
@@ -48,7 +52,7 @@ import { branch, type BranchLink, type PendingEdit } from "./branch";
 import type { ModelData } from "./ports";
 import type { Store, StoreOptions } from "./store";
 
-/** The only ways a pending edit may pass a non-empty discard stack. */
+/** The only ways a pending edit may proceed while a redo is available to lose. */
 export type EditChoice = "discard-redo" | "new-model" | "cancel";
 
 /** Whether the shell must ask before sealing. */
@@ -87,7 +91,7 @@ export function resolveEdit({
 }: EditRequest): EditResolution {
   switch (choice) {
     case "discard-redo": {
-      // Continuing here: the seal truncates the tail itself.
+      // Continuing here: the edit is appended at the tip, which is what takes the redo away.
       store.applyTransaction(pending.primary, pending.cascade ?? [], { node: pending.node });
       return { store, unchanged: false };
     }
@@ -107,7 +111,7 @@ export function resolveEdit({
  * — applied, **without sealing anything**.
  *
  * This is the payload for the save in step 2 above and the copy in step 3. Sealing instead would
- * truncate the discard stack, which is precisely what the user is still deciding about.
+ * move the tip and take the redo away, which is precisely what the user is still deciding about.
  */
 export function previewOf(store: Store, pending: PendingEdit): ModelData {
   return applyDiffs(applyDiffs(store.data, pending.primary), pending.cascade ?? []);

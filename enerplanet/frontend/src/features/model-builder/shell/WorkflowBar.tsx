@@ -3,12 +3,10 @@
  *
  * Dense by rule: it is chrome, and vertical space belongs to the content.
  *
- * **The bar moves; it does not undo** (superseding the earlier "module movement is undo/redo" framing).
- * Movement is a **pure position move**: a prior click seals a `jump` with an empty cascade, so it rests the
- * session on the node it lands on — leaving that node `done`, not stale — and discards nothing. There is no
- * `undo`/`redo` here — undo would leave a redo tail, and a move must leave none, so the bar offers no history
- * navigation at all. What goes stale is decided by *influence* when a node actually runs, never by how far the
- * bar moved.
+ * **The bar moves; it does not undo.** Movement is a **view**: a prior click sets the placement the
+ * session is looking at and writes **nothing** (§4) — no `jump` commit, no redo tail — so the moved-to
+ * node stays `done`, not stale. There is no `undo`/`redo` here at all: the bar is not a history control.
+ * What goes stale is decided by *influence* when a node actually runs, never by where the bar looked.
  *
  * So the **prior step is the one backward control**, and it is a control only when there is a node behind the
  * session to return to. The **next step is plain greyed text**: it names what comes next rather than moving
@@ -16,10 +14,9 @@
  * Apply), and an auto node runs on arrival with no button anywhere (`autoRun.ts`), so a bar button whose
  * enabled-ness depended on node state would be the frame pretending to know something only the session knows.
  *
- * Jumping to *any* step was deferred while movement meant a discard. It does not any more: a move is a pure
- * position move that discards nothing, so there is no preview to owe, and the steps panel offers the jump
- * The rule that remains is direction — `moveToNode` refuses a forward target, because forward is
- * `Continue` running the node.
+ * Moving to *any* step behind the frontier is now offered: a view writes nothing, so there is no preview to
+ * owe. The one rule that remains is direction — a view reaches only backwards, because forward is *running*
+ * the node, and a later node is reached that way rather than by standing on it.
  *
  * In **test mode** there is no position to show, so it says so rather than rendering a bar of dashes — a bar
  * naming steps while no workflow drives the session would be lying about where it is. The movement and save
