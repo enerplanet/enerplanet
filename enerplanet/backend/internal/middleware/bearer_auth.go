@@ -158,14 +158,11 @@ func rejectBearer(c *gin.Context, reason string) {
 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unrecognised bearer token"})
 }
 
-// Allowed toolbox routes.
+// toolboxReadRoute lists the routes toolbox tokens may call; it must match the
+// RENvolveIT API documentation (enerplanet/openapi.yaml).
 func toolboxReadRoute(route string) bool {
 	switch route {
-	case "/api/auth/whoami", "/api/models", "/api/models/:id",
-		"/api/models/:id/results", "/api/models/:id/results/structured",
-		"/api/models/:id/results/carrier-timeseries",
-		"/api/models/:id/results/location/:location", "/api/models/:id/results/pypsa",
-		"/api/models/:id/download", "/api/results/:id", "/api/results/:id/layer":
+	case "/api/auth/whoami", "/api/models", "/api/models/:id":
 		return true
 	}
 	return false

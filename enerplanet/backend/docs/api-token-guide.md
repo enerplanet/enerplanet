@@ -279,7 +279,7 @@ this one screen.
 The toolbox backend sends the signed-in user's RENvolveIT access token instead
 of a `whf_` token. These tokens:
 
-- can only read (`GET`) models and results;
+- can only call `GET /auth/whoami`, `GET /models` and `GET /models/{id}`;
 - act as the EnerPlanET account the RENvolveIT user created by signing in to
   EnerPlanET with RENvolveIT (including the invite linking above);
 - are checked against that account on every request, so disabling the account

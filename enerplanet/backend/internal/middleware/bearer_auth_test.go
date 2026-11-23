@@ -74,7 +74,7 @@ func TestBearerAuthenticationChain(t *testing.T) {
 		{"JWT access level capped", "GET", "/api/auth/whoami", "Bearer " + raw, false, 200, `"access_level":"intermediate"`},
 		{"JWT reports partner issuer", "GET", "/api/auth/whoami", "Bearer " + raw, false, 200, `"issuer":"` + f.Issuer + `"`},
 		{"case insensitive scheme", "GET", "/api/models", "bearer " + raw, false, 200, `"subject":"local-a"`},
-		{"results", "GET", "/api/models/12/results", "Bearer " + raw, false, 200, "local-a"},
+		{"results not open to toolbox", "GET", "/api/models/12/results", "Bearer " + raw, false, 403, "Token does not permit"},
 		{"not linked", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-new")), false, 403, "No EnerPlanET account is linked"},
 		{"disabled account", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-disabled")), true, 403, "account is disabled"},
 		{"lookup failure", "GET", "/api/models", "Bearer " + f.Sign(t, f.Claims("partner-down")), true, 503, "Account lookup unavailable"},
