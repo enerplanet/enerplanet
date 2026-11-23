@@ -73,6 +73,7 @@ import { saveSession } from "./actions";
 import { autoRunFor, createAutoGuard } from "./autoRun";
 import { createVariantSessionGuard, persistVariantSession } from "./variantSession";
 import { useStoreVersion } from "./useStoreVersion";
+import { viewedProjection } from "./viewedProjection";
 import { WorkflowBar } from "./WorkflowBar";
 import { LedgerBar } from "./LedgerBar";
 import { StepsPanel } from "./StepsPanel";
@@ -686,7 +687,10 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
 
   const active: BuilderModule = view.entry;
   const View = active.Component;
-  const data = session.store.data;
+  // The module renders from **its own commit** while the session views a placement (§4); otherwise from the
+  // live tip. Only `data` moves: the store the module runs against, `run`, the map service and the position/
+  // steps panel stay on the live store — a view is read-only, and acting snaps back to the tip.
+  const data = viewedProjection(session.store, viewed);
   const inRegion = (region: Region): boolean => active.module.layout.includes(region);
 
   // The auto node's run state, handed to its render — and only an auto node's. Before the frame's first status
