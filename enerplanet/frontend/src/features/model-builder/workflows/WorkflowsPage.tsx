@@ -16,9 +16,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import { Copy, ExternalLink, Layers, Pencil, Plus, Trash2, Workflow as WorkflowIcon } from "lucide-react";
 import { MODULES } from "../shell/moduleRegistry";
-import { copyPayload, documentWithNodes, newDocument, slugify } from "./document";
+import { copyPayload, newDocument, slugify } from "./document";
 import { workflowService } from "./service";
-import { documentProblem, type WorkflowDocument, type WorkflowNodeDocument, type WorkflowSummary } from "./types";
+import { documentProblem, type WorkflowDocument, type WorkflowSummary } from "./types";
 import { WorkflowEditor } from "./WorkflowEditor";
 
 /**
@@ -102,10 +102,13 @@ const WorkflowsPage: React.FC = () => {
     setNewLabel("");
   };
 
-  const changeNodes = (nodes: readonly WorkflowNodeDocument[]): void => {
-    setEditing((current) =>
-      current === null ? current : { ...current, document: documentWithNodes(current.document, nodes) },
-    );
+  /**
+   * Keep the document the editor hands back — the chain edit and the `recommended` map (§6) travel the same
+   * way now, so one setter carries both. The editor owns the merge; this only stores the result and marks the
+   * session dirty.
+   */
+  const changeDocument = (document: WorkflowDocument): void => {
+    setEditing((current) => (current === null ? current : { ...current, document }));
     setDirty(true);
   };
 
@@ -193,7 +196,7 @@ const WorkflowsPage: React.FC = () => {
         dirty={dirty}
         saving={saving}
         error={saveError}
-        onChange={changeNodes}
+        onChange={changeDocument}
         onSave={() => void save()}
         onBack={() => {
           setEditing(null);

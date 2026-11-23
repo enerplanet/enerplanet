@@ -305,3 +305,58 @@ describe("reordering a chain", () => {
     expect(disabledCount(html)).toBe(2);
   });
 });
+
+describe("authoring recommended sections", () => {
+  // A document offering one section for `producer` — the terminal's stable name is the map key, and the
+  // section carries its own workflow-local key, label, description and the nodes it appends.
+  const SECTION = {
+    key: "insulate",
+    label: "Insulate",
+    description: "Add insulation and re-run.",
+    nodes: [{ id: "buildings", moduleId: "producer", label: "Producer" }],
+  };
+  const withRecommended: WorkflowDocument = {
+    id: "x",
+    version: 1,
+    label: "X",
+    nodes: [{ id: "p", moduleId: "producer" }],
+    recommended: { producer: [SECTION] },
+  };
+
+  it("renders the panel, the terminal keyed on its stable name, and the section's fields", () => {
+    const html = render(withRecommended);
+
+    expect(html).toContain("Recommended sections");
+    expect(html).toContain("producer"); // the terminal node's stable name
+    expect(html).toContain("insulate"); // the section's own key
+    expect(html).toContain("Insulate"); // its label
+    expect(html).toContain("Add insulation and re-run."); // its description (the goal)
+    expect(html).toContain("Add section"); // a control to author more
+    expect(html).toContain("Add a terminal"); // a control to name another terminal
+  });
+
+  it("names a section's nodes, so the author sees what a section appends", () => {
+    const html = render(withRecommended);
+
+    // The node reads as its label and its module — the same pair the chain rows show.
+    expect(html).toContain("Producer</span>");
+  });
+
+  it("surfaces a malformed map before a save is attempted, naming the defect", () => {
+    const malformed: WorkflowDocument = {
+      ...withRecommended,
+      recommended: { producer: [{ ...SECTION, key: "" }] },
+    };
+    const html = render(malformed);
+
+    expect(html).toContain("malformed");
+    expect(html).toContain("blank key");
+  });
+
+  it("prompts to name a terminal when the workflow declares no recommended sections", () => {
+    const html = render(empty);
+
+    expect(html).toContain("Recommended sections");
+    expect(html).toContain("No recommended sections");
+  });
+});
