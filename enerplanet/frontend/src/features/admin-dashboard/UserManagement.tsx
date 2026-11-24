@@ -16,6 +16,7 @@ import {
   XCircle,
   FolderInput,
   KeyRound,
+  MailPlus,
 } from "lucide-react";
 import { ApiTokensDialog } from "@/features/api-tokens/ApiTokensDialog";
 import { useAuthStore } from "@/store/auth-store";
@@ -88,6 +89,8 @@ interface UserFormData {
   password?: string;
   password_confirmation?: string;
   model_limit?: number | string;
+  /** email set-password link */
+  send_invite?: boolean;
 }
 
 interface ApiResponse<T> {
@@ -110,6 +113,7 @@ type CreateUserPayload = {
   password?: string;
   access_level: User["access_level"];
   group_id?: Group["id"];
+  send_invite?: boolean;
 };
 
 type UserDialogState = Pick<ReturnType<typeof useDialog<User>>, "selectedItem" | "close">;
@@ -158,6 +162,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
     password: "",
     password_confirmation: "",
     model_limit: undefined,
+    send_invite: true,
   });
   const {
     showSuccess,
@@ -219,8 +224,9 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
       const payload: CreateUserPayload = {
         email: userData.email,
         name: userData.name,
-        password: userData.password || undefined,
+        password: userData.send_invite ? undefined : userData.password || undefined,
         access_level: userData.access_level,
+        send_invite: Boolean(userData.send_invite),
       };
 
       if ((isManager(user) || isExpert(user)) && selectedGroup) {
@@ -233,11 +239,19 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
       if (data.success) {
         await new Promise((resolve) => setTimeout(resolve, 200));
         await fetchUsers();
-        setNotification({
-          open: true,
-          message: t("userManagement.notifications.userCreated"),
-          severity: "success",
-        });
+        // invite may fail separately
+        const inviteFailed = userData.send_invite && (data.data as { invite_sent?: boolean } | undefined)?.invite_sent === false;
+        setNotification(
+          inviteFailed
+            ? { open: true, message: t("userManagement.notifications.inviteFailed", "User created, but the invite e-mail could not be sent. Send it again from the user menu."), severity: "warning" }
+            : {
+                open: true,
+                message: userData.send_invite
+                  ? t("userManagement.notifications.inviteSent", { email: userData.email, defaultValue: "User created. An e-mail to set the password was sent to {{email}}." })
+                  : t("userManagement.notifications.userCreated"),
+                severity: "success",
+              }
+        );
         if (onUsersMutated) onUsersMutated();
         return true;
       } else {
@@ -741,7 +755,8 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
       if (editDialog.selectedItem) {
         success = await updateUser(editDialog.selectedItem.id, formData);
       } else {
-        if (!formData.password || formData.password !== formData.password_confirmation) {
+        // password only without invite
+        if (!formData.send_invite && (!formData.password || formData.password !== formData.password_confirmation)) {
           setFormErrors({
             password_confirmation: t("userManagement.notifications.passwordMismatch"),
           });
@@ -762,6 +777,26 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
     }
   };
 
+  const handleSendPasswordEmail = async (target: User) => {
+    await confirm({
+      type: "info",
+      title: t("userManagement.passwordEmail.title", "Send password e-mail?"),
+      description: t("userManagement.passwordEmail.description", {
+        email: target.email,
+        defaultValue: "{{email}} will get a link to set a new password. The link works for 72 hours.",
+      }),
+      confirmLabel: t("userManagement.passwordEmail.confirm", "Send e-mail"),
+      onConfirm: async () => {
+        try {
+          await axios.post(`/users/${target.id}/password-email`);
+          showSuccess(t("userManagement.passwordEmail.sent", { email: target.email, defaultValue: "Password e-mail sent to {{email}}." }));
+        } catch {
+          showError(t("userManagement.passwordEmail.failed", "The e-mail could not be sent. Check the mail settings and try again."));
+        }
+      },
+    });
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -771,6 +806,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
       password: "",
       password_confirmation: "",
       model_limit: undefined,
+      send_invite: true,
     });
     setFormErrors({});
   };
@@ -1247,6 +1283,18 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
                                     },
                                   ]
                                 : []),
+                              // set-password link
+                              ...(isExpertOrManager(user)
+                                ? [
+                                    {
+                                      key: "password-email",
+                                      icon: MailPlus,
+                                      tooltip: t("userManagement.actions.sendPasswordEmail", "E-mail a link to set a new password"),
+                                      variant: "default" as const,
+                                      onClick: () => void handleSendPasswordEmail(tableUser),
+                                    },
+                                  ]
+                                : []),
                               {
                                 key: "edit",
                                 icon: Edit,
@@ -1312,7 +1360,7 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
             ? t("userManagement.dialog.editTitle")
             : t("userManagement.dialog.addTitle")
         }
-        sections={getUserFormSections(!!editDialog.selectedItem, t, user?.access_level)}
+        sections={getUserFormSections(!!editDialog.selectedItem, t, user?.access_level, formData.send_invite !== false)}
         values={formData as unknown as Record<string, FormDataConvertible>}
         onChange={handleFormChange}
         onSubmit={handleSaveUser}

@@ -271,7 +271,9 @@
       },
       "security": {
         "title": "Seguridad",
-        "description": "Credenciales de seguridad de la cuenta"
+        "description": "Credenciales de seguridad de la cuenta",
+        "inviteDescription": "Cómo obtiene el usuario su contraseña",
+        "passwordTitle": "Definir una contraseña ahora"
       },
       "fields": {
         "fullName": "Nombre Completo",
@@ -280,7 +282,8 @@
         "emailVerified": "Correo Verificado",
         "password": "Contraseña",
         "confirmPassword": "Confirmar Contraseña",
-        "modelLimit": "Límite de Modelos"
+        "modelLimit": "Límite de Modelos",
+        "sendInvite": "Enviar al usuario un enlace para crear su contraseña"
       },
       "placeholders": {
         "fullName": "Ingrese nombre completo",
@@ -291,7 +294,8 @@
       },
       "descriptions": {
         "emailVerified": "Marcar correo como verificado",
-        "modelLimit": "Límite personalizado de creación de modelos (0 = ilimitado, vacío = predeterminado)"
+        "modelLimit": "Límite personalizado de creación de modelos (0 = ilimitado, vacío = predeterminado)",
+        "sendInvite": "Recomendado. El enlace vale 72 horas y luego abre la aplicación."
       },
       "accessLevels": {
         "veryLow": "Acceso Muy Bajo",
@@ -1236,7 +1240,8 @@
       "bulkMoveToGroup": "Mover al grupo",
       "deselectAll": "Deseleccionar todo",
       "selectAll": "Seleccionar todo",
-      "selected": "{{count}} seleccionados"
+      "selected": "{{count}} seleccionados",
+      "sendPasswordEmail": "Enviar un enlace para crear una contraseña nueva"
     },
     "groups": {
       "selectOrCreate": "Seleccionar o crear un grupo",
@@ -1296,7 +1301,9 @@
       "bulkDeletePartial": "{{succeeded}} de {{total}} usuarios eliminados. {{failed}} fallaron.",
       "bulkDeleted": "{{count}} usuarios eliminados correctamente",
       "bulkGroupChangeFailed": "No se pudo mover a los usuarios al grupo",
-      "bulkGroupChanged": "{{count}} usuarios movidos correctamente al nuevo grupo"
+      "bulkGroupChanged": "{{count}} usuarios movidos correctamente al nuevo grupo",
+      "inviteSent": "Usuario creado. Se envió un correo para crear la contraseña a {{email}}.",
+      "inviteFailed": "Usuario creado, pero no se pudo enviar el correo de invitación. Envíalo de nuevo desde el menú del usuario."
     },
     "confirmations": {
       "disableUserDescription": "Esto evitará que el usuario inicie sesión.",
@@ -1305,6 +1312,13 @@
       "enableGroupDescription": "Habilitar un grupo habilitará todos sus usuarios.",
       "deleteGroupDescription": "Esto eliminará el grupo y todos sus usuarios. Esta acción no se puede deshacer.",
       "bulkDeleteDescription": "Esto eliminará permanentemente {{count}} usuarios seleccionados. Esta acción no se puede deshacer."
+    },
+    "passwordEmail": {
+      "title": "¿Enviar correo de contraseña?",
+      "description": "{{email}} recibirá un enlace para crear una contraseña nueva. El enlace vale 72 horas.",
+      "confirm": "Enviar correo",
+      "sent": "Correo de contraseña enviado a {{email}}.",
+      "failed": "No se pudo enviar el correo. Revisa la configuración de correo e inténtalo de nuevo."
     }
   },
   "modelsManagement": {

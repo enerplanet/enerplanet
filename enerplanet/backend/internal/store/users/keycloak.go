@@ -7,10 +7,12 @@ import (
 	"io"
 	"net/http"
 	urlpkg "net/url"
+	"strconv"
 	"strings"
 
-	applogger "platform.local/platform/logger"
 	"spatialhub_backend/internal/config"
+
+	applogger "platform.local/platform/logger"
 )
 
 const (
@@ -124,6 +126,34 @@ func (s *Store) updateUserPayload(authToken, userID string, user *User) error {
 
 	url := fmt.Sprintf(urlPatternAdminUser, s.cfg.Auth.BaseURL, s.cfg.Auth.Realm, userID)
 	return s.doKeycloakPUT(authToken, url, body, http.StatusNoContent, http.StatusOK)
+}
+
+const setPasswordLinkSeconds = 72 * 60 * 60
+
+func (s *Store) SendSetPasswordEmail(authToken, userID string) error {
+	withRedirect := s.cfg.Auth.ClientID != "" && s.cfg.AppURL != ""
+	err := s.executeActionsEmail(authToken, userID, withRedirect)
+	if err != nil && withRedirect && strings.Contains(err.Error(), "redirect") {
+		applogger.ForComponent("users").Warnf("app url %s not an allowed keycloak redirect, sending without return link", s.cfg.AppURL)
+		return s.executeActionsEmail(authToken, userID, false)
+	}
+	return err
+}
+
+func (s *Store) executeActionsEmail(authToken, userID string, withRedirect bool) error {
+	params := urlpkg.Values{}
+	params.Set("lifespan", strconv.Itoa(setPasswordLinkSeconds))
+	if withRedirect {
+		params.Set("client_id", s.cfg.Auth.ClientID)
+		params.Set("redirect_uri", strings.TrimRight(s.cfg.AppURL, "/")+"/login")
+	}
+	endpoint := fmt.Sprintf(urlPatternAdminUser+"/execute-actions-email?%s", s.cfg.Auth.BaseURL, s.cfg.Auth.Realm, urlpkg.PathEscape(userID), params.Encode())
+	resp, err := s.keycloakRequest("PUT", endpoint, authToken, strings.NewReader(`["UPDATE_PASSWORD"]`))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	return checkKeycloakResponse(resp, http.StatusOK, http.StatusNoContent)
 }
 
 func New(cfg *config.Config) *Store {
