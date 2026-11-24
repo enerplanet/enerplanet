@@ -1,11 +1,4 @@
-/**
- * `compare-variant`'s view — rendered to a string, because the app has no DOM test environment.
- *
- * The point is the states the view owes the user — loading, both sides with results, a side with none (the
- * common case right after the variant was made), and a failed fetch — plus the no-gateway error that names the
- * installer, and the one control an interactive step must carry: the forward action. `t` echoes its key and the
- * source slot's state is driven through its own functions, so no DOM or fetch is involved.
- */
+/** `compare-variant`'s view: the states it owes the user, rendered to a string. */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ModelData } from "@model-builder/core";

@@ -1,11 +1,4 @@
-/**
- * The draft store's contract, held to account without a browser.
- *
- * Written failing first. What matters here is small and load-bearing: every region of the module must see the
- * *same* draft (that is the bug this store exists to fix), the snapshot must change identity when the value
- * changes (or React will not re-render), and it must **not** change when the value is the same (or an effect
- * keyed on the draft loops).
- */
+/** The draft store's contract: one draft every region sees, re-rendering on a change and not on sameness. */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDraft, setDraft, subscribe } from "./draft";
 import type { Coordinates } from "@model-builder/core";

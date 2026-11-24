@@ -1,14 +1,4 @@
-/**
- * `run-meme-pypsa`'s full-screen auto state — in progress, done, or failed with a manual re-run.
- *
- * The structure is `run-meme-calliope`'s: no control at all while the leg is in progress or done, and on
- * failure the message plus the **manual re-run** — the one affordance an auto node has. The states are rendered
- * to a string (`@spatialhub/i18n` echoes the key) because the app has no DOM test environment.
- *
- * As for the Calliope run, the *source* of the leg's state is the store's `memePypsaLeg` port — the frame's
- * `auto.state` describes its own `run()` call, which returns as soon as the leg is dispatched, minutes before it
- * finishes. So these cases hand the port the value under test and `auto` the guard and the rerun.
- */
+/** `run-meme-pypsa`'s full-screen auto state, driven by the `memePypsaLeg` port. */
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { AutoRunState, MemePypsaLeg } from "@model-builder/core";
@@ -49,8 +39,7 @@ describe("run-meme-pypsa's auto state view", () => {
   });
 
   it("shows the leg done, with no control at all", () => {
-    // `auto.state` is not the source: it reads `done` the moment the dispatch returns, while the leg is still
-    // going. The port is what says the leg finished.
+    // `auto.state` is not the source: the `memePypsaLeg` port says the leg finished.
     const html = render({ state: "running", rerun: () => {} }, leg("completed"));
 
     expect(html).toContain(DONE);

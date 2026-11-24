@@ -1,15 +1,4 @@
-/**
- * The grid engine — this module's **provider slot**.
- *
- * The module is a blackbox whose contract is only the GeoJSON it produces, and its engine is a *slot*:
- * `pylovo-grid` by default, "or any engine emitting the identical shape". So the
- * engine is an interface here, `pylovo.ts` is one implementation, and a test — or another host — may supply
- * another. Nothing above this line may know which one it is.
- *
- * The shape is deliberate in one respect: an engine returns **all five port values or throws**. A grid of half
- * a network is not a grid, and the module writes in one transaction, so partial success is not a state the
- * module has to represent — the type simply has no room for it.
- */
+/** The grid engine — this module's provider slot. */
 
 import type { Coordinates, RegionRef } from "@model-builder/core";
 
@@ -28,17 +17,11 @@ export interface GridResult {
   lines: GeoJSON.FeatureCollection;
   /** Medium voltage. Features carry `mv_line_id`, `from_transformer`, `to_transformer`, `length_km`. */
   mvLines: GeoJSON.FeatureCollection;
-  /**
-   * The grid ids present in the response — pylovo emits `[{ grid_result_id }]` and nothing more, which is why
-   * `ModelData.grids` is `unknown`. The counts and levels come from a separate backend call, not from here.
-   */
+  /** The grid ids present in the response (pylovo emits `[{ grid_result_id }]`); `ModelData.grids` is `unknown`. */
   grids: unknown;
 }
 
-/**
- * A grid engine. Implementations may call a backend, read a file, or synthesise a grid — the module cannot
- * tell, and must not try.
- */
+/** A grid engine: implementations may call a backend, read a file, or synthesise a grid. */
 export interface GridEngine {
   generate(request: GridRequest): Promise<GridResult>;
 }

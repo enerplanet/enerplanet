@@ -1,16 +1,4 @@
-/**
- * The `weather` module's tests.
- *
- * Written failing first.
- *
- * Two things are pinned here, and they are the two the legacy taught: **the year belongs to the period, not
- * to the scenario**, and **`provider: null` means the server's default rather than "unset"**. Both are easy
- * to get subtly wrong, and both would only show up as a wrong `weatherYear`/`weatherProvider` on the wire —
- * which is invisible until a run behaves oddly.
- *
- * (The rules the core enforces — undeclared writes, clobber, the required gate — are demonstrated in the
- * example module's tests. This file is about *this* module.)
- */
+/** The `weather` module's tests: the year belongs to the period, and `null` provider means the default. */
 import { describe, expect, it } from "vitest";
 import { contractIssues, runInScratch, type ModelData, type WeatherSelection } from "@model-builder/core";
 import weather, {
@@ -30,8 +18,7 @@ const SELECTION = "weatherSelection";
 /** The period every case starts from, named once for the same reason. */
 const FROM_DATE = "2025-01-01";
 
-/** A projection holding just a selection — the shape the module's gate is asked about, and the one place
- *  this key is written. */
+/** A projection holding just a selection. */
 function holding(selection: WeatherSelection): Partial<ModelData> {
   return { [SELECTION]: selection };
 }
@@ -59,22 +46,17 @@ describe("weather's declaration", () => {
       "fromDate",
       SELECTION,
     ]);
-    // The period is required, not merely read: this module's choice is finished only with the period
-    // `model-start` produces upstream — a recorded year takes the period's year, and a scenario's dates
-    // are the model's. Declaring it here makes the reliance part of the contract rather than an assumption.
+    // The period is required: this module's choice is finished only with it.
     expect(weather.module.params.filter((param) => param.required === true).map((p) => p.port)).toEqual([
       "fromDate",
     ]);
-    // Declaring a port is not claiming to write it: `buildingParams` is here because the cascade can remove it
-    // when the weather changes, and a module must know every port it can affect.
+    // `buildingParams` is declared because the cascade can remove it when the weather changes.
   });
 
   it("declares the edges it actually has, leaving transitivity to the module that owns it", () => {
-    // Invalidation is transitive, so `building-demand` declares the step to `technologies`; writing that
-    // far edge here would claim a coupling that belongs to another module.
+    // Invalidation is transitive: the far edge belongs to `building-demand`.
     expect([...weather.module.affect[SELECTION]!]).toEqual(["buildingParams"]);
-    // The period edge is real and was found by the influence prober, not by reading: a recorded year
-    // comes from the period, so changing the period invalidates the selection.
+    // The period edge is real: a recorded year comes from the period.
     expect([...weather.module.affect.fromDate!]).toEqual([SELECTION]);
   });
 
@@ -91,8 +73,7 @@ describe("weather's run", () => {
 
     expect(error).toBeUndefined();
     expect(store.data.weatherSelection).toEqual({ provider: null, choice: "p90" });
-    // No `year` key at all: a scenario has no calendar year, and a fake one is how the legacy's non-leap
-    // convention would end up in the wrong place.
+    // No `year` key: a scenario has no calendar year.
     expect(store.data.weatherSelection).not.toHaveProperty("year");
   });
 
@@ -105,8 +86,7 @@ describe("weather's run", () => {
   });
 
   it("keeps `null` as the archive, rather than writing the default's name", async () => {
-    // `null` means "the server's default", so a save omits the key. Writing the name would freeze today's
-    // default into every model.
+    // `null` means the server's default, so a save omits the key.
     choose({ provider: null, choice: "p50" });
 
     const { store } = await runInScratch({ module: weather.module, mock: READY });
@@ -123,8 +103,7 @@ describe("weather's run", () => {
   });
 
   it("changes no data but still records the run when the choice would change nothing", async () => {
-    // Clicking the option that is already chosen must not change a value — the module compares instead of
-    // trusting the click. The run still seals one zero-diff transaction, so the placement reads `done`.
+    // Re-clicking the chosen option changes nothing but still seals a zero-diff transaction.
     choose({ provider: null, choice: "p50" });
 
     const { store } = await runInScratch({ module: weather.module, mock: READY });
@@ -144,16 +123,14 @@ describe("weather's run", () => {
 
 describe("weather's gate", () => {
   it("reports a recorded year with no period to take it from", () => {
-    // The module's own completeness claim. The choice was made, but it cannot be finished: the year it
-    // needs lives on the period. The node stays unfinished, so the flow rests here.
+    // The node stays unfinished: the year it needs lives on the period.
     expect(issuesFor(holding({ provider: null, choice: "year" }))).toEqual([
       { port: SELECTION, message: "Set the model's period before running on a recorded year." },
     ]);
   });
 
   it("says nothing before a choice exists, and nothing once it is usable", () => {
-    // Silence means two different things, both correct: nothing chosen yet (the node is `pending`, not
-    // stale), and a choice that is complete.
+    // Silence means nothing chosen yet, or a choice that is complete.
     expect(issuesFor({})).toEqual([]);
     expect(issuesFor(holding(DEFAULT_SELECTION))).toEqual([]);
     expect(
@@ -194,8 +171,7 @@ describe("weather's helpers", () => {
   });
 
   it("hands the source over rather than reaching for one", () => {
-    // The provider slot: the module never learns which client it has. A host installs one, a test installs a
-    // fake, and `null` means "none yet" — which is what keeps this file free of any HTTP arrangement.
+    // The provider slot: `null` means "none yet".
     const installed = { listArchives: () => Promise.resolve({ defaultProvider: null, archives: {} }) };
     setWeatherSource(installed);
     setWeatherSource(null);

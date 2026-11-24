@@ -1,16 +1,4 @@
-/**
- * The `model-save` module's tests.
- *
- * This module reports rather than collects, so the cases here assert the three things it *does*: its
- * declaration is consistent, the `model.json` it would produce is the shape the backend is given, and the
- * node refuses to run until a host binds it a session.
- *
- * The conversion cases are the important ones. `model.json` is the one artefact where a mistake is
- * invisible until a round trip through the backend, so its shape is pinned here — and pinned against the
- * *builder*, not against a hand-written object, so this file cannot drift from what the save path sends.
- *
- * Written failing first.
- */
+/** The `model-save` module's tests: its declaration, the `model.json` shape, and the session gate. */
 import { describe, it, expect } from "vitest";
 import { contractIssues, createEngine, createStore, runInScratch } from "@model-builder/core";
 import modelSave, { bindModelSaveSession, previewPayload } from "./index";
@@ -44,8 +32,7 @@ function sessionFor(store: ReturnType<typeof createStore>, payloads: LegacyModel
     gateway: gateway(payloads),
     store,
     workflow: WORKFLOW,
-    // The flow is only the save node here: "every other node is done" is then vacuously true, which is
-    // the case that exercises the promotion rather than the refusal.
+    // Only the save node here, so "every other node is done" is vacuously true.
     flow: [{ id: NODE, moduleId: NODE }],
     registry: { [NODE]: modelSave.module },
   };
@@ -59,8 +46,7 @@ describe("the model-save module's declaration", () => {
   it("declares the whole persisted surface, and requires the drawn area", () => {
     const declared = modelSave.module.params.map((param) => param.port);
 
-    // Every port the legacy `model.json` carries. Nothing here is written by this node — they all arrive
-    // from upstream — but declaring them is what makes the completeness gate and the flow gate possible.
+    // Every port the legacy `model.json` carries; all arrive from upstream.
     expect([...declared].sort()).toEqual([
       "advancedParams",
       "buildingParams",
@@ -96,16 +82,7 @@ describe("the model-save module's declaration", () => {
   });
 
   it("seals per commit, so its record is sealed before the session that must contain it", () => {
-    // Deliberately NOT the default, and the reason is a save rather than a write. The node records
-    // `modelId`/`saveResult` through the save's seam, between the two calls, because the artefact Call B writes
-    // is where those ports have to appear — in its *log* as well as its projection, or a reloaded session shows
-    // the node with no history at all: `pending`, and a flow that reads incomplete, so a saved model could never
-    // be saved as a complete one again. `at-completion` buffers a commit until `run` returns, which is after
-    // Call B, so the record could not be in the session at all.
-    //
-    // The atomicity this node still needs — id and result together, never one without the other — comes from
-    // there being exactly one commit, made through one helper. Its history is one transaction either way: the
-    // end-of-run flush adds nothing to a run that has already sealed.
+    // `seal: "per-commit"` (not the default) so the id/result record is in the session before Call B.
     expect(modelSave.module.seal).toBe("per-commit");
   });
 
@@ -153,9 +130,7 @@ describe("the conversion output — the model.json this store produces", () => {
   });
 
   it("sends an empty config for an unfinished model, and says so", () => {
-    // The split: there is no model yet, so Call A carries `{}` rather than a config full of defaults,
-    // and the status is what tells a legacy consumer the model is not runnable. The real state travels
-    // in Call B's artefact either way.
+    // No model yet: Call A carries `{}`; the real state travels in Call B's artefact.
     const store = createStore({
       modelName: "Half-built",
       fromDate: "2025-01-01",
@@ -179,8 +154,7 @@ describe("the conversion output — the model.json this store produces", () => {
 
 describe("the session the node reads", () => {
   it("refuses to run while no host has bound a session", async () => {
-    // The node is *declared* without one — that is what keeps the flow valid and the `required` gate
-    // meaningful — but running it must not act on a session that is not there.
+    // Declared without a session, but running it must not act on one that is not there.
     bindModelSaveSession(null);
     const store = createStore({ ...modelSave.mock });
 

@@ -1,20 +1,4 @@
-/**
- * `technologies`'s tests.
- *
- * Written failing first.
- *
- * The catalogue arrives through a slot, but nothing in these cases needs one: **placing a technology calls
- * nothing** — that is the legacy's own behaviour, and the reason this module has no fetch — so the run is
- * driven through `holdType`/`holdAutoresolve`, the same door its panel uses.
- *
- * Three rules carry real weight here and each has its own case: the **one-heat-per-building** rule (the legacy
- * skips a second supply rather than replacing it), the **expected-fit** table (ported, so its resolution is
- * pinned), and the fact that an autoplaced assignment is flagged **estimated** — the legacy badges it precisely
- * because the heuristic is meant to be overruled.
- *
- * (The rules the core enforces are demonstrated in the example module's tests. This file is about *this*
- * module.)
- */
+/** `technologies`'s tests: one heat per building, the expected-fit table, and `estimated` flagging. */
 import { describe, expect, it } from "vitest";
 import {
   contractIssues,
@@ -46,12 +30,7 @@ function building(osmId: string, props: Record<string, unknown> = {}): GeoJSON.F
   };
 }
 
-/**
- * What a run starts from: the grid, and a demand figure per vector.
- *
- * `apartment` resolves to a gas boiler in the expected-fit table, `house` to an air-source heat pump — so the
- * two ids below let a case tell *which* class the table was asked about.
- */
+/** What a run starts from: the grid, and a demand figure per vector. */
 function ready(heatKwh = 10_800): Partial<ModelData> {
   return {
     buildings: { type: "FeatureCollection", features: [building("b1")] },
@@ -89,8 +68,7 @@ describe("technologies's declaration", () => {
   });
 
   it("renders in the sidebar alone, until a building selection exists", () => {
-    // A `map` region to pick buildings would need a selection API, and `MapService` has no way to ask for one.
-    // Assign-to-all is what the panel can honestly offer until it does.
+    // Assign-to-all is what the panel can offer until `MapService` supports a selection API.
     expect([...technologies.module.layout]).toEqual(["sidebar"]);
   });
 });
@@ -229,8 +207,7 @@ describe("the assignment rules", () => {
 
   it("counts exactly the legacy's heat types as heat supplies", () => {
     expect(HEAT_SUPPLY_TYPES).toContain("electric_boilers");
-    // An air conditioner is in the legacy's heat group too, but it is not a *supply* — so it must not
-    // satisfy the one-per-building rule or the gate.
+    // An air conditioner is in the legacy's heat group but is not a supply, so it must not satisfy the rule.
     expect(HEAT_SUPPLY_TYPES).not.toContain("air_conditioner");
   });
 

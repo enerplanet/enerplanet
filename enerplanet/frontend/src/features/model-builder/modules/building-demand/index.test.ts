@@ -1,19 +1,4 @@
-/**
- * `building-demand`'s tests.
- *
- * Written failing first.
- *
- * The estimate arrives through a slot, so every case here installs a fake and asserts what the module *does
- * with the answers*: one request per building, both vectors filled, the merge that leaves another module's
- * vector alone, and the flags that say where each number came from.
- *
- * The heat mirror gets its own cases, and they are mostly about the *table* — it is a deliberate copy of
- * backend defaults, so the rates are the part that has to be right. A mirror that is merely close is worse
- * than none: it disagrees exactly where nobody looks.
- *
- * (The rules the core enforces are demonstrated in the example module's tests. This file is about *this*
- * module.)
- */
+/** `building-demand`'s tests: the estimate slot, and the heat-mirror table. */
 import { describe, expect, it, beforeEach } from "vitest";
 import { contractIssues, runInScratch, type ModelData } from "@model-builder/core";
 import buildingDemand, { attributesOf, issuesFor, osmIdOf } from "./index";
@@ -80,8 +65,7 @@ describe("building-demand's declaration", () => {
     expect(
       buildingDemand.module.params.filter((param) => param.required === true).map((p) => p.port),
     ).toEqual(["buildings"]);
-    // `weatherSelection` is declared but never read: a weather change invalidates these params, and a module
-    // must know every port its writes can affect. Declaring is not claiming to write.
+    // `weatherSelection` is declared but never written: a weather change invalidates these params.
     expect(buildingDemand.module.params.map((param) => param.port).sort()).toEqual([
       PARAMS,
       "buildings",
@@ -204,8 +188,7 @@ describe("reading the features", () => {
   });
 
   it("falls back to the legacy's alternate property names", () => {
-    // `area_m2` cleared so the spread's default cannot win: this is the fallback path, and it only runs when
-    // the primary name is genuinely absent.
+    // `area_m2` cleared so the fallback path is exercised.
     const legacy = building("b1", {
       area_m2: undefined,
       area: 90,

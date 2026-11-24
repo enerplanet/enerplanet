@@ -1,17 +1,4 @@
-/**
- * `run-meme-pypsa`'s tests.
- *
- * Two things are asserted, the same two worth asserting about any module: that its **declaration** is
- * consistent (`contractIssues`), and that its **behaviour** is what it claims (through the real engine).
- *
- * The leg arrives through a slot, so every behaviour case installs a fake gateway and asserts what the module
- * *does with the answers*: submits once on arrival, submits nothing when a leg is already recorded, commits the
- * outcome when the leg lands, and reports a failure. It also pins the precondition this node alone has — a
- * **completed** Calliope run, without which the backend refuses the leg. The poll itself is not waited on: the
- * outcome-commit is the very `run()` the poll calls, so the cases drive `run()` directly and no test sleeps.
- *
- * Written failing first.
- */
+/** `run-meme-pypsa`'s tests: its declaration, and its behaviour through the real engine. */
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   contractIssues,
@@ -25,9 +12,7 @@ import { createInvalidator } from "../../core/invalidate";
 import type { DiffOp } from "../../core/diff";
 import runMemePypsa, { issuesFor } from "./index";
   it("is invalidated when the model is saved again, so an edited model is run again", () => {
-    // The leg describes a Calliope run of the *saved* model, and an edit re-saves under the same id: `saveResult`
-    // moves, `modelId` never does. Without this edge a completed leg stood for the rest of the session and the
-    // adjusted model the variant flow exists to run could not be powered at all.
+    // The leg describes the saved model; an edit re-saves under the same id, so `saveResult` moves and `modelId` does not.
     const store = createStore({
       ...runMemePypsa.mock,
       memePypsaLeg: leg("completed"),
@@ -63,10 +48,7 @@ function calliope(status: MemeRun["status"]): MemeRun {
 /** The failure message a leg can carry, named once so the cases speak about the same thing. */
 const FAILURE = "meme said no";
 
-/**
- * A gateway that answers from a script and remembers what it was asked. `status` may be a single answer (every
- * read) or a queue (one per read), so a case can drive the leg through several states.
- */
+/** A gateway that answers from a script and remembers what it was asked. */
 function fakeGateway(answers: { submit?: MemePypsaLeg; status?: MemePypsaLeg | MemePypsaLeg[] } = {}): MemePypsaLegGateway & {
   submitted: number[];
   polled: number[];
@@ -120,8 +102,7 @@ describe("run-meme-pypsa's declaration", () => {
   });
 
   it("declares all three edges — a different model, a save, and a different Calliope run", () => {
-    // The leg is *derived from* the Calliope run, so a different run makes the leg describe stale results;
-    // the backend drops the leg's row when a new Calliope run starts for the same reason.
+    // A different Calliope run makes the leg describe stale results.
     expect([...runMemePypsa.module.affect.modelId!]).toEqual(["memePypsaLeg"]);
     expect([...runMemePypsa.module.affect.saveResult!]).toEqual(["memePypsaLeg"]);
     expect([...runMemePypsa.module.affect.memeRun!]).toEqual(["memePypsaLeg"]);
@@ -138,9 +119,7 @@ describe("run-meme-pypsa's declaration", () => {
 
 describe("run-meme-pypsa's run", () => {
   it("reads the model first, then submits, when nothing has been started", async () => {
-    // The model reports nothing started, which is what one that has never been run looks like through the
-    // gateway: a leg status nobody has set lands on `failed`. Without this answer the fake defaults to a leg
-    // already going, which is the case below.
+    // Nothing started looks, through the gateway, like `failed`.
     const gateway = fakeGateway({ submit: leg("pending"), status: leg("failed") });
     setMemePypsaLegGateway(gateway);
 
@@ -153,9 +132,7 @@ describe("run-meme-pypsa's run", () => {
   });
 
   it("continues a leg it finds already going instead of starting a second one", async () => {
-    // A reopened session restores without the leg's record, so arrival happens again — and the leg may already be
-    // running. Submitting from nothing here is what dispatched a duplicate power flow; the read is what tells a
-    // session continuing a leg from one starting it.
+    // A reopened session re-reads rather than resubmitting a leg already running.
     const gateway = fakeGateway({ status: leg("running") });
     setMemePypsaLegGateway(gateway);
 
@@ -184,8 +161,7 @@ describe("run-meme-pypsa's run", () => {
     const store = createStore({ ...runMemePypsa.mock, memePypsaLeg: leg("running") });
     await createEngine(store).runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id });
 
-    // The backend refuses a duplicate live leg and, for the same reason, a second POST would be wrong: an
-    // existing record means read, never resubmit.
+    // An existing record means read, never resubmit.
     expect(gateway.submitted).toEqual([]);
     expect(gateway.polled).toEqual([runMemePypsa.mock?.modelId]);
   });
@@ -222,8 +198,7 @@ describe("run-meme-pypsa's run", () => {
     const store = createStore({ ...runMemePypsa.mock, memePypsaLeg: leg("failed", "boom") });
     await createEngine(store).runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id });
 
-    // A terminal failure is the one case that submits on top of an existing record: the backend allows a fresh
-    // dispatch once a leg is terminal (`MemeRunFinished`), and re-reading the dead leg would only repeat it.
+    // A terminal failure is the one case that submits on top of an existing record.
     expect(gateway.submitted).toEqual([runMemePypsa.mock?.modelId]);
     expect(store.data.memePypsaLeg).toEqual(leg("pending"));
   });
@@ -254,8 +229,7 @@ describe("run-meme-pypsa's run", () => {
       { op: "replace", path: "/memePypsaLeg", prev: leg("pending"), next: leg("running") },
     ]);
 
-    // The second run rewrites `memePypsaLeg`, which the first left holding a value. A blind write would be
-    // rejected as `clobber`; succeeding is the proof that run() read the port first.
+    // Rewriting `memePypsaLeg` succeeds only because run() read the port first.
     await engine.runModule(runMemePypsa.module, { id: NODE, moduleId: runMemePypsa.module.id });
     expect(store.data.memePypsaLeg).toEqual(leg("completed"));
   });

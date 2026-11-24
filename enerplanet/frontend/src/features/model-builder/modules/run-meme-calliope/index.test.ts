@@ -1,16 +1,4 @@
-/**
- * `run-meme-calliope`'s tests.
- *
- * Two things are asserted, the same two worth asserting about any module: that its **declaration** is
- * consistent (`contractIssues`), and that its **behaviour** is what it claims (through the real engine).
- *
- * The run arrives through a slot, so every behaviour case installs a fake gateway and asserts what the module
- * *does with the answers*: submits once on arrival, submits nothing when a run is already recorded, commits the
- * outcome when the run lands, and reports a failure. The poll itself is not waited on — the outcome-commit is
- * the very `run()` the poll calls, so the cases drive `run()` directly and no test sleeps.
- *
- * Written failing first.
- */
+/** `run-meme-calliope`'s tests: its declaration, and its behaviour through the real engine. */
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   contractIssues,
@@ -24,9 +12,7 @@ import type { DiffOp } from "../../core/diff";
 import runMemeCalliope, { issuesFor } from "./index";
 
   it("is invalidated when the model is saved again, so an edited model is run again", () => {
-    // A run consumes the *saved* model, and an edit re-saves under the same id: `saveResult` moves, `modelId`
-    // never does. Without this edge a completed run stood for the rest of the session and the adjusted model the
-    // variant flow exists to run could not be run at all.
+    // A run consumes the saved model; an edit re-saves under the same id, so `saveResult` moves and `modelId` does not.
     const store = createStore({
       ...runMemeCalliope.mock,
       memeRun: run("completed"),
@@ -57,10 +43,7 @@ function run(status: MemeRun["status"], error?: string): MemeRun {
 /** The failure message a run can carry, named once so the cases speak about the same thing. */
 const FAILURE = "meme said no";
 
-/**
- * A gateway that answers from a script and remembers what it was asked. `status` may be a single answer (every
- * read) or a queue (one per read), so a case can drive a run through several states.
- */
+/** A gateway that answers from a script and remembers what it was asked. */
 function fakeGateway(answers: { submit?: MemeRun; status?: MemeRun | MemeRun[] } = {}): MemeRunGateway & {
   submitted: number[];
   polled: number[];
@@ -131,9 +114,7 @@ describe("run-meme-calliope's declaration", () => {
 
 describe("run-meme-calliope's run", () => {
   it("reads the model first, then submits, when nothing has been started", async () => {
-    // The model reports nothing started, which is what one that has never been run looks like through the
-    // gateway: `draft` and its friends land on `failed`. Without this answer the fake defaults to a run already
-    // going, which is the case below.
+    // Nothing started looks, through the gateway, like `failed`.
     const gateway = fakeGateway({ submit: run("pending"), status: run("failed") });
     setMemeRunGateway(gateway);
 
@@ -146,9 +127,7 @@ describe("run-meme-calliope's run", () => {
   });
 
   it("continues a run it finds already going instead of starting a second one", async () => {
-    // A reopened session restores without the run's record, so arrival happens again — and the model may already
-    // be running. Submitting from nothing here is what dispatched a duplicate calculation; the read is what tells
-    // a session continuing a run from one starting it.
+    // A reopened session re-reads rather than resubmitting a run already going.
     const gateway = fakeGateway({ status: run("running") });
     setMemeRunGateway(gateway);
 
@@ -177,8 +156,7 @@ describe("run-meme-calliope's run", () => {
     const store = createStore({ ...runMemeCalliope.mock, memeRun: run("running") });
     await createEngine(store).runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id });
 
-    // The backend refuses a duplicate live run and the submit is idempotent, so a second POST would be both
-    // wrong and wasteful: an existing record means read, never resubmit.
+    // An existing record means read, never resubmit.
     expect(gateway.submitted).toEqual([]);
     expect(gateway.polled).toEqual([runMemeCalliope.mock?.modelId]);
   });
@@ -215,8 +193,7 @@ describe("run-meme-calliope's run", () => {
     const store = createStore({ ...runMemeCalliope.mock, memeRun: run("failed", "boom") });
     await createEngine(store).runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id });
 
-    // A terminal failure is the one case that submits on top of an existing record: the backend allows a fresh
-    // dispatch then (`MemeRunFinished`), and speaking to the dead run again would only repeat its failure.
+    // A terminal failure is the one case that submits on top of an existing record.
     expect(gateway.submitted).toEqual([runMemeCalliope.mock?.modelId]);
     expect(store.data.memeRun).toEqual(run("pending"));
   });
@@ -247,8 +224,7 @@ describe("run-meme-calliope's run", () => {
       { op: "replace", path: "/memeRun", prev: run("pending"), next: run("running") },
     ]);
 
-    // The second run rewrites `memeRun`, which the first left holding a value. A blind write would be rejected
-    // as `clobber`; succeeding is the proof that run() read the port first.
+    // Rewriting `memeRun` succeeds only because run() read the port first.
     await engine.runModule(runMemeCalliope.module, { id: NODE, moduleId: runMemeCalliope.module.id });
     expect(store.data.memeRun).toEqual(run("completed"));
   });

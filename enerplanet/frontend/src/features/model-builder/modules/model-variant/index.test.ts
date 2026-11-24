@@ -1,17 +1,4 @@
-/**
- * `model-variant`'s tests.
- *
- * Two things are asserted, the same two worth asserting about any module: that its **declaration** is
- * consistent (`contractIssues`) and honest (`deriveInfluence`), and that its **behaviour** is what it claims —
- * through the real engine.
- *
- * The copy is made through a slot, so every behaviour case installs a fake gateway and asserts what the module
- * *does with the answers*: creates one copy on a run, never a second when a record already exists, commits the
- * record the gateway answered, **moves `modelId` onto the copy in the same transaction**, and reports a missing
- * gateway rather than pretending.
- *
- * Written failing first.
- */
+/** `model-variant`'s tests: its declaration, and its behaviour through the real engine. */
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   assertInfluenceHonest,
@@ -33,10 +20,7 @@ function variant(overrides: Partial<ModelVariant> = {}): ModelVariant {
   return { variantModelId: 11, rootModelId: 1, title: "Base v1", ...overrides };
 }
 
-/**
- * A gateway that answers from a script and remembers what it was asked. The default answer is keyed by the
- * model id, so an input perturbation is visible to the influence prober.
- */
+/** A gateway that answers from a script and remembers what it was asked, keyed by model id. */
 function fakeGateway(answer?: ModelVariant): ModelVariantGateway & { asked: number[] } {
   const asked: number[] = [];
   return {
@@ -129,8 +113,7 @@ describe("model-variant's run", () => {
     const store = createStore({ ...modelVariant.mock, modelVariant: variant() });
     await createEngine(store).runModule(modelVariant.module, { id: NODE, moduleId: modelVariant.module.id });
 
-    // The read-before-write guard: a recorded variant means the copy was already made, so pressing the control
-    // again must not fork a second time.
+    // A recorded variant means the copy was already made, so pressing again must not fork a second.
     expect(gateway.asked).toEqual([]);
     expect(store.data.modelVariant).toEqual(variant());
     // The step is still sealed — a zero-diff trace — so the node can be left behind.

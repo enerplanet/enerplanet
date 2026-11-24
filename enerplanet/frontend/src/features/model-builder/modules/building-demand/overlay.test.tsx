@@ -1,10 +1,4 @@
-/**
- * `building-demand`'s full-screen auto state — in progress, done, or failed with a manual re-run.
- *
- * This module is the one `auto` node in the dev flow, so it is also the demonstration: it has no button to start
- * with, and the only control anywhere on it is the **manual re-run**, and only after a failure. The states are
- * rendered to a string (`@spatialhub/i18n` echoes the key) because the app has no DOM test environment.
- */
+/** `building-demand`'s full-screen auto state: running, done, or failed with a manual re-run. */
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { AutoRunState } from "@model-builder/core";
