@@ -3223,6 +3223,20 @@
         "subflowNote": "Een subflow is een fragment: hij wordt in een andere workflow ingevoegd en gevalideerd waar hij wordt ingevoegd, niet op zichzelf."
       },
       "editor": {
+        "addNode": "Knooppunt toevoegen",
+        "addSection": "Sectie toevoegen",
+        "addTerminal": "Eindknooppunt toevoegen",
+        "noNodes": "Geen knooppunten.",
+        "noSections": "Nog geen secties.",
+        "pickModule": "Module toevoegen…",
+        "recommended": "Aanbevolen secties",
+        "recommendedEmpty": "Geen aanbevolen secties. Noem een eindknooppunt om te beginnen.",
+        "recommendedHint": "Vervolgknooppunten die na een run worden aangeboden, gekoppeld aan de stabiele naam van het eindknooppunt. Elke sectie wordt als één geheel toegevoegd.",
+        "recommendedProblem": "De aanbevolen secties zijn ongeldig: {{reason}}",
+        "sectionDescription": "Beschrijving (het doel)",
+        "sectionKey": "Sleutel",
+        "sectionLabel": "Label",
+        "terminalName": "Eindknooppunt (stabiele naam)",
         "back": "Terug naar de lijst",
         "version": "versie {{version}}",
         "unsaved": "Niet-opgeslagen wijzigingen",
@@ -3344,6 +3358,9 @@
         "partial": "één kant nog niet gedraaid",
         "empty": "geen kant gedraaid"
       }
+    },
+    "recommended": {
+      "title": "Voorgestelde volgende stappen"
     }
   }
 }

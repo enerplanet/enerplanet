@@ -3224,6 +3224,20 @@
         "subflowNote": "Un subflujo es un fragmento: se inserta en otro flujo de trabajo y se valida donde se inserta, no por sí solo."
       },
       "editor": {
+        "addNode": "Añadir nodo",
+        "addSection": "Añadir sección",
+        "addTerminal": "Añadir un terminal",
+        "noNodes": "No hay nodos.",
+        "noSections": "Todavía no hay secciones.",
+        "pickModule": "Añadir un módulo…",
+        "recommended": "Secciones recomendadas",
+        "recommendedEmpty": "No hay secciones recomendadas. Nombra un terminal para empezar.",
+        "recommendedHint": "Nodos de seguimiento ofrecidos tras una ejecución, indexados por el nombre estable del nodo terminal. Cada sección se añade como una unidad.",
+        "recommendedProblem": "Las secciones recomendadas no son válidas: {{reason}}",
+        "sectionDescription": "Descripción (el objetivo)",
+        "sectionKey": "Clave",
+        "sectionLabel": "Etiqueta",
+        "terminalName": "Nodo terminal (nombre estable)",
         "back": "Volver a la lista",
         "version": "versión {{version}}",
         "unsaved": "Cambios sin guardar",
@@ -3345,6 +3359,9 @@
         "partial": "un lado aún sin ejecutar",
         "empty": "ningún lado ejecutado"
       }
+    },
+    "recommended": {
+      "title": "Próximos pasos sugeridos"
     }
   }
 }

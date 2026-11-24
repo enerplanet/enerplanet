@@ -3223,6 +3223,20 @@
         "subflowNote": "A subflow is a fragment: it is spliced into another workflow and validated where it is inserted, not on its own."
       },
       "editor": {
+        "addNode": "Add node",
+        "addSection": "Add section",
+        "addTerminal": "Add a terminal",
+        "noNodes": "No nodes.",
+        "noSections": "No sections yet.",
+        "pickModule": "Add a module…",
+        "recommended": "Recommended sections",
+        "recommendedEmpty": "No recommended sections. Name a terminal to begin.",
+        "recommendedHint": "Follow-up nodes offered after a run, keyed by the terminal node's stable name. Each section is appended as one unit.",
+        "recommendedProblem": "The recommended sections are malformed: {{reason}}",
+        "sectionDescription": "Description (the goal)",
+        "sectionKey": "Key",
+        "sectionLabel": "Label",
+        "terminalName": "Terminal node (stable name)",
         "back": "Back to the list",
         "version": "version {{version}}",
         "unsaved": "Unsaved changes",
@@ -3344,6 +3358,9 @@
         "partial": "one side not run yet",
         "empty": "neither side run yet"
       }
+    },
+    "recommended": {
+      "title": "Suggested next steps"
     }
   }
 }

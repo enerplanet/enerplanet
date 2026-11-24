@@ -3223,6 +3223,20 @@
         "subflowNote": "Ein Subflow ist ein Fragment: Er wird in einen anderen Workflow eingefügt und dort validiert, wo er eingesetzt wird, nicht für sich allein."
       },
       "editor": {
+        "addNode": "Knoten hinzufügen",
+        "addSection": "Abschnitt hinzufügen",
+        "addTerminal": "Endknoten hinzufügen",
+        "noNodes": "Keine Knoten.",
+        "noSections": "Noch keine Abschnitte.",
+        "pickModule": "Modul hinzufügen…",
+        "recommended": "Empfohlene Abschnitte",
+        "recommendedEmpty": "Keine empfohlenen Abschnitte. Benenne einen Endknoten, um zu beginnen.",
+        "recommendedHint": "Nach einem Lauf angebotene Folgeknoten, benannt nach dem stabilen Namen des Endknotens. Jeder Abschnitt wird als eine Einheit angehängt.",
+        "recommendedProblem": "Die empfohlenen Abschnitte sind fehlerhaft: {{reason}}",
+        "sectionDescription": "Beschreibung (das Ziel)",
+        "sectionKey": "Schlüssel",
+        "sectionLabel": "Bezeichnung",
+        "terminalName": "Endknoten (stabiler Name)",
         "back": "Zurück zur Liste",
         "version": "Version {{version}}",
         "unsaved": "Ungespeicherte Änderungen",
@@ -3344,6 +3358,9 @@
         "partial": "eine Seite noch nicht berechnet",
         "empty": "keine Seite berechnet"
       }
+    },
+    "recommended": {
+      "title": "Vorgeschlagene nächste Schritte"
     }
   }
 }
