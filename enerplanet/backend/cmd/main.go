@@ -388,7 +388,7 @@ func setupGinEngine(cfg *config.Config, log *logrus.Logger) *gin.Engine {
 		return ok
 	}
 
-	r.Use(cors.New(corsConfig))
+	r.Use(middleware.CORS(corsConfig, cfg.ToolboxOrigins))
 	r.Use(middleware.RequestMetrics())
 	r.Use(middleware.RateLimit())
 

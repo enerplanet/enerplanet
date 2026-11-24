@@ -334,6 +334,7 @@ jobs:
           set_env "$ENV_PROD" KEYCLOAK_API_IDP_ALIAS "${{ vars.RENVOLVEIT_IDP_ALIAS }}"
           # Keep >= RENvolveIT access token lifespan.
           set_env "$ENV_PROD" KEYCLOAK_API_MAX_TOKEN_LIFETIME_SECONDS 900
+          set_env "$ENV_PROD" TOOLBOX_CORS_ORIGINS "${{ vars.TOOLBOX_CORS_ORIGINS }}"
           # keycloak-init wrote the generated client secret into backend/.env.
           if grep -q '^KEYCLOAK_CLIENT_SECRET=' "$DEPLOY/enerplanet/backend/.env" 2>/dev/null; then
             KC_SECRET=$(grep '^KEYCLOAK_CLIENT_SECRET=' "$DEPLOY/enerplanet/backend/.env" | head -1)
