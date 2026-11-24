@@ -12,6 +12,16 @@ describe("slugify — the id derived from a label", () => {
   it("trims leading and trailing dashes", () => {
     expect(slugify("  A/B test  ")).toBe("a-b-test");
   });
+
+  it("transliterates umlauts rather than dropping them", () => {
+    expect(slugify("Öl-Kessel")).toBe("oel-kessel");
+    expect(slugify("Änderung der Größe")).toBe("aenderung-der-groesse");
+    expect(slugify("Straße")).toBe("strasse");
+  });
+
+  it("strips accents it has no transliteration for", () => {
+    expect(slugify("Café Écologie")).toBe("cafe-ecologie");
+  });
 });
 
 describe("a new document", () => {
@@ -147,24 +157,24 @@ describe("a copy of a document with recommended sections", () => {
     version: 1,
     label: "Development flow",
     nodes: [{ id: "model-start", moduleId: "model-start" }],
-    recommended: { "model-start": [SECTION] },
+    recommended: [SECTION],
   };
 
-  it("round-trips the recommended map, so a copy pastes back with its follow-ups intact", () => {
+  it("round-trips the recommended list, so a copy pastes back with its follow-ups intact", () => {
     const round = JSON.parse(copyPayload(doc)) as WorkflowDocument;
     expect(round.recommended).toEqual(doc.recommended);
   });
 
-  it("orders the map after nodes and each section's own keys, rather than trusting arrival order", () => {
+  it("orders the list after nodes and each section's own keys, rather than trusting arrival order", () => {
     const shuffled = JSON.parse(
-      '{"id":"x","version":1,"label":"X","nodes":[],"recommended":{"m":[{"description":"D","label":"L","nodes":[{"moduleId":"m","id":"b"}],"key":"k"}]}}',
+      '{"id":"x","version":1,"label":"X","nodes":[],"recommended":[{"description":"D","label":"L","nodes":[{"moduleId":"m","id":"b"}],"key":"k"}]}',
     ) as WorkflowDocument;
     const round = JSON.parse(copyPayload(shuffled)) as Record<string, unknown> & {
-      recommended: { m: Array<Record<string, unknown> & { nodes: Array<Record<string, unknown>> }> };
+      recommended: Array<Record<string, unknown> & { nodes: Array<Record<string, unknown>> }>;
     };
 
     expect(Object.keys(round)).toEqual(["id", "version", "label", "nodes", "recommended"]);
-    expect(Object.keys(round.recommended.m[0])).toEqual(["key", "label", "description", "nodes"]);
-    expect(Object.keys(round.recommended.m[0].nodes[0])).toEqual(["id", "moduleId"]);
+    expect(Object.keys(round.recommended[0])).toEqual(["key", "label", "description", "nodes"]);
+    expect(Object.keys(round.recommended[0].nodes[0])).toEqual(["id", "moduleId"]);
   });
 });

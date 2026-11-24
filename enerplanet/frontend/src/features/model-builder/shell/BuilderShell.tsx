@@ -50,7 +50,7 @@ import { StepsPanel } from "./StepsPanel";
 import { MAP_PROVIDER, MODULES, bindModelSaveSession } from "./moduleRegistry";
 import { frameView, type FrameMode } from "./frameMode";
 import { loadDefaultWorkflow, type Workflow } from "./workflow";
-import { appendRecommended, recommendedFor } from "../workflows/recommended";
+import { appendRecommended, recommendedFor, takeableSections } from "../workflows/recommended";
 import type { RecommendedSection } from "../workflows/types";
 import { createInvalidator } from "../core/invalidate";
 import type { BuilderModule, ModuleViewProps, OverlayControl, Region } from "./contract";
@@ -243,14 +243,24 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   // The effective flow the frame walks: the session's placed flow over the store's log.
   const flow = transcript(session.flow, session.store.log);
 
-  /** The follow-up sections a finished run offers for its terminal, derived from the effective flow. */
-  const recommendations = recommendedFor(flow, session.store, workflow.document);
+  /** The follow-up sections a finished run offers — only those whose steps this build can still run. */
+  const recommendations = takeableSections(
+    recommendedFor(flow, session.store, workflow.document),
+    workflow.lookup,
+    workflow.registry,
+  );
 
   /** Take a recommended section: grow the session's placed flow by the section's nodes as fresh placements. */
-  const takeSection = useCallback((section: RecommendedSection): void => {
-    setSession((current) => ({ ...current, flow: appendRecommended(current.flow, section) }));
-    setViewed(undefined);
-  }, []);
+  const takeSection = useCallback(
+    (section: RecommendedSection): void => {
+      setSession((current) => ({
+        ...current,
+        flow: appendRecommended(current.flow, section, workflow.lookup, workflow.registry),
+      }));
+      setViewed(undefined);
+    },
+    [workflow],
+  );
 
   // What the mode says to show, and what a session should start from.
   const view = frameView(mode, workflow, MODULES, session.store, flow, held);

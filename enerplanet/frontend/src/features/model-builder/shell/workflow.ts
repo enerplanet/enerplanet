@@ -33,6 +33,8 @@ export interface Workflow {
   ref: WorkflowRef;
   /** The document this workflow was built from, kept whole so a consumer can read the definition. */
   document: WorkflowDocument;
+  /** Resolves a subflow's workflow id to its document — what taking a subflow suggestion flattens through. */
+  lookup: WorkflowLookup;
 }
 
 /**
@@ -97,14 +99,14 @@ export function toWorkflow(
     // The follow-up sections a run may offer, carried through so the shell can read them off the finished terminal.
     ...(raw.recommended === undefined
       ? {}
-      : { recommended: raw.recommended as Record<string, RecommendedSection[]> }),
+      : { recommended: raw.recommended as RecommendedSection[] }),
   };
 
-  // The `recommended` map is untrusted input, so it is refused here rather than mis-read after a run.
+  // The `recommended` list is untrusted input, so it is refused here rather than mis-read after a run.
   const recommendedProblem = documentProblem(document);
   if (recommendedProblem !== undefined) {
     throw new Error(
-      `[model-builder] workflow "${id}" has a malformed recommended map: ${recommendedProblem}`,
+      `[model-builder] workflow "${id}" has a malformed recommended list: ${recommendedProblem}`,
     );
   }
 
@@ -120,6 +122,7 @@ export function toWorkflow(
     seedFile: asString(raw.seed) ?? "",
     ref: { id, version },
     document,
+    lookup,
   };
 }
 

@@ -3224,19 +3224,15 @@
       },
       "editor": {
         "addNode": "Knooppunt toevoegen",
-        "addSection": "Sectie toevoegen",
-        "addTerminal": "Eindknooppunt toevoegen",
+        "addSuggestion": "Suggestie toevoegen",
         "noNodes": "Geen knooppunten.",
-        "noSections": "Nog geen secties.",
         "pickModule": "Module toevoegen…",
-        "recommended": "Aanbevolen secties",
-        "recommendedEmpty": "Geen aanbevolen secties. Noem een eindknooppunt om te beginnen.",
-        "recommendedHint": "Vervolgknooppunten die na een run worden aangeboden, gekoppeld aan de stabiele naam van het eindknooppunt. Elke sectie wordt als één geheel toegevoegd.",
-        "recommendedProblem": "De aanbevolen secties zijn ongeldig: {{reason}}",
-        "sectionDescription": "Beschrijving (het doel)",
-        "sectionKey": "Sleutel",
-        "sectionLabel": "Label",
-        "terminalName": "Eindknooppunt (stabiele naam)",
+        "suggested": "Voorgestelde volgende stappen",
+        "suggestedEmpty": "Nog geen suggesties. Voeg hieronder een suggestie toe om te beginnen.",
+        "suggestedHint": "Vervolgstappen die worden aangeboden zodra de laatste stap van de keten is uitgevoerd. Elke suggestie wordt als één geheel toegevoegd.",
+        "suggestedProblem": "De voorgestelde volgende stappen zijn ongeldig: {{reason}}",
+        "suggestionTitle": "Titel",
+        "suggestionWhy": "Waarom (het doel)",
         "back": "Terug naar de lijst",
         "version": "versie {{version}}",
         "unsaved": "Niet-opgeslagen wijzigingen",
@@ -3271,7 +3267,8 @@
         "subflowOwnedBy": "Stappen uit \"{{label}}\" - bewerkt in die workflow, niet hier.",
         "subflowExpansionFailed": "Deze workflow kan hier niet worden uitgevouwen.",
         "recursive": "zou deze workflow bevatten - een subflow kan zichzelf niet bevatten, direct noch transitief",
-        "unresolved": "kan niet worden opgelost - hij noemt een module of workflow die deze build niet heeft"
+        "unresolved": "kan niet worden opgelost - hij noemt een module of workflow die deze build niet heeft",
+        "pickWorkflow": "Workflows"
       }
     },
     "run-meme-calliope": {

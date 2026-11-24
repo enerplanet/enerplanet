@@ -50,38 +50,34 @@ export interface RecommendedSection {
   nodes: WorkflowNodeDocument[];
 }
 
-/** Why a document's `recommended` map is malformed, or `undefined` when it is well-formed. */
+/** Why a document's `recommended` list is malformed, or `undefined` when it is well-formed. */
 export function documentProblem(document: WorkflowDocument): string | undefined {
   const recommended = document.recommended;
   if (recommended === undefined) return undefined;
+  if (!Array.isArray(recommended)) {
+    return "suggested next steps are not a list of suggestions";
+  }
 
   const seenKeys = new Set<string>();
-  for (const [terminalName, sections] of Object.entries(recommended)) {
-    if (terminalName.trim().length === 0) {
-      return "a recommended map has a blank terminal name; sections are keyed by a node's stable name";
+  for (const section of recommended) {
+    const key = typeof section?.key === "string" ? section.key : "";
+    if (key.trim().length === 0) {
+      return "a suggestion has a blank key; keys are derived from a suggestion's title";
     }
-    if (!Array.isArray(sections)) {
-      return `recommended["${terminalName}"] is not a list of sections`;
+    if (seenKeys.has(key)) {
+      const title = typeof section?.label === "string" && section.label.trim().length > 0 ? section.label : key;
+      return `two suggestions share the title "${title}"; a title must be unique within its workflow`;
     }
-    for (const section of sections) {
-      const key = typeof section?.key === "string" ? section.key : "";
-      if (key.trim().length === 0) {
-        return `a recommended section for "${terminalName}" has a blank key; a section's key is how a user picks it`;
-      }
-      if (seenKeys.has(key)) {
-        return `two recommended sections share the key "${key}"; a section key is unique within its workflow`;
-      }
-      seenKeys.add(key);
+    seenKeys.add(key);
 
-      const nodes = section.nodes;
-      if (!Array.isArray(nodes)) {
-        return `recommended section "${key}" has no nodes`;
-      }
-      for (const node of nodes) {
-        const problem = nodeProblem(node);
-        if (problem !== undefined) {
-          return `recommended section "${key}" has a malformed node: ${problem}`;
-        }
+    const nodes = section.nodes;
+    if (!Array.isArray(nodes)) {
+      return `suggestion "${key}" has no nodes`;
+    }
+    for (const node of nodes) {
+      const problem = nodeProblem(node);
+      if (problem !== undefined) {
+        return `suggestion "${key}" has a malformed node: ${problem}`;
       }
     }
   }
@@ -103,10 +99,10 @@ export interface WorkflowDocument {
   seed?: string;
   nodes: WorkflowNodeDocument[];
   /**
-   * The follow-up node groups a run of this workflow may offer, keyed by the terminal node's stable name
-   * (a module's `moduleId`, or a seed node's own `id`). Optional.
+   * The follow-up node groups a run of this workflow may offer once its last node finishes. Optional;
+   * an absent or empty list is well-formed.
    */
-  recommended?: Record<string, RecommendedSection[]>;
+  recommended?: RecommendedSection[];
 }
 
 /**

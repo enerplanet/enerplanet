@@ -3224,19 +3224,15 @@
       },
       "editor": {
         "addNode": "Knoten hinzufügen",
-        "addSection": "Abschnitt hinzufügen",
-        "addTerminal": "Endknoten hinzufügen",
+        "addSuggestion": "Vorschlag hinzufügen",
         "noNodes": "Keine Knoten.",
-        "noSections": "Noch keine Abschnitte.",
         "pickModule": "Modul hinzufügen…",
-        "recommended": "Empfohlene Abschnitte",
-        "recommendedEmpty": "Keine empfohlenen Abschnitte. Benenne einen Endknoten, um zu beginnen.",
-        "recommendedHint": "Nach einem Lauf angebotene Folgeknoten, benannt nach dem stabilen Namen des Endknotens. Jeder Abschnitt wird als eine Einheit angehängt.",
-        "recommendedProblem": "Die empfohlenen Abschnitte sind fehlerhaft: {{reason}}",
-        "sectionDescription": "Beschreibung (das Ziel)",
-        "sectionKey": "Schlüssel",
-        "sectionLabel": "Bezeichnung",
-        "terminalName": "Endknoten (stabiler Name)",
+        "suggested": "Vorgeschlagene nächste Schritte",
+        "suggestedEmpty": "Noch keine Vorschläge. Fügen Sie unten einen Vorschlag hinzu, um zu beginnen.",
+        "suggestedHint": "Folgeschritte, die angeboten werden, sobald der letzte Schritt der Kette gelaufen ist. Jeder Vorschlag wird als eine Einheit angehängt.",
+        "suggestedProblem": "Die vorgeschlagenen nächsten Schritte sind fehlerhaft: {{reason}}",
+        "suggestionTitle": "Titel",
+        "suggestionWhy": "Warum (das Ziel)",
         "back": "Zurück zur Liste",
         "version": "Version {{version}}",
         "unsaved": "Ungespeicherte Änderungen",
@@ -3271,7 +3267,8 @@
         "subflowOwnedBy": "Schritte aus \"{{label}}\" - bearbeitet in diesem Workflow, nicht hier.",
         "subflowExpansionFailed": "Dieser Workflow kann hier nicht expandiert werden.",
         "recursive": "würde diesen Workflow enthalten - ein Subflow kann sich nicht selbst enthalten, weder direkt noch transitiv",
-        "unresolved": "kann nicht aufgelöst werden - er nennt ein Modul oder einen Workflow, den dieser Build nicht hat"
+        "unresolved": "kann nicht aufgelöst werden - er nennt ein Modul oder einen Workflow, den dieser Build nicht hat",
+        "pickWorkflow": "Workflows"
       }
     },
     "run-meme-calliope": {

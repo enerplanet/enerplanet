@@ -1,9 +1,11 @@
-/** Recommended sections: what a terminal node offers, and how taking a section grows the flow. */
+/** Recommended sections: what a finished run offers, and how taking a section grows the flow. */
 import { describe, expect, it } from "vitest";
-import type { Flow } from "../core/flow";
+import type { Flow, ModuleRegistry } from "../core/flow";
+import type { Module } from "../core/module";
 import { createStore, type Store } from "../core/store";
+import type { WorkflowLookup } from "./expand";
 import type { RecommendedSection, WorkflowDocument } from "./types";
-import { appendRecommended, recommendedFor, sectionsFor } from "./recommended";
+import { appendRecommended, recommendedFor, takeableSections } from "./recommended";
 
 const INSULATE: RecommendedSection = {
   key: "insulate",
@@ -26,36 +28,41 @@ const DOC: WorkflowDocument = {
   version: 1,
   label: "Development flow",
   nodes: [{ id: "model-start", moduleId: "model-start" }],
-  recommended: { "model-start": [INSULATE, COMPARE] },
+  recommended: [INSULATE, COMPARE],
 };
 
 const SEED: Flow = [{ id: "0-model-start", moduleId: "model-start" }];
 
-describe("sectionsFor — the sections offered for a terminal", () => {
-  it("returns them by the terminal's stable name, in the order declared", () => {
-    expect(sectionsFor(DOC, "model-start").map((section) => section.key)).toEqual(["insulate", "compare"]);
-  });
+/** A lookup resolving nothing — a module-only section needs no subflow. */
+const noLookup: WorkflowLookup = () => undefined;
 
-  it("returns none for a name the document does not key on", () => {
-    expect(sectionsFor(DOC, "run-pypsa")).toEqual([]);
-  });
+function module(id: string): Module {
+  return { id, name: id, params: [], affect: {}, layout: ["sidebar"] };
+}
 
-  it("returns none when the document declares no recommended map at all", () => {
-    const plain: WorkflowDocument = { id: "y", version: 1, label: "Y", nodes: [] };
-    expect(sectionsFor(plain, "model-start")).toEqual([]);
-  });
-});
+/** The build the module-only fixtures run against: their modules, and only those. */
+const MODULES: ModuleRegistry = {
+  "building-configurator": module("building-configurator"),
+  "run-pypsa": module("run-pypsa"),
+  "compare-variant": module("compare-variant"),
+  lonely: module("lonely"),
+};
 
 describe("appendRecommended — a plan addition", () => {
   it("appends the section's nodes as fresh placements, in order, with monotonic ids", () => {
-    const grown = appendRecommended(SEED, INSULATE);
+    const grown = appendRecommended(SEED, INSULATE, noLookup, MODULES);
 
     expect(grown.map((node) => node.id)).toEqual(["0-model-start", "1-buildings", "2-run"]);
     expect(grown.map((node) => node.moduleId)).toEqual(["model-start", "building-configurator", "run-pypsa"]);
   });
 
   it("mints ids after the placements already present, so a second append stays monotonic", () => {
-    const twice = appendRecommended(appendRecommended(SEED, INSULATE), INSULATE);
+    const twice = appendRecommended(
+      appendRecommended(SEED, INSULATE, noLookup, MODULES),
+      INSULATE,
+      noLookup,
+      MODULES,
+    );
 
     expect(twice.map((node) => node.id)).toEqual([
       "0-model-start",
@@ -68,7 +75,7 @@ describe("appendRecommended — a plan addition", () => {
 
   it("does not mutate the input flow", () => {
     const before = SEED.slice();
-    appendRecommended(SEED, INSULATE);
+    appendRecommended(SEED, INSULATE, noLookup, MODULES);
 
     expect(SEED).toHaveLength(1);
     expect(SEED).toEqual(before);
@@ -81,18 +88,108 @@ describe("appendRecommended — a plan addition", () => {
       description: "A node authored without an id.",
       nodes: [{ id: "", moduleId: "lonely" }],
     };
-    const grown = appendRecommended([], nameless);
+    const grown = appendRecommended([], nameless, noLookup, MODULES);
 
     expect(grown[0].id).toBe("0-lonely");
   });
 
-  it("replaces the placed flow with a longer one — monotonic ids, the appended node present", () => {
-    const placed: Flow = SEED;
-    const grown = appendRecommended(placed, INSULATE);
+  it("drops a subflow that cannot be resolved, leaving the flow otherwise intact", () => {
+    const broken: RecommendedSection = {
+      key: "broken",
+      label: "Broken",
+      description: "Names a workflow this build does not have.",
+      nodes: [{ id: "s", workflows: ["nope"] }],
+    };
 
-    expect(grown).toHaveLength(placed.length + INSULATE.nodes.length);
-    expect(grown.map((node) => node.id)).toEqual(["0-model-start", "1-buildings", "2-run"]);
-    expect(grown.at(-1)).toEqual({ id: "2-run", moduleId: "run-pypsa" });
+    expect(appendRecommended(SEED, broken, noLookup, MODULES)).toEqual(SEED);
+  });
+});
+
+describe("appendRecommended — a subflow suggestion flattens to runnable modules", () => {
+  const child: WorkflowDocument = {
+    id: "child",
+    version: 1,
+    label: "Child",
+    nodes: [
+      { id: "a", moduleId: "m1", label: "A" },
+      { id: "b", moduleId: "m2", label: "B" },
+    ],
+  };
+  const lookup: WorkflowLookup = (workflowId) => (workflowId === "child" ? child : undefined);
+  const registry: ModuleRegistry = { m1: module("m1"), m2: module("m2") };
+  const SECTION: RecommendedSection = {
+    key: "adjust",
+    label: "Adjust",
+    description: "Splice a workflow in.",
+    nodes: [{ id: "sub", workflows: ["child"], label: "Child" }],
+  };
+
+  it("turns the subflow into module nodes with non-empty moduleIds and namespaced ids", () => {
+    const grown = appendRecommended(SEED, SECTION, lookup, registry);
+
+    expect(grown).toEqual([
+      { id: "0-model-start", moduleId: "model-start" },
+      { id: "1-sub/a", moduleId: "m1", label: "Child / A" },
+      { id: "2-sub/b", moduleId: "m2", label: "Child / B" },
+    ]);
+    for (const node of grown) expect(node.moduleId.length).toBeGreaterThan(0);
+  });
+
+  it("keeps the rest of a section's nodes when one subflow cannot be resolved", () => {
+    const mixed: RecommendedSection = {
+      key: "mixed",
+      label: "Mixed",
+      description: "One module, one broken subflow, one module.",
+      nodes: [
+        { id: "first", moduleId: "m1" },
+        { id: "sub", workflows: ["nope"] },
+        { id: "last", moduleId: "m2" },
+      ],
+    };
+    const grown = appendRecommended([], mixed, lookup, registry);
+
+    expect(grown.map((node) => node.moduleId)).toEqual(["m1", "m2"]);
+  });
+});
+
+describe("takeableSections — what a run may still offer", () => {
+  it("keeps a section whose every step this build can run", () => {
+    expect(takeableSections([INSULATE, COMPARE], noLookup, MODULES).map((section) => section.key)).toEqual([
+      "insulate",
+      "compare",
+    ]);
+  });
+
+  it("drops a section whose module this build does not declare", () => {
+    const missing: RecommendedSection = {
+      key: "missing",
+      label: "Missing",
+      description: "Names a module this build does not have.",
+      nodes: [{ id: "x", moduleId: "not-declared" }],
+    };
+
+    expect(takeableSections([INSULATE, missing], noLookup, MODULES).map((section) => section.key)).toEqual([
+      "insulate",
+    ]);
+  });
+
+  it("drops a section whose subflow names a workflow that is not stored", () => {
+    const broken: RecommendedSection = {
+      key: "broken",
+      label: "Broken",
+      description: "Names a workflow this build does not have.",
+      nodes: [{ id: "s", workflows: ["nope"] }],
+    };
+
+    expect(takeableSections([INSULATE, broken], noLookup, MODULES).map((section) => section.key)).toEqual([
+      "insulate",
+    ]);
+  });
+
+  it("drops a section with no steps, which would append nothing", () => {
+    const empty: RecommendedSection = { key: "empty", label: "Empty", description: "", nodes: [] };
+
+    expect(takeableSections([empty], noLookup, MODULES)).toEqual([]);
   });
 });
 
@@ -107,13 +204,13 @@ function startedStore(): Store {
   return store;
 }
 
-describe("recommendedFor — the sections on offer after a run", () => {
-  it("offers the finished terminal's sections, in the order declared", () => {
+describe("recommendedFor — the suggestions on offer after a run", () => {
+  it("offers the list once the last placement has finished", () => {
     expect(recommendedFor(SEED, startedStore(), DOC).map((section) => section.key)).toEqual(["insulate", "compare"]);
   });
 
   it("offers nothing while a run is still unfinished — the placement has committed nothing yet", () => {
-    // A store with no log: `0-model-start` is still pending, so no terminal has finished.
+    // A store with no log: `0-model-start` is still pending, so the tip has not finished.
     expect(recommendedFor(SEED, createStore({ modelName: "seed" }), DOC)).toEqual([]);
   });
 
@@ -122,13 +219,13 @@ describe("recommendedFor — the sections on offer after a run", () => {
     expect(recommendedFor(flow, startedStore(), DOC)).toEqual([]);
   });
 
-  it("offers nothing when the finished terminal is one the document does not name", () => {
-    const doc: WorkflowDocument = { ...DOC, recommended: { "run-pypsa": [COMPARE] } };
-    expect(recommendedFor(SEED, startedStore(), doc)).toEqual([]);
+  it("offers nothing when the document declares no list", () => {
+    const plain: WorkflowDocument = { id: "y", version: 1, label: "Y", nodes: [] };
+    expect(recommendedFor(SEED, startedStore(), plain)).toEqual([]);
   });
 
   it("offers nothing once a section's own nodes are appended pending — the tip is no longer the terminal", () => {
-    const grown = appendRecommended(SEED, INSULATE);
+    const grown = appendRecommended(SEED, INSULATE, noLookup, MODULES);
     expect(recommendedFor(grown, startedStore(), DOC)).toEqual([]);
   });
 });

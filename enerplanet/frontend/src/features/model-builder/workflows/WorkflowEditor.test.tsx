@@ -286,7 +286,7 @@ describe("reordering a chain", () => {
   });
 });
 
-describe("authoring recommended sections", () => {
+describe("authoring suggested next steps", () => {
   const SECTION = {
     key: "insulate",
     label: "Insulate",
@@ -297,33 +297,66 @@ describe("authoring recommended sections", () => {
     id: "x",
     version: 1,
     label: "X",
-    nodes: [{ id: "p", moduleId: "producer" }],
-    recommended: { producer: [SECTION] },
+    nodes: [{ id: "pv-step", moduleId: "producer", label: "Solar PV" }],
+    recommended: [SECTION],
   };
+  const GRID: WorkflowDocument = { id: "grid", version: 1, label: "Grid build", nodes: [] };
 
-  it("renders the panel, the terminal keyed on its stable name, and the section's fields", () => {
+  it("renders the panel under its own wording and the suggestion's fields", () => {
     const html = render(withRecommended);
 
-    expect(html).toContain("Recommended sections");
-    expect(html).toContain("producer"); // the terminal node's stable name
-    expect(html).toContain("insulate"); // the section's own key
-    expect(html).toContain("Insulate"); // its label
-    expect(html).toContain("Add insulation and re-run."); // its description (the goal)
-    expect(html).toContain("Add section"); // a control to author more
-    expect(html).toContain("Add a terminal"); // a control to name another terminal
+    expect(html).toContain("Suggested next steps"); // the panel heading
+    expect(html).toContain("Insulate"); // the suggestion's title
+    expect(html).toContain("Add insulation and re-run."); // its why (the goal)
+    expect(html).toContain("Add a suggestion"); // a control to author more
+    expect(html).toContain("Title"); // the title field's label
+    expect(html).toContain("Why (the goal)"); // the why field's label
   });
 
-  it("names a section's nodes, so the author sees what a section appends", () => {
+  it("has no step picker — a suggestion always belongs to the chain's tail", () => {
+    const html = render(withRecommended);
+
+    expect(html).not.toContain("After which step");
+    expect(html).not.toContain("Add suggestions for a step…");
+  });
+
+  it("renders no Key field — a suggestion's key is derived, never shown", () => {
+    const html = render(withRecommended);
+
+    expect(html).not.toContain(">Key</span>");
+  });
+
+  it("names a suggestion's nodes, so the author sees what it appends", () => {
     const html = render(withRecommended);
 
     // The node reads as its label and its module — the same pair the chain rows show.
     expect(html).toContain("Producer</span>");
   });
 
-  it("surfaces a malformed map before a save is attempted, naming the defect", () => {
+  it("offers modules and workflows in a suggestion's step picker", () => {
+    const html = render(withRecommended, false, [GRID]);
+
+    expect(html).toContain("Modules");
+    expect(html).toContain("Workflows");
+    expect(html).toContain("Grid build");
+    expect(html).toContain('value="module:producer"');
+    expect(html).toContain('value="workflow:grid"');
+  });
+
+  it("renders a suggestion whose step is a workflow", () => {
+    const subflow: WorkflowDocument = {
+      ...withRecommended,
+      recommended: [{ ...SECTION, nodes: [{ id: "adjust", workflows: ["grid"], label: "Grid" }] }],
+    };
+    const html = render(subflow, false, [GRID]);
+
+    expect(html).toContain("Grid");
+  });
+
+  it("surfaces a malformed list before a save is attempted, naming the defect", () => {
     const malformed: WorkflowDocument = {
       ...withRecommended,
-      recommended: { producer: [{ ...SECTION, key: "" }] },
+      recommended: [{ ...SECTION, key: "" }],
     };
     const html = render(malformed);
 
@@ -331,11 +364,11 @@ describe("authoring recommended sections", () => {
     expect(html).toContain("blank key");
   });
 
-  it("prompts to name a terminal when the workflow declares no recommended sections", () => {
+  it("prompts to author a suggestion when the workflow declares none", () => {
     const html = render(empty);
 
-    expect(html).toContain("Recommended sections");
-    expect(html).toContain("No recommended sections");
+    expect(html).toContain("Suggested next steps");
+    expect(html).toContain("No suggestions yet");
   });
 
   it("starts folded: the heading is all it shows until it is opened", () => {
@@ -344,7 +377,7 @@ describe("authoring recommended sections", () => {
     // Folded by default, so the panel is out of the way — but the heading stays and announces the
     // state, so the follow-ups a workflow offers are still discoverable.
     expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain("Recommended sections</span>");
+    expect(html).toContain("Suggested next steps</span>");
     expect(html).toContain("hidden px-3 pb-3");
   });
 });

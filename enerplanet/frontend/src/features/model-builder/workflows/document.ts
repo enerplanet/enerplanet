@@ -4,11 +4,17 @@
 
 import { isSubflowNode, type WorkflowDocument, type WorkflowNodeDocument } from "./types";
 
-/** A definition's id, derived from its label: lowercase, runs of non-alphanumerics to single dashes. */
+/** A definition's id, derived from its label: transliterated, lowercased, runs of non-alphanumerics to dashes. */
 export function slugify(label: string): string {
   return label
     .trim()
     .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
@@ -66,19 +72,14 @@ export function copyPayload(document: WorkflowDocument): string {
   const recommended =
     document.recommended === undefined
       ? undefined
-      : Object.fromEntries(
-          Object.entries(document.recommended).map(([terminalName, sections]) => [
-            terminalName,
-            sections.map((section) =>
-              ordered(
-                {
-                  ...(section as unknown as Record<string, unknown>),
-                  nodes: (section.nodes ?? []).map(orderedNode),
-                },
-                SECTION_KEY_ORDER,
-              ),
-            ),
-          ]),
+      : document.recommended.map((section) =>
+          ordered(
+            {
+              ...(section as unknown as Record<string, unknown>),
+              nodes: (section.nodes ?? []).map(orderedNode),
+            },
+            SECTION_KEY_ORDER,
+          ),
         );
   const canonical = ordered(
     {

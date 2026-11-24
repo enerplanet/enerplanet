@@ -35,15 +35,13 @@ import {
 import { subflowCandidates, type SubflowCandidate } from "./subflow";
 import {
   recommendedNode,
-  renamedTerminal,
+  recommendedSubflow,
+  sectionKey,
   updatedSection,
   withSection,
   withSectionNode,
-  withTerminal,
   withoutSection,
   withoutSectionNode,
-  withoutTerminal,
-  type RecommendedMap,
 } from "./recommendedEdit";
 import type { RecommendedSection, SubflowNodeDocument, WorkflowDocument, WorkflowNodeDocument } from "./types";
 import { documentProblem, isSubflowNode } from "./types";
@@ -338,57 +336,62 @@ const SubflowPicker: React.FC<{
   );
 };
 
-/** Recommended sections, authored: the map keyed by a terminal node's **stable name**. */
+/** Suggested next steps, authored: a flat list of suggestions, always offered for the chain's tail. */
 const RecommendedPanel: React.FC<{
-  recommended: RecommendedMap | undefined;
+  recommended: readonly RecommendedSection[] | undefined;
   problem: string | undefined;
   catalogue: readonly BuilderModule[];
-  onChange: (recommended: RecommendedMap) => void;
-}> = ({ recommended, problem, catalogue, onChange }) => {
+  workflows: readonly WorkflowDocument[];
+  onChange: (recommended: RecommendedSection[]) => void;
+}> = ({ recommended, problem, catalogue, workflows, onChange }) => {
   const { t } = useTranslation();
-  const [terminalDraft, setTerminalDraft] = useState("");
-  const [sectionDraft, setSectionDraft] = useState<{
-    terminal: string;
-    key: string;
-    label: string;
-    description: string;
-  } | null>(null);
+  const [suggestionDraft, setSuggestionDraft] = useState<{ title: string; why: string } | null>(null);
   const [nodePicks, setNodePicks] = useState<Record<string, string>>({});
   /** Folded until the author opens it, so the panel stays out of the way by default. */
   const [open, setOpen] = useState(false);
 
-  const map = recommended ?? {};
-  const terminals = Object.keys(map);
+  const list = recommended ?? [];
   const nodeModules = catalogue.filter((entry) => !isHostModule(entry.module));
+  const byId = useMemo(() => new Map(catalogue.map((entry) => [entry.module.id, entry])), [catalogue]);
+  /** A node's human label: its own label, else the catalogue's name, else its name. */
+  const labelFor = (node: WorkflowNodeDocument): string =>
+    isSubflowNode(node)
+      ? node.label ?? node.workflows[0] ?? node.id
+      : node.label ?? byId.get(node.moduleId)?.module.name ?? node.moduleId;
+  /** Every key already in the document, so a derived key stays unique document-wide. */
+  const takenKeys = list.map((suggestion) => suggestion.key);
 
-  const addTerminal = (): void => {
-    const name = terminalDraft.trim();
-    if (name.length === 0) return;
-    onChange(withTerminal(map, name));
-    setTerminalDraft("");
-  };
-
-  const addSection = (): void => {
-    if (sectionDraft === null) return;
-    const key = sectionDraft.key.trim();
-    if (key.length === 0) return;
+  const addSuggestion = (): void => {
+    if (suggestionDraft === null) return;
+    const title = suggestionDraft.title.trim();
+    if (title.length === 0) return;
     onChange(
-      withSection(map, sectionDraft.terminal, {
-        key,
-        label: sectionDraft.label,
-        description: sectionDraft.description,
+      withSection(list, {
+        key: sectionKey(title, takenKeys),
+        label: suggestionDraft.title,
+        description: suggestionDraft.why,
         nodes: [],
       }),
     );
-    setSectionDraft(null);
+    setSuggestionDraft(null);
   };
 
-  const addNode = (terminal: string, section: RecommendedSection): void => {
-    const pick = nodePicks[`${terminal}::${section.key}`] ?? "";
-    const module = nodeModules.find((entry) => entry.module.id === pick);
-    if (module === undefined) return;
-    onChange(withSectionNode(map, terminal, section.key, recommendedNode(module, section.nodes)));
-    setNodePicks((current) => ({ ...current, [`${terminal}::${section.key}`]: "" }));
+  const addNode = (suggestion: RecommendedSection): void => {
+    const pick = nodePicks[suggestion.key] ?? "";
+    const at = pick.indexOf(":");
+    if (at < 0) return;
+    const kind = pick.slice(0, at);
+    const id = pick.slice(at + 1);
+    let node: WorkflowNodeDocument | undefined;
+    if (kind === "module") {
+      const module = nodeModules.find((entry) => entry.module.id === id);
+      if (module !== undefined) node = recommendedNode(module, suggestion.nodes);
+    } else if (kind === "workflow") {
+      node = recommendedSubflow(id, suggestion.nodes);
+    }
+    if (node === undefined) return;
+    onChange(withSectionNode(list, suggestion.key, node));
+    setNodePicks((current) => ({ ...current, [suggestion.key]: "" }));
   };
 
   return (
@@ -407,7 +410,7 @@ const RecommendedPanel: React.FC<{
           }
         />
         <span className="text-sm font-semibold text-foreground">
-          {t("modelBuilder.workflows.editor.recommended", "Recommended sections")}
+          {t("modelBuilder.workflows.editor.suggested", "Suggested next steps")}
         </span>
       </button>
 
@@ -416,7 +419,7 @@ const RecommendedPanel: React.FC<{
         <p className="mx-3 mb-3 flex items-start gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            {t("modelBuilder.workflows.editor.recommendedProblem", "The recommended sections are malformed: {{reason}}", {
+            {t("modelBuilder.workflows.editor.suggestedProblem", "The suggested next steps are malformed: {{reason}}", {
               reason: problem,
             })}
           </span>
@@ -426,254 +429,176 @@ const RecommendedPanel: React.FC<{
       {/* Shown by CSS rather than rendered conditionally: this harness asserts static markup, so a
           folded body has to stay in the DOM to be covered. */}
       <div className={open ? "px-3 pb-3" : "hidden px-3 pb-3"}>
-          <p className="mb-3 text-xs text-muted-foreground">
-            {t(
-              "modelBuilder.workflows.editor.recommendedHint",
-              "Follow-up nodes offered after a run, keyed by the terminal node's stable name. Each section is appended as one unit.",
-            )}
-          </p>
+        <p className="mb-3 text-xs text-muted-foreground">
+          {t(
+            "modelBuilder.workflows.editor.suggestedHint",
+            "Follow-up steps offered once the chain's last step has run. Each suggestion is appended as one unit.",
+          )}
+        </p>
 
-        {terminals.length === 0 ? (
+        {list.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            {t("modelBuilder.workflows.editor.recommendedEmpty", "No recommended sections. Name a terminal to begin.")}
+            {t("modelBuilder.workflows.editor.suggestedEmpty", "No suggestions yet. Add a suggestion below to begin.")}
           </p>
         ) : (
           <ul className="space-y-3">
-            {terminals.map((terminal) => (
-              <li key={terminal} className="rounded-lg border border-border bg-card p-3">
+            {list.map((section) => (
+              <li key={section.key} className="rounded-lg border border-border bg-card p-3">
                 <div className="flex items-start gap-2">
-                  <label className="min-w-0 flex-1">
-                    <span className="text-[11px] text-muted-foreground">
-                      {t("modelBuilder.workflows.editor.terminalName", "Terminal node (stable name)")}
-                    </span>
-                    <input
-                      defaultValue={terminal}
-                      onBlur={(event) => {
-                        const to = event.target.value.trim();
-                        if (to !== terminal) onChange(renamedTerminal(map, terminal, to));
-                      }}
-                      className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
-                    />
-                  </label>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <label className="block">
+                      <span className="text-[11px] text-muted-foreground">
+                        {t("modelBuilder.workflows.editor.suggestionTitle", "Title")}
+                      </span>
+                      <input
+                        defaultValue={section.label}
+                        onBlur={(event) => onChange(updatedSection(list, section.key, { label: event.target.value }))}
+                        className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-[11px] text-muted-foreground">
+                        {t("modelBuilder.workflows.editor.suggestionWhy", "Why (the goal)")}
+                      </span>
+                      <input
+                        defaultValue={section.description}
+                        onBlur={(event) =>
+                          onChange(updatedSection(list, section.key, { description: event.target.value }))
+                        }
+                        className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                      />
+                    </label>
+                  </div>
 
                   <button
                     type="button"
-                    onClick={() => onChange(withoutTerminal(map, terminal))}
-                    className="mt-4 shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                    onClick={() => onChange(withoutSection(list, section.key))}
+                    className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
                     aria-label={t(REMOVE_KEY, "Remove")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
 
-                {(map[terminal] ?? []).length === 0 ? (
-                  <p className="mt-2 text-[11px] text-muted-foreground">
-                    {t("modelBuilder.workflows.editor.noSections", "No sections yet.")}
-                  </p>
-                ) : (
-                  <ul className="mt-2 space-y-2">
-                    {(map[terminal] ?? []).map((section) => (
-                      <li key={section.key} className="rounded-md border border-border bg-background p-2.5">
-                        <div className="flex items-start gap-2">
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <label className="block">
-                              <span className="text-[11px] text-muted-foreground">
-                                {t("modelBuilder.workflows.editor.sectionKey", "Key")}
-                              </span>
-                              <input
-                                defaultValue={section.key}
-                                onBlur={(event) =>
-                                  onChange(
-                                    updatedSection(map, terminal, section.key, { key: event.target.value.trim() }),
-                                  )
-                                }
-                                className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
-                              />
-                            </label>
-                            <label className="block">
-                              <span className="text-[11px] text-muted-foreground">
-                                {t("modelBuilder.workflows.editor.sectionLabel", "Label")}
-                              </span>
-                              <input
-                                defaultValue={section.label}
-                                onBlur={(event) =>
-                                  onChange(updatedSection(map, terminal, section.key, { label: event.target.value }))
-                                }
-                                className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                              />
-                            </label>
-                            <label className="block">
-                              <span className="text-[11px] text-muted-foreground">
-                                {t("modelBuilder.workflows.editor.sectionDescription", "Description (the goal)")}
-                              </span>
-                              <input
-                                defaultValue={section.description}
-                                onBlur={(event) =>
-                                  onChange(
-                                    updatedSection(map, terminal, section.key, { description: event.target.value }),
-                                  )
-                                }
-                                className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                              />
-                            </label>
-                          </div>
-
+                <div className="mt-2 border-t border-border pt-2">
+                  {section.nodes.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      {t("modelBuilder.workflows.editor.noNodes", "No nodes.")}
+                    </p>
+                  ) : (
+                    <ol className="space-y-1">
+                      {section.nodes.map((node, at) => (
+                        <li key={`${node.id}-${at}`} className="flex items-center gap-2 text-xs">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
+                            {at + 1}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate">
+                            <span className="text-foreground">{labelFor(node)}</span>{" "}
+                            <span className="font-mono text-[11px] text-muted-foreground">
+                              {isSubflowNode(node) ? node.workflows.join(", ") : node.moduleId}
+                            </span>
+                          </span>
                           <button
                             type="button"
-                            onClick={() => onChange(withoutSection(map, terminal, section.key))}
-                            className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                            onClick={() => onChange(withoutSectionNode(list, section.key, at))}
+                            className="shrink-0 rounded-md border border-border p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
                             aria-label={t(REMOVE_KEY, "Remove")}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
-                        </div>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
 
-                        <div className="mt-2 border-t border-border pt-2">
-                          {section.nodes.length === 0 ? (
-                            <p className="text-[11px] text-muted-foreground">
-                              {t("modelBuilder.workflows.editor.noNodes", "No nodes.")}
-                            </p>
-                          ) : (
-                            <ol className="space-y-1">
-                              {section.nodes.map((node, at) => (
-                                <li key={`${node.id}-${at}`} className="flex items-center gap-2 text-xs">
-                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
-                                    {at + 1}
-                                  </span>
-                                  <span className="min-w-0 flex-1 truncate">
-                                    <span className="text-foreground">{node.label ?? node.id}</span>{" "}
-                                    <span className="font-mono text-[11px] text-muted-foreground">
-                                      {isSubflowNode(node) ? node.workflows.join(", ") : node.moduleId}
-                                    </span>
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => onChange(withoutSectionNode(map, terminal, section.key, at))}
-                                    className="shrink-0 rounded-md border border-border p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
-                                    aria-label={t(REMOVE_KEY, "Remove")}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                </li>
-                              ))}
-                            </ol>
-                          )}
-
-                          <div className="mt-2 flex items-center gap-2">
-                            <select
-                              value={nodePicks[`${terminal}::${section.key}`] ?? ""}
-                              onChange={(event) =>
-                                setNodePicks((current) => ({
-                                  ...current,
-                                  [`${terminal}::${section.key}`]: event.target.value,
-                                }))
-                              }
-                              className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                            >
-                              <option value="">{t("modelBuilder.workflows.editor.pickModule", "Add a module…")}</option>
-                              {nodeModules.map((entry) => (
-                                <option key={entry.module.id} value={entry.module.id}>
-                                  {entry.module.name ?? entry.module.id}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              type="button"
-                              onClick={() => addNode(terminal, section)}
-                              disabled={(nodePicks[`${terminal}::${section.key}`] ?? "") === ""}
-                              className="shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
-                            >
-                              {t("modelBuilder.workflows.editor.addNode", "Add node")}
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {sectionDraft !== null && sectionDraft.terminal === terminal ? (
-                  <div className="mt-2 rounded-md border border-dashed border-border p-2.5">
-                    <div className="flex flex-wrap items-end gap-2">
-                      <label className="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground">
-                        {t("modelBuilder.workflows.editor.sectionKey", "Key")}
-                        <input
-                          autoFocus
-                          value={sectionDraft.key}
-                          onChange={(event) => setSectionDraft({ ...sectionDraft, key: event.target.value })}
-                          className="w-32 rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
-                        />
-                      </label>
-                      <label className="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground">
-                        {t("modelBuilder.workflows.editor.sectionLabel", "Label")}
-                        <input
-                          value={sectionDraft.label}
-                          onChange={(event) => setSectionDraft({ ...sectionDraft, label: event.target.value })}
-                          className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={addSection}
-                        disabled={sectionDraft.key.trim().length === 0}
-                        className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
-                      >
-                        {t("modelBuilder.workflows.editor.add", "Add")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSectionDraft(null)}
-                        className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
-                      >
-                        {t("modelBuilder.workflows.newForm.cancel", "Cancel")}
-                      </button>
-                    </div>
-                    <input
-                      value={sectionDraft.description}
-                      onChange={(event) => setSectionDraft({ ...sectionDraft, description: event.target.value })}
-                      placeholder={t("modelBuilder.workflows.editor.sectionDescription", "Description (the goal)")}
-                      className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                    />
+                  <div className="mt-2 flex items-center gap-2">
+                    <select
+                      value={nodePicks[section.key] ?? ""}
+                      onChange={(event) =>
+                        setNodePicks((current) => ({ ...current, [section.key]: event.target.value }))
+                      }
+                      className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                    >
+                      <option value="">{t("modelBuilder.workflows.editor.pickModule", "Add a module…")}</option>
+                      <optgroup label={t("modelBuilder.workflows.editor.palette", "Modules")}>
+                        {nodeModules.map((entry) => (
+                          <option key={entry.module.id} value={`module:${entry.module.id}`}>
+                            {entry.module.name ?? entry.module.id}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label={t("modelBuilder.workflows.editor.pickWorkflow", "Workflows")}>
+                        {workflows.map((workflow) => (
+                          <option key={workflow.id} value={`workflow:${workflow.id}`}>
+                            {workflow.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => addNode(section)}
+                      disabled={(nodePicks[section.key] ?? "") === ""}
+                      className="shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      {t("modelBuilder.workflows.editor.addNode", "Add node")}
+                    </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setSectionDraft({ terminal, key: "", label: "", description: "" })}
-                    className="mt-2 flex items-center gap-1 rounded-md border border-dashed border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    {t("modelBuilder.workflows.editor.addSection", "Add section")}
-                  </button>
-                )}
+                </div>
               </li>
             ))}
           </ul>
         )}
 
-        <div className="mt-3 flex items-end gap-2">
-          <label className="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground">
-            {t("modelBuilder.workflows.editor.addTerminal", "Add a terminal")}
+        {suggestionDraft !== null ? (
+          <div className="mt-3 rounded-md border border-dashed border-border p-2.5">
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground">
+                {t("modelBuilder.workflows.editor.suggestionTitle", "Title")}
+                <input
+                  autoFocus
+                  value={suggestionDraft.title}
+                  onChange={(event) => setSuggestionDraft({ ...suggestionDraft, title: event.target.value })}
+                  className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={addSuggestion}
+                disabled={suggestionDraft.title.trim().length === 0}
+                className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                {t("modelBuilder.workflows.editor.add", "Add")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSuggestionDraft(null)}
+                className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
+              >
+                {t("modelBuilder.workflows.newForm.cancel", "Cancel")}
+              </button>
+            </div>
             <input
-              value={terminalDraft}
-              onChange={(event) => setTerminalDraft(event.target.value)}
-              placeholder="model-start"
-              className="w-full rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
+              value={suggestionDraft.why}
+              onChange={(event) => setSuggestionDraft({ ...suggestionDraft, why: event.target.value })}
+              placeholder={t("modelBuilder.workflows.editor.suggestionWhy", "Why (the goal)")}
+              className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
             />
-          </label>
+          </div>
+        ) : (
           <button
             type="button"
-            onClick={addTerminal}
-            className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
+            onClick={() => setSuggestionDraft({ title: "", why: "" })}
+            className="mt-3 flex items-center gap-1 rounded-md border border-dashed border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted"
           >
             <Plus className="h-3.5 w-3.5" />
-            {t("modelBuilder.workflows.editor.add", "Add")}
+            {t("modelBuilder.workflows.editor.addSuggestion", "Add a suggestion")}
           </button>
-        </div>
+        )}
       </div>
     </section>
   );
 };
-
 export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   document,
   catalogue,
@@ -697,10 +622,10 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     onChange({ ...document, nodes: [...nodes] });
   };
 
-  /** The document with the recommended map replaced; an empty map drops the field. */
-  const changeRecommended = (recommended: RecommendedMap): void => {
+  /** The document with the recommended list replaced; an empty list drops the field. */
+  const changeRecommended = (recommended: RecommendedSection[]): void => {
     const next: WorkflowDocument = { ...document };
-    if (Object.keys(recommended).length === 0) delete next.recommended;
+    if (recommended.length === 0) delete next.recommended;
     else next.recommended = recommended;
     onChange(next);
   };
@@ -960,6 +885,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           recommended={document.recommended}
           problem={problem}
           catalogue={catalogue}
+          workflows={workflows}
           onChange={changeRecommended}
         />
 
