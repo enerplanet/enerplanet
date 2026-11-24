@@ -5,7 +5,7 @@
 #
 # Usage:
 #   fixtures/load.sh          # load what is missing, leave what is present
-#   fixtures/load.sh pylovo   # only the named sets: weather, city2tabula, pylovo
+#   fixtures/load.sh pylovo   # only the named sets: weather, city2tabula, pylovo, relink
 #   FORCE=1 fixtures/load.sh  # overwrite targets that already exist
 #   FIXTURES_DIR=/other fixtures/load.sh  # read the fixture data from elsewhere
 #
@@ -200,10 +200,62 @@ load_pylovo() {
   fi
 }
 
+# The OSM link table names PyLovo grid buildings, so it goes stale whenever the
+# grid does. Relinking is what the deploy path does after it replaces a PyLovo
+# database (see relink_all in scripts/deploy-fixture.sh); this script has no
+# such step because it never replaces one, and that is the gap it closes.
+#
+# Safe to run always: the table is rebuilt from whatever grid is current, so the
+# work is idempotent and a rerun costs about a second per country. That matters
+# because a database left half-processed is only repaired by re-linking it —
+# City2TABULA's on-request run extracts all *unprocessed* buildings of a country,
+# so on an already-processed one it finds nothing to extract and reports no
+# buildings at all, which surfaces much later as a model run with no envelopes.
+C2T_API_CONTAINER="${C2T_API_CONTAINER:-city2tabula-api-1}"
+
+# Must match isoByCountry in city2tabula's internal/config/country.go: the server
+# names each country's database <DB_NAME>_<code> and takes the country by name.
+C2T_COUNTRIES="austria:at belgium:be bulgaria:bg cyprus:cy czechia:cz denmark:dk
+  france:fr germany:de greece:gr hungary:hu ireland:ie italy:it netherlands:nl
+  norway:no poland:pl serbia:rs slovenia:si spain:es sweden:se united_kingdom:gb"
+
+# country_for CODE — the country name to run City2TABULA under, or non-zero when
+# the code is not a country it knows.
+country_for() {
+  local pair
+  for pair in $C2T_COUNTRIES; do
+    [ "${pair#*:}" = "$1" ] && { printf '%s' "${pair%%:*}"; return 0; }
+  done
+  return 1
+}
+
+# relink_all re-runs the PyLovo link for every country database that has one, so
+# the links name the grid buildings of the database currently loaded.
+relink_all() {
+  local db code country
+  c2t_settings || return 0
+  if [ "$(docker inspect -f '{{.State.Running}}' "$C2T_API_CONTAINER" 2>/dev/null)" != true ]; then
+    skip "city2tabula: container $C2T_API_CONTAINER is not running, start it with 'make city2tabula' first"
+    return 0
+  fi
+  for db in $(c2t_psql -d postgres -tAc "select datname from pg_database where datname like '${C2T_TARGET_NAME}\\_%' order by 1"); do
+    code="${db#"${C2T_TARGET_NAME}"_}"
+    country="$(country_for "$code")" || continue
+    # A country database without the link table has nothing to relink.
+    [ "$(c2t_psql -d "$db" -tAc "select to_regclass('city2tabula.building_link') is not null")" = t ] || continue
+    if docker exec -e COUNTRY="$country" "$C2T_API_CONTAINER" ./c2t -link-pylovo -relink >/dev/null 2>&1; then
+      ok "city2tabula/$code: relinked to the current PyLovo grid"
+    else
+      fail "city2tabula/$code: relink failed, run it by hand to see why: docker exec -e COUNTRY=$country $C2T_API_CONTAINER ./c2t -link-pylovo -relink"
+    fi
+  done
+}
+
 echo "== loading fixtures from $FIXTURES_DIR =="
-for set in ${@:-weather city2tabula pylovo}; do
+for set in ${@:-weather city2tabula pylovo relink}; do
   case "$set" in
     weather|city2tabula|pylovo) "load_$set" ;;
+    relink) relink_all ;;
     *) fail "unknown fixture set: $set" ;;
   esac
 done
