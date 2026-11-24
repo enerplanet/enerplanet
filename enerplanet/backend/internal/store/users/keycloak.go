@@ -3,6 +3,7 @@ package users
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -130,10 +131,12 @@ func (s *Store) updateUserPayload(authToken, userID string, user *User) error {
 
 const setPasswordLinkSeconds = 72 * 60 * 60
 
+var errRedirectRejected = errors.New("keycloak rejected redirect uri")
+
 func (s *Store) SendSetPasswordEmail(authToken, userID string) error {
 	withRedirect := s.cfg.Auth.ClientID != "" && s.cfg.AppURL != ""
 	err := s.executeActionsEmail(authToken, userID, withRedirect)
-	if err != nil && withRedirect && strings.Contains(err.Error(), "redirect") {
+	if withRedirect && errors.Is(err, errRedirectRejected) {
 		applogger.ForComponent("users").Warnf("app url %s not an allowed keycloak redirect, sending without return link", s.cfg.AppURL)
 		return s.executeActionsEmail(authToken, userID, false)
 	}
@@ -153,6 +156,13 @@ func (s *Store) executeActionsEmail(authToken, userID string, withRedirect bool)
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode == http.StatusBadRequest {
+		body, _ := io.ReadAll(resp.Body)
+		if strings.Contains(string(body), "Invalid redirect uri") {
+			return fmt.Errorf("%w: %s", errRedirectRejected, body)
+		}
+		return fmt.Errorf("keycloak error (status %d): %s", resp.StatusCode, body)
+	}
 	return checkKeycloakResponse(resp, http.StatusOK, http.StatusNoContent)
 }
 

@@ -790,8 +790,13 @@ export const UserManagement = ({ onUsersMutated }: UserManagementProps) => {
         try {
           await axios.post(`/users/${target.id}/password-email`);
           showSuccess(t("userManagement.passwordEmail.sent", { email: target.email, defaultValue: "Password e-mail sent to {{email}}." }));
-        } catch {
-          showError(t("userManagement.passwordEmail.failed", "The e-mail could not be sent. Check the mail settings and try again."));
+        } catch (error: unknown) {
+          const response = (error as { response?: { status?: number; data?: { error?: string } } })?.response;
+          showError(
+            response?.status === 502 || !response?.data?.error
+              ? t("userManagement.passwordEmail.failed", "The e-mail could not be sent. Check the mail settings and try again.")
+              : response.data.error
+          );
         }
       },
     });

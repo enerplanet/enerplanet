@@ -408,7 +408,7 @@ type createUserRequest struct {
 	Password     string `json:"password"`
 	AccessLevel  string `json:"access_level"`
 	GroupID      string `json:"group_id"`
-	SendInvite bool `json:"send_invite"`
+	SendInvite   bool   `json:"send_invite"`
 }
 
 // getManagerInfo extracts manager info from session data
@@ -546,7 +546,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	httputil.Created(c, gin.H{"message": "user created", "invite_sent": inviteSent})
 }
 
-// admin sends reset link
+// SendPasswordEmail emails the user a Keycloak link to set a new password.
 func (h *Handler) SendPasswordEmail(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
