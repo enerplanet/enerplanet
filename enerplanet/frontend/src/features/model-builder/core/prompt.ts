@@ -1,21 +1,7 @@
 /**
- * The edit-while-behind prompt.
- *
- * The trigger is the seal itself: editing while the session is **off the tip** — while a rollback
- * is available to redo (§4.1) — is what raises the question, because sealing here is a one-way
- * step. An edit is a **placement commit**, the only thing that moves the tip, so once it lands the
- * undone run can no longer be re-applied. So `needsPrompt` is nothing more than "is there a
- * rollback available to redo", and the shell asks before it seals.
- *
- * There are exactly three outcomes and no fourth path — the union below is the guarantee, since a
- * switch over it has nothing left to fall through to:
- *
- * - **discard-redo** — continue *here*: the edit is appended at the tip, which is what takes the
- *   redo away. Nothing is dropped — the log only ever grows (the name records the v1 shape, when
- *   the tail was truncated);
- * - **new-model** — branch and hand the shell the family link;
- * - **cancel** — write nothing, so the shell can re-render the node from the store's own data and
- *   the redo stays available.
+ * The edit-while-behind prompt — editing while the session is off the tip (a redo available) raises
+ * the question, because sealing an edit here is a one-way step. `needsPrompt` is just "is a redo
+ * available"; the three outcomes are `discard-redo`, `new-model` and `cancel`.
  *
  * ## The shell's half of "new model"
  *
@@ -106,13 +92,7 @@ export function resolveEdit({
   }
 }
 
-/**
- * The model as the user sees it: the session's state with the pending edit — and any staged cascade
- * — applied, **without sealing anything**.
- *
- * This is the payload for the save in step 2 above and the copy in step 3. Sealing instead would
- * move the tip and take the redo away, which is precisely what the user is still deciding about.
- */
+/** The model as the user sees it: the session state with the pending edit and any staged cascade applied, without sealing. */
 export function previewOf(store: Store, pending: PendingEdit): ModelData {
   return applyDiffs(applyDiffs(store.data, pending.primary), pending.cascade ?? []);
 }

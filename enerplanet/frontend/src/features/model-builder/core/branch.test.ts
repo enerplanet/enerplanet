@@ -1,12 +1,6 @@
 /**
- * Branching — "New Model" at the prompt.
- *
- * v2 model (`spec/history-v2.md` §1): the log is **append-only** and has no redo tail, so a branch
- * takes the **whole log** as it stands — there is no cursor to slice at and no discard stack to
- * leave behind. A branch is still full duplex: a copy of the projection, the log, and the pending
- * change as its own first commit, while the source session is left bit-identical.
- *
- * Written failing first against the new design.
+ * Branching — "New Model" at the prompt: a full-duplex copy of the projection and the whole log,
+ * with the pending change as its own first commit.
  */
 import { describe, it, expect } from "vitest";
 import { branch } from "./branch";

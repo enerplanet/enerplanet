@@ -40,7 +40,7 @@ export interface FrameView {
   labelId: string;
   /** The node a run is stamped with. Absent in test mode: there is no position to stamp. */
   nodeId?: string;
-  /** The module of the node on screen — what a run stamps alongside the placement id (`NodeRef.moduleId`). */
+  /** The module of the node on screen — what a run stamps alongside the placement id. */
   moduleId?: string;
   /**
    * Whether the module on screen is an **automatic** step (`autoRun.ts`). The module declares it
@@ -57,12 +57,7 @@ export function frameView(
   workflow: Workflow,
   entries: readonly BuilderModule[],
   store: Store,
-  /**
-   * The effective flow the frame walks — the session's placed flow over its log (`transcript()`), not the
-   * seed. Deriving it in the shell and passing it here is what makes an **appended successor placement** an
-   * ordinary node: the frame, the bar and the steps panel all walk what was actually enacted, and a re-run
-   * that appends a placement shows up like any other.
-   */
+  /** The effective flow the frame walks — the session's placed flow over its log, not the seed. */
   flow: Flow,
   /**
    * A node to show instead of the derived one, while its run is in flight and until its effects have landed.
@@ -86,8 +81,8 @@ export function frameView(
     };
   }
 
-  // The session's frontier (`position()`): the first node that is not done, or — when the flow is complete —
-  // the last node, so the frame stays on the module that finished rather than emptying out.
+  // The session's frontier: the first node that is not done, or the last node when complete, so the frame
+  // stays on the module that finished rather than emptying out.
   const at = position(flow, workflow.registry, store);
   const derivedId = at.complete ? flow[flow.length - 1]?.id : flow[at.index]?.id;
   const nodeId = hold ?? derivedId;

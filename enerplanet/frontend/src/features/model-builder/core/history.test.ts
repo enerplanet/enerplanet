@@ -1,17 +1,6 @@
 /**
- * History — undo/redo as commits over the append-only log.
- *
- * v2 model (`spec/history-v2.md` §1, §4.1): the log is **append-only with no truncation**, and
- * undo/redo are themselves commits in the **`git revert` shape** — undo appends a rollback whose
- * `primary` is the inverse of the target's change + cascade, resolving the model to the state
- * before it. The target stays in the log as a superseded occurrence, so nothing rewrites an entry.
- *
- * These lock: undo restores a commit's pre-values *exactly* (including cascade pruned values), a
- * new edit after an undo **appends** rather than truncating, redo re-applies while the session is
- * off the tip, and undo lands on auto work too (auto is a normal target — an undo reverses the auto
- * step's page first, the one below it next).
- *
- * Written failing first against the new design.
+ * History — undo/redo as commits over the append-only log: undo restores a commit's pre-values
+ * exactly, a new edit appends rather than truncating, and undo lands on auto work too.
  */
 import { describe, it, expect } from "vitest";
 import { createStore } from "./store";

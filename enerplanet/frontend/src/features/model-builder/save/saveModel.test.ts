@@ -4,8 +4,6 @@
  * The payload assertions are **oracle tests**: the expected values are copied from
  * the legacy `saveAreaData`'s own output. Parity is the reason this code exists, so the
  * shape is pinned against the legacy original rather than described.
- *
- * Written failing first.
  */
 import { describe, it, expect } from "vitest";
 import { buildModelPayload, buildSaveConfig, saveModel, type SaveRequest } from "./saveModel";

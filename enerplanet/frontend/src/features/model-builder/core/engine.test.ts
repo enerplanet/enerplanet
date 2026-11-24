@@ -2,8 +2,6 @@
  * Core contract — store, sealed transaction, write boundary.
  *
  * These lock the single store with one reducer, and contract-checked writes.
- *
- * Written failing first, before any implementation exists.
  */
 import { describe, it, expect } from "vitest";
 import { createStore } from "./store";

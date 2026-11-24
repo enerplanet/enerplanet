@@ -6,8 +6,6 @@
  * drive them through a fake); what can break silently is the *mapping*. Unlike the Calliope run's gateway, this
  * leg's status is exposed directly (`pypsa_leg_status`), so the mapping is a passthrough of the backend's own
  * vocabulary — and it is a pure function, tested directly, without stubbing axios.
- *
- * Written failing first.
  */
 import { describe, expect, it } from "vitest";
 import { memePypsaLegOf, memePypsaLegStatusOf } from "./memePypsaLegGateway";

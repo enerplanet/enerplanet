@@ -1,16 +1,5 @@
 /**
- * A viewed placement shows **the state it was committed with** (§4).
- *
- * The rule: while the session looks at a placement, the module on screen renders from that placement's own
- * commit, rebuilt out of the log — not from the live tip. `viewedProjection` is that decision, factored out
- * as a pure function because there is no jsdom here to mount the frame and read the `data` prop: these cases
- * pin the function the JSX calls.
- *
- * History is built directly through the store — "given a log shaped like this, the view reads that" — the
- * same way the bar/panel suites do. `revision` is 1-based and monotonic, so `replay(…, revision)` lands just
- * after the viewed commit: exactly the value that commit sealed.
- *
- * Written failing first.
+ * A viewed placement shows the state it was committed with — its own commit, not the live tip.
  */
 import { describe, it, expect } from "vitest";
 import { viewedProjection } from "./viewedProjection";

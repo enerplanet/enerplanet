@@ -1,13 +1,6 @@
 /**
- * The steps panel's state — the whole workflow in order.
- *
- * The panel answers a different question from the bar: not "where am I" but "what is the state of every step",
- * which is why it is a derivation of its own rather than a wider reading of `barState`. Everything comes from
- * `positionReport` — done / stale / pending per node, plus what a node wrote that is gone and which required
- * ports are missing *right now* — with one addition: which node the session is looking at (§4), because the
- * panel marks it and `positionReport` has no reason to.
- *
- * Written failing first.
+ * The steps panel's state — every step's state from `positionReport`, plus which node the session is
+ * looking at.
  */
 import { describe, it, expect } from "vitest";
 import { defineModule } from "@model-builder/core";
@@ -107,8 +100,7 @@ describe("the steps panel reads the whole workflow", () => {
     const store = createStore(workflow.initial);
     store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: ref("first") });
 
-    // A view is a read-only selection (§4): looking back at "first" writes nothing, but its work is untouched
-    // so it stays `done`. Marking it stale would be the lie this rule removes.
+    // A view is read-only: looking back at "first" writes nothing, so it stays done.
     const steps = stepsState(workflow.flow, workflow.registry, store, "first");
 
     expect(steps[0].state).toBe("done");

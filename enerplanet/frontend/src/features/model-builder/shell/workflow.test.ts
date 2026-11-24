@@ -1,17 +1,6 @@
 /**
- * The default-workflow loader — how the definition reaches the frame now that it is a database row.
- *
- * The loader's job is to turn untrusted configuration into exactly what the core already takes: a `Flow`,
- * a `ModuleRegistry`, and the seed ports that exist before any node runs. `toWorkflow` is deliberately pure
- * and separate from the fetch, so the shape can be exercised without a fixture or a server — and the cases
- * below are mostly the *refusals*. A workflow that names a module nobody registered, or places two nodes
- * under one id, cannot be walked; it should fail here, loudly, rather than half-work later.
- *
- * `loadDefaultWorkflow` is the one binding that fetches it, so it is pinned against a mocked client the way
- * the workflows service is. It reports *no default* as `undefined` rather than throwing — a data condition,
- * not a transport fault.
- *
- * Written failing first.
+ * The default-workflow loader: `toWorkflow` turns an untrusted definition into a flow, a registry and
+ * seed ports, and mostly refuses what cannot be walked.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import example from "./fixtures";
@@ -327,7 +316,7 @@ describe("the workflow a requested id names", () => {
   });
 });
 
-describe("the loader refuses a malformed recommended map (§6)", () => {
+describe("the loader refuses a malformed recommended map", () => {
   /** A well-formed section: the map is untrusted input, so what it accepts is pinned beside what it refuses. */
   const GOOD_SECTION = {
     key: "insulate",

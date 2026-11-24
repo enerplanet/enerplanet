@@ -1,8 +1,6 @@
 /**
  * The grid engine's one piece of real judgement: pylovo answers in two different projections.
  *
- * Written failing first.
- *
  * The legacy sniffs the same tell — a coordinate too large to be a longitude means Web Mercator — and converts
  * before drawing. Getting this wrong does not look like an error: the grid keeps its shape and lands on the
  * wrong ground, which is a bug that reads as "pylovo generated nonsense" rather than "we drew it wrong".

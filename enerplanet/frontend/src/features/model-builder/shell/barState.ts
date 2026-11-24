@@ -1,20 +1,9 @@
 /**
- * The workflow bar's state — where the session is.
+ * The workflow bar's state — where the session is: the node before it, the node it is looking at, and
+ * the node after it.
  *
- * The bar answers one question and the answer is *derived* from `(flow, registry, store)`:
- *
- *   prior    the node before the session — always done, because the session is the first node that is not
- *   current  the node the session is looking at
- *   next     the node after it
- *
- * Once the flow has finished there is no "first node that is not done", so the bar sits on the **last** node
- * (so it keeps naming what is on screen rather than going blank the moment the model is complete). That is
- * also why this is not the same question the steps panel asks: the panel wants every step's state, the bar
- * wants the three that frame the session.
- *
- * **A view is not a commit** (§4). Where the session *rests* is a read-only selection — the viewed placement
- * — passed in as `view`; absent, it is the frontier (`position()`). A move writes nothing, so the frontier
- * (`complete`) is unaffected by where the session is looking.
+ * Once the flow is finished the bar sits on the last node, so it keeps naming what is on screen. The
+ * viewed placement is passed in as `view`, else the frontier.
  */
 
 import type { Flow, FlowNode, ModuleRegistry } from "../core/flow";
@@ -45,8 +34,7 @@ export function barState(
   const report = positionReport(flow, registry, store);
   const at = position(flow, registry, store);
 
-  // Where the session is looking: the viewed placement when one is set, else the frontier — and when the
-  // flow is complete with no view, the last node, so the bar keeps naming what is on screen.
+  // Where the session is looking: the viewed placement, else the frontier (the last node when complete).
   const derived = at.complete ? flow.length - 1 : at.index;
   const held = view === undefined ? -1 : flow.findIndex((node) => node.id === view);
   const index = held === -1 ? derived : held;

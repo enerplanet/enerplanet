@@ -1,12 +1,6 @@
 /**
- * Position — derived flow state per placement.
- *
- * v2 model (`spec/history-v2.md` §2, §4, §7 H7): a placement has **at most one commit**, so its
- * state is read from *that* commit — no union over a `nodeId`, no jump scan, no `requesting`
- * second position. State is one of `done` / `stale` / `pending`, and `index` is the **frontier**:
- * the first placement that is not done. `restingIndex` and the "two positions" doctrine are gone.
- *
- * Written failing first against the new design.
+ * Position — a placement's state read from its own single commit (`done` / `stale` / `pending`),
+ * with `index` the frontier: the first placement that is not done.
  */
 import { describe, it, expect } from "vitest";
 import { activeNode, nodeStates, position, positionReport } from "./position";
@@ -273,7 +267,7 @@ describe("the transcript grows by appends, and every placement keys its own stat
     const store = createStore(seed());
     await runAll(store);
 
-    // A re-run of `grid` appends a **successor** placement (§2, §7 H8) rather than rewriting `grid`.
+    // A re-run of `grid` appends a successor placement rather than rewriting `grid`.
     const successor = placementId(transcript(FLOW, store.log).length, "grid");
     await createEngine(store).runModule(grid, { id: successor, moduleId: "grid" });
 

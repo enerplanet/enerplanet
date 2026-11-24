@@ -1,27 +1,11 @@
 /**
- * The steps panel — the frame's right-hand band.
+ * The steps panel — the frame's right-hand band, a sibling of the module frame.
  *
- * A **sibling of the module frame**, full height, collapsed to a rail by default: its job is to answer "where
- * am I in this workflow" at a glance and then get out of the way. The rail keeps the state legible as a dot
- * even when there is no room for words, so collapsing costs context but not information.
+ * A step behind the session is a control; clicking one moves the view there — the shell's session
+ * state, which writes nothing. Steps ahead of the frontier are not clickable: a later node is
+ * reached by running it, not by standing on it.
  *
- * **A step behind the session is a control; nothing else is.** Clicking one **moves** the view there — the
- * shell's session state, which writes nothing (§4): a view is a read-only selection, so it cannot invalidate
- * anything by itself. What goes stale is decided by *influence* when a node actually runs, never by how far
- * the panel looked.
- *
- * Steps **ahead** of the frontier are deliberately not clickable, and that is the core's rule rather than a UI
- * preference: movement reaches only as far as the first node that is not done, because a later node is reached
- * by *running* it, not by standing on it. Rendering an unreachable step as a button would offer something the
- * session cannot honour.
- *
- * This panel was info-only while clicking a step was deferred, and the reason recorded for that deferral was
- * that a move "deserves the discard preview it ought to show before it commits". That reason dissolved when
- * movement was built as a **view** — a read-only selection that writes nothing, so there is no discard to
- * preview. What the deferral was guarding against is handled by the direction rule above instead, which is a
- * shape the user can see rather than a dialog they must answer.
- *
- * Colours come from the theme's semantic pairs rather than raw hues, so the states survive dark mode.
+ * Colours come from the theme's semantic pairs, so the states survive dark mode.
  */
 
 import { useState } from "react";
@@ -48,16 +32,9 @@ interface Props {
   flow: Flow;
   registry: ModuleRegistry;
   store: Store;
-  /**
-   * The placement the session is looking at (§4). A view is a read-only selection — the panel marks the
-   * viewed step and offers the steps a click can move the view to. Absent, the frontier is what is marked.
-   */
+  /** The placement the session is looking at; absent, the frontier is what is marked. */
   view?: string;
-  /**
-   * Move the view to a step behind it. Absent in test mode, where there is no position to move — and a step
-   * with nowhere to move to is plain text, which is the honest rendering: a disabled button still looks like
-   * something you are being kept from.
-   */
+  /** Move the view to a step behind it. Absent in test mode, where there is no position to move. */
   onMove?: (nodeId: string) => void;
 }
 

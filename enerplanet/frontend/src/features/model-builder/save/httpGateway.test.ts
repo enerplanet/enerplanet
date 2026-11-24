@@ -1,8 +1,6 @@
 /**
  * The HTTP adapter — endpoint paths and payload keys are the kind of thing that breaks silently, so
  * they are pinned here against a recording client.
- *
- * Written failing first.
  */
 import { describe, it, expect } from "vitest";
 import { createHttpGateway, type HttpClient } from "./httpGateway";

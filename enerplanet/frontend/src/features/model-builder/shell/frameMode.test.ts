@@ -1,16 +1,6 @@
 /**
- * Which module the frame shows, and what its session starts from.
- *
- * Two modes, and the difference is not cosmetic. In **workflow** mode the module on screen is the node the
- * session sits on, and its data is the workflow's seed. In **test mode** a module is shown on its own,
- * seeded from its own test data, with no workflow and no position — which is what lets a module be developed
- * and *seen* before it is placed in anything.
- *
- * That is why this is a derivation worth its own cases rather than logic inside the JSX: the point of test
- * mode is precisely the module the workflow does **not** place, and the point of workflow mode is that the
- * position decides.
- *
- * Written failing first.
+ * Which module the frame shows and what its session starts from: workflow mode follows the position,
+ * test mode shows one module on its own.
  */
 import { describe, it, expect } from "vitest";
 import { defineModule, requiredPorts } from "@model-builder/core";
@@ -214,13 +204,7 @@ describe("the frame reports whether the module on screen is automatic", () => {
 });
 
 describe("the frame walks the transcript, not the seed — an appended successor placement shows up", () => {
-  /**
-   * A re-run **appends a successor placement** to the log rather than rewriting a placement in place (§3), so
-   * the flow the frame must walk is `transcript(session.flow, store.log)`, not the seed `workflow.flow`. The
-   * shell derives that transcript once and threads it into the frame, the bar and the steps panel; this pins
-   * the shape it relies on — given a store whose log carries an appended placement, the transcript has one more
-   * node, and the frame and the bar both show it, where the seed flow would still show the node it replaced.
-   */
+  /** A re-run appends a successor placement, so the frame must walk `transcript(session.flow, store.log)`, not the seed. */
   it("the derived flow is the transcript: the appended placement is a node, and the frame and bar show it", () => {
     const workflow = workflowOf();
     const store = createStore(workflow.initial);

@@ -1,17 +1,6 @@
 /**
- * The shell's half of `model-variant`'s switch (`shell/variantSession.ts`) — the fork's own session row, and the
- * guard that keeps it to one write.
- *
- * Two things are pinned, and they are the two the change rests on:
- *
- * - **the row is self-consistent** — keyed by the variant's model id, its log including the switch transaction,
- *   its projection the store after the switch, its fingerprint recomputed over that projection, so
- *   `fromArtefact` trusts it rather than replaying the switch away (`core/artefact.ts:125-136`);
- * - **it is written once per fork** — a session that arrived with a variant already recorded (a load, a reset)
- *   owes nothing, and a fork is claimed exactly once, so a re-render or a later store change is not a second
- *   write.
- *
- * Written failing first.
+ * The fork's own session row (`shell/variantSession.ts`): the row is self-consistent, and it is
+ * written once per fork.
  */
 import { describe, expect, it } from "vitest";
 import { fromArtefact, type Artefact, type WorkflowRef } from "../core/artefact";

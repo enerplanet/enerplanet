@@ -4,10 +4,8 @@
  * Every control maps onto an operation the core already has — "*the bar only has to call
  * them*" — so this module is deliberately thin. It exists for the two places where "just call it" is not enough:
  *
- * - **Movement is a view, not a commit** (§4). A move sets the viewed placement in the shell's session state
- *   and writes **nothing**: there is no `jump` transaction, no discard preview, and no redo tail (undo/redo
- *   are rollback commits, `core/store.ts`). The shell owns the view and the bar/steps panel drive it, which is
- *   why there is no `moveToNode` here any more.
+ * - **Movement is a view, not a commit.** A move sets the viewed placement and writes nothing; there is no
+ *   `moveToNode` here any more.
  * - **The bar's save is always `incomplete`.** The *full* save — the real `model.json`, promoted to
  *   `draft` so that a run accepts it — belongs to the save **node**, behind its completeness gate. A bar button
  *   that wrote a finished model on a complete flow would be bypassing that gate, which is why the status is

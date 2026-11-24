@@ -1,17 +1,6 @@
 /**
- * The bar's actions — written failing first.
- *
- * The mapping is deliberately thin: the bar calls operations the core already has, so what is worth testing
- * here is the two places the bar must *not* be thin —
- *
- * 1. **movement is a view, not a commit** (§4). There is no `jump`: "step back to look at something" sets the
- *    viewed placement and writes **nothing**, so no redo tail is ever produced. The cases below pin that a
- *    view prunes not a single port *and marks nothing stale* — invalidation is by *influence* when a node runs,
- *    never by where the session looked — and that the reachable set stops at the frontier.
- * 2. **the bar's save is always `incomplete`.** Finishing a model — writing the real `model.json` and
- *    promoting to `draft` — is the save *node*'s job, behind its completeness gate. So the bar's save pins the
- *    status rather than letting completeness derive it, which is exactly the case below that a complete flow
- *    would otherwise get wrong.
+ * The bar's actions: movement is a view that writes nothing, and the bar's save pins the status to
+ * `incomplete`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -288,8 +277,7 @@ describe("a view writes nothing; a change invalidates by influence", () => {
     const { store, flow, registry } = sixSession();
     runSix(store);
 
-    // Look at B: a view (§4). It writes nothing — every node stays done — and the frontier is past the whole
-    // flow, so looking at B cannot move it.
+    // Look at B: a view writes nothing, so it cannot move the completed frontier.
     expect(position(flow, registry, store)).toMatchObject({ index: 6, complete: true });
     expect(nodeStates(flow, registry, store)).toEqual({
       a: "done",

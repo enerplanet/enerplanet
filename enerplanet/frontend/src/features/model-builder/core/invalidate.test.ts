@@ -1,8 +1,6 @@
 /**
  * The invalidator: *the cascade is the affected closure, minus what it cannot touch*.
  *
- * Written failing first.
- *
  * The cascade is staged from a **primary** diff (what an action changed) and answers one question:
  * which *other* ports does this working model no longer have a right to keep? The answer is three
  * rules, and each of them is a case below:

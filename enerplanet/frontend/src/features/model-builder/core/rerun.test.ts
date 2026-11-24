@@ -1,13 +1,6 @@
 /**
- * Re-run and repair mechanics.
- *
- * v2 model (`spec/history-v2.md` §2, §5 step 3): the jump machinery is gone. What is left is
- * **first-run-fills / re-run-appends** (`runTarget`, §2, §7 H8) and **goal-driven repair**
- * (`repair`, §5 step 3): from the terminal's `required` ports, find every port now missing, map it
- * to the placement that produces it, re-run it (appending a successor), iterate to a fixpoint —
- * re-running **only the influence-affected placements**, in transcript order.
- *
- * Written failing first against the new design.
+ * Re-run and repair: first-run-fills / re-run-appends, and goal-driven repair that re-runs only the
+ * influence-affected placements, in transcript order, to a fixpoint.
  */
 import { describe, it, expect } from "vitest";
 import { repair, runPlacement, runTarget } from "./rerun";
@@ -86,7 +79,7 @@ const registry: ModuleRegistry = Object.fromEntries(
   [start, draw, settings, grid, save].map((module) => [module.id, module]),
 );
 
-/** Seed placements, ids `"<n>-<name>"` (§2), contiguous from 0 — what `n` counts over. */
+/** Seed placements, ids `"<n>-<name>"`, contiguous from 0. */
 const PLACED: Flow = [
   { id: "0-start", moduleId: "start" },
   { id: "1-draw", moduleId: "draw" },

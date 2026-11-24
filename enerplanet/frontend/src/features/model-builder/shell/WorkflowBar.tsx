@@ -1,30 +1,12 @@
 /**
- * The workflow bar — the frame's top band.
+ * The workflow bar — the frame's top band. Dense by rule: it is chrome, and vertical space belongs
+ * to the content.
  *
- * Dense by rule: it is chrome, and vertical space belongs to the content.
+ * The bar moves; it does not undo. Movement is a view: a prior click sets the placement the session
+ * is looking at and writes nothing, so the moved-to node stays done. There is no forward control —
+ * a module advances by running itself, and an auto node runs on arrival.
  *
- * **The bar moves; it does not undo.** Movement is a **view**: a prior click sets the placement the
- * session is looking at and writes **nothing** (§4) — no `jump` commit, no redo tail — so the moved-to
- * node stays `done`, not stale. There is no `undo`/`redo` here at all: the bar is not a history control.
- * What goes stale is decided by *influence* when a node actually runs, never by where the bar looked.
- *
- * So the **prior step is the one backward control**, and it is a control only when there is a node behind the
- * session to return to. The **next step is plain greyed text**: it names what comes next rather than moving
- * there. There is **no forward control at all** — an interactive module advances by running itself (its own
- * Apply), and an auto node runs on arrival with no button anywhere (`autoRun.ts`), so a bar button whose
- * enabled-ness depended on node state would be the frame pretending to know something only the session knows.
- *
- * Moving to *any* step behind the frontier is now offered: a view writes nothing, so there is no preview to
- * owe. The one rule that remains is direction — a view reaches only backwards, because forward is *running*
- * the node, and a later node is reached that way rather than by standing on it.
- *
- * In **test mode** there is no position to show, so it says so rather than rendering a bar of dashes — a bar
- * naming steps while no workflow drives the session would be lying about where it is. The movement and save
- * controls are hidden for the same reason: there is no position to move and no session to save.
- *
- * Everything it renders in workflow mode comes from `barState`, so the bar holds no knowledge of history that
- * could fall out of date. Movement is not reimplemented here either — the prior control calls `actions.ts`
- * directly, which is exactly the thinness the bar wants.
+ * Everything it renders in workflow mode comes from `barState`.
  */
 
 import { Save } from "lucide-react";
@@ -82,7 +64,7 @@ const Step: React.FC<{
 
 interface Props {
   workflow: Workflow;
-  /** The effective flow the bar walks — the session's transcript, so an appended placement is a step like any. */
+  /** The effective flow the bar walks — the session's transcript. */
   flow: Flow;
   store: Store;
   mode: FrameMode;
@@ -95,17 +77,9 @@ interface Props {
   saving?: boolean;
   /** What the last save did, shown beside the button. A failed save goes to the frame's error strip. */
   saveNotice?: string;
-  /**
-   * The placement the session is looking at (§4). The bar derives its position from the store, so without this
-   * it would name the frontier while the session is looking elsewhere — and during a run the shell holds it on
-   * the node leaving the screen, so the bar does not name the node the session has *reached* while the frame
-   * still shows the one it is leaving.
-   */
+  /** The placement the session is looking at; during a run the shell holds it on the node leaving the screen. */
   hold?: string;
-  /**
-   * Move the view to a placement behind it — the shell's session state, which writes nothing (§4). The prior
-   * control is offered only when this is given.
-   */
+  /** Move the view to a placement behind it. The prior control is offered only when this is given. */
   onMove?: (nodeId: string) => void;
 }
 

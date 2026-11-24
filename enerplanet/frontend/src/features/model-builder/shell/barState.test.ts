@@ -1,17 +1,6 @@
 /**
- * The workflow bar's state — where the session is.
- *
- * The bar answers one question, and the answer is *derived* from `(flow, registry, store)`, never stored:
- * prior is the node before the position, current is the node the session sits on, next is the one after.
- * These cases pin the derivation, including the two readings that are easy to get wrong — a flow that has
- * finished still names the last node (that is what is on screen), and a node the session *moved* back to is
- * where the bar rests yet stays **done**, because a view writes no data.
- *
- * Most cases build history directly through the store, because the bar is a pure derivation over history:
- * "given history shaped like this, the bar reads that". The one case that runs a real node does so to prove
- * the derivation survives the real write path, not to test the engine.
- *
- * Written failing first.
+ * The workflow bar's state — prior / current / next derived from `(flow, registry, store)`; a finished
+ * flow still names the last node.
  */
 import { describe, it, expect } from "vitest";
 import { barState } from "./barState";
@@ -108,8 +97,7 @@ describe("the bar derives the session's position", () => {
 
     const bar = barState(workflow.flow, workflow.registry, store, "first");
 
-    // The session looks at "first" — a read-only view (§4), which wrote nothing (the log is unchanged) — and
-    // because a view changes no data, "first" is still `done`: nothing a view does makes a node stale.
+    // The session looks at "first" — a view writes nothing, so "first" is still done.
     expect(store.log.length).toBe(logLength);
     expect(bar.current).toEqual({ id: "first", label: "First", state: "done" });
     // The tail keeps its work — a view discards nothing, so "second" is still done.

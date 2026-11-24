@@ -1,21 +1,5 @@
 /**
- * The artefact — what persists a session.
- *
- * A session is `(projection, flow, log)`. Persisting it naively would mean replaying the log on
- * every load; persisting it as the projection alone would lose history. So the artefact carries
- * **all three**: the projection, the log it came from, and the **placed flow** (§3.1) — the
- * session's seed placements plus any appended ones, **including the nodes that have not run yet**.
- * The loader trusts the projection for speed and uses the log as the recovery path; the
- * fingerprint in between stops the two from lying to each other silently.
- *
- * **The flow is stored, not derived.** With v2 there is no redo tail and the view is not
- * persisted, so the artefact's `cursor` and `discarded` fall away (§3.1): the row is
- * `{ workflow, initial, projection, flow, log, fingerprint }`. A move writes nothing, so there is
- * nothing for a view cursor to carry, and a re-run appends rather than truncating.
- *
- * What the fingerprint does **not** cover is the log itself. The log is the source of truth and
- * the projection is the cache, so hashing the log would verify nothing that would change what the
- * loader does: a corrupted log is what `replayArtefact` exists to be called on deliberately.
+ * The artefact — what persists a session: the projection, the log it came from, and the placed flow.
  */
 
 import type { Transaction } from "./diff";
@@ -43,7 +27,7 @@ export interface Artefact {
   initial: ModelData;
   /** The projection at the tip: the fast path. */
   projection: ModelData;
-  /** The placed flow (§3.1) — the seed placements, plus appends, to-run nodes included. */
+  /** The placed flow — the seed placements, plus appends, to-run nodes included. */
   flow: FlowNode[];
   /** The full, append-only log. */
   log: Transaction[];
@@ -69,17 +53,7 @@ export interface LoadResult {
   divergence?: Divergence;
 }
 
-/**
- * Snapshot a live session.
- *
- * `record` is the caller's own record of the save — the ports the *saver* is about to commit but
- * which the live store does not hold yet (`modelId`, `saveResult`). It is not part of the log: no
- * module transaction produced it, and the saver seals its own commit only after this snapshot is
- * taken. Folding it into the projection here — **before** the fingerprint is taken — is what lets
- * a reload read those ports immediately: the stored fingerprint then matches the stored
- * projection, so `fromArtefact` trusts it rather than replaying the log. The log and `initial` are
- * left alone, because the record was never a commit.
- */
+/** Snapshot a live session into an artefact. */
 export function toArtefact(session: {
   store: Store;
   workflow: WorkflowRef;
@@ -107,11 +81,8 @@ export function replayArtefact(artefact: Artefact): ModelData {
 }
 
 /**
- * Open a session from an artefact.
- *
- * The stored projection is used directly — no replay — unless its fingerprint disagrees, in which
- * case the log is replayed and the divergence reported. Nothing is repaired in place: the artefact
- * is data, and a caller that wants to persist the recovered session writes a fresh one.
+ * Open a session from an artefact: the stored projection unless its fingerprint disagrees, in
+ * which case the log is replayed and the divergence reported.
  */
 export function fromArtefact(artefact: Artefact): LoadResult {
   if (artefact.version !== ARTEFACT_VERSION) {
@@ -142,10 +113,7 @@ function restoreStore(artefact: Artefact, log: Transaction[], projection: ModelD
   });
 }
 
-/**
- * Transactions are frozen and immutable, so a snapshot only needs fresh containers — but the
- * ops inside them are shared, so serialising an artefact never deep-copies a diff it cannot change.
- */
+/** Fresh containers over the immutable ops inside, so serialising never deep-copies a diff. */
 function copy(transaction: Transaction): Transaction {
   return { ...transaction, primary: [...transaction.primary], cascade: [...transaction.cascade] };
 }

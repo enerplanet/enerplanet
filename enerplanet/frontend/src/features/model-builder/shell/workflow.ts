@@ -48,11 +48,7 @@ export interface Workflow {
    * constant some caller invented.
    */
   ref: WorkflowRef;
-  /**
-   * The document this workflow was built from, kept whole so a consumer can read what the *definition* says
-   * rather than re-deriving it — `recommended` (§6), above all, which the shell asks for a finished terminal.
-   * The flow is the document flattened; the document is the plan the flow came from.
-   */
+  /** The document this workflow was built from, kept whole so a consumer can read the definition. */
   document: WorkflowDocument;
 }
 
@@ -133,16 +129,13 @@ export function toWorkflow(
     version,
     label,
     nodes: raw.nodes as WorkflowNodeDocument[],
-    // The follow-up sections a run may offer (§6), carried through the build so the shell can read them off
-    // the finished terminal. Shape-checked below, not trusted because it arrived with the rest of the row.
+    // The follow-up sections a run may offer, carried through so the shell can read them off the finished terminal.
     ...(raw.recommended === undefined
       ? {}
       : { recommended: raw.recommended as Record<string, RecommendedSection[]> }),
   };
 
-  // The `recommended` map is untrusted input like every other part of the row, so it is refused here rather
-  // than accepted silently and mis-read after a run. The message follows the loader's own shape: it names the
-  // workflow and the exact defect (`documentProblem`).
+  // The `recommended` map is untrusted input, so it is refused here rather than mis-read after a run.
   const recommendedProblem = documentProblem(document);
   if (recommendedProblem !== undefined) {
     throw new Error(

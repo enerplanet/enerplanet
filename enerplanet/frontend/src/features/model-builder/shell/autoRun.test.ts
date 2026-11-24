@@ -1,10 +1,6 @@
 /**
- * The auto-run decision and its guard — written failing first.
- *
- * The rule this file pins is the whole point of the change: an auto node runs **on arrival** and **once**,
- * and it must not run again for a re-render or for a bare move — only for a genuine input change
- * (the invalidator's staleness), or the first time it is ever seen. `autoRunFor` is the decision and
- * `createAutoGuard` is the idempotency, so both are exercised here without a frame.
+ * The auto-run decision and its guard: an auto node runs on arrival and once — not for a re-render or
+ * a bare move, only for a genuine input change or the first time it is seen.
  */
 
 import { describe, expect, it } from "vitest";

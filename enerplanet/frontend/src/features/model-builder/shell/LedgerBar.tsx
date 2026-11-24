@@ -1,14 +1,9 @@
 /**
  * The ledger bar — the frame's bottom band.
  *
- * Collapsed by default and dense: the newest **commit** as a signed line. Expanded it is the whole log,
- * newest first — that is the one view that answers "what happened". The log is append-only and every entry is
- * applied now (an undo is a rollback commit like any other, §4.1), so there is no cursor and no discarded tail
- * to draw.
- *
- * It carries no module status: store and history live here, anything a module wants to say belongs in its own
- * `bottom` slot. And it holds no history of its own — `ledgerState` derives every line from the log, so this
- * component cannot show a state the store is not in.
+ * Collapsed by default and dense: the newest commit as a signed line. Expanded it is the whole log,
+ * newest first — the one view that answers "what happened". The log is append-only, so there is no
+ * cursor and no discarded tail to draw.
  */
 
 import { useState } from "react";

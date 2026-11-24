@@ -9,8 +9,6 @@
  *
  * Every status the dashboard's `ModelStatus` names is covered, so a status added to the dashboard's sets and
  * not to this copy (or the reverse) shows up here.
- *
- * Written failing first.
  */
 import { describe, expect, it } from "vitest";
 import { memeRunOf, memeRunStatusOf } from "./memeRunGateway";

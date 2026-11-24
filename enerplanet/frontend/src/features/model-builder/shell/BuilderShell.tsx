@@ -88,7 +88,7 @@ import type { BuilderModule, ModuleViewProps, OverlayControl, Region } from "./c
 interface Session {
   store: Store;
   engine: Engine;
-  /** The placed flow this session carries — the seed's, or a loaded artefact's (§3.1). */
+  /** The placed flow this session carries — the seed's, or a loaded artefact's. */
   flow: Flow;
 }
 
@@ -229,11 +229,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
    */
   const [held, setHeld] = useState<string | undefined>(undefined);
 
-  /**
-   * The placement the session is **looking at** (§4) — a view, not a commit. Moving sets it and writes nothing;
-   * the bar and the steps panel read it to mark the viewed step. Absent, the frontier (`position()`) is what is
-   * marked. It is cleared when a run lands (the view snaps to the tip) and when the session is replaced.
-   */
+  /** The placement the session is looking at — a view, not a commit. Absent, the frontier is marked. */
   const [viewed, setViewed] = useState<string | undefined>(undefined);
 
   // ── the load: `?model=<id>`, the way the dashboard hands a model over ──────────────────────────────
@@ -378,27 +374,14 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
   // The frame reads the store; the store tells it when it changed — a seal, an undo, a redo.
   useStoreVersion(session.store);
 
-  // The **effective flow** the frame walks: the session's placed flow over the store's log (§3). Today the
-  // placed flow and the seed are identical, so this is the seed until something appends — but once a re-run
-  // appends a successor placement, that placement is in the transcript and the frame, the bar and the steps
-  // panel all walk it like any node. Derived once here and threaded through, rather than each consumer reading
-  // the seed (`workflow.flow`) and leaving the successor invisible.
+  // The effective flow the frame walks: the session's placed flow over the store's log, so an appended
+  // successor is a node like any other.
   const flow = transcript(session.flow, session.store.log);
 
-  /**
-   * The follow-up sections a finished run offers for its terminal (§6), derived from the effective flow: the
-   * terminal is the newest done placement, `[]` while a run is unfinished or the terminal offers nothing.
-   *
-   * The decision is a pure call (`recommendedFor`), not a local derivation, so the JSX below is only a
-   * rendering of it and there is no DOM-level logic to test.
-   */
+  /** The follow-up sections a finished run offers for its terminal, derived from the effective flow. */
   const recommendations = recommendedFor(flow, session.store, workflow.document);
 
-  /**
-   * Take a recommended section: grow the **session's placed flow** by the section's nodes as fresh placements
-   * (§6). A **plan addition** — nothing runs; the appended nodes are `pending` until a module runs them. The
-   * placed flow on the session is what the artefact persists, so the append is applied there, not to a local.
-   */
+  /** Take a recommended section: grow the session's placed flow by the section's nodes as fresh placements. */
   const takeSection = useCallback((section: RecommendedSection): void => {
     setSession((current) => ({ ...current, flow: appendRecommended(current.flow, section) }));
     setViewed(undefined);
@@ -415,9 +398,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     const moduleId = view.moduleId;
     try {
       if (at !== undefined && moduleId !== undefined) setHeld(at);
-      // In a workflow the transaction is stamped with the *node* id **and its module** — a placement id names
-      // the position, and the module is what lets a replay rebuild the placement without the plan (§2). In test
-      // mode there is no position, so nothing is stamped.
+      // In a workflow the transaction is stamped with the node id and its module; in test mode nothing is stamped.
       await session.engine.runModule(
         entry.module,
         at === undefined || moduleId === undefined ? undefined : { id: at, moduleId },
@@ -533,9 +514,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
         flow={flow}
         registry={workflow.registry}
         store={session.store}
-        // The view is a read-only selection in the shell's session state (§4) — a move sets it and writes
-        // nothing, so a click here cannot invalidate anything. The panel offers only what the session can
-        // honour: steps up to the frontier, minus the one already being looked at.
+        // The view is a read-only selection in the shell's session state — a move sets it and writes nothing.
         view={viewed}
         onMove={setViewed}
       />
@@ -648,8 +627,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
       onSave={save}
       saving={saving}
       saveNotice={saveNotice}
-      // The bar names the viewed placement — the held node while a run is landing, else the session's view
-      // (§4) — and its prior control moves that view.
+      // The bar names the viewed placement — the held node while a run is landing, else the session's view.
       hold={held ?? viewed}
       onMove={setViewed}
     />
@@ -687,9 +665,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
 
   const active: BuilderModule = view.entry;
   const View = active.Component;
-  // The module renders from **its own commit** while the session views a placement (§4); otherwise from the
-  // live tip. Only `data` moves: the store the module runs against, `run`, the map service and the position/
-  // steps panel stay on the live store — a view is read-only, and acting snaps back to the tip.
+  // The module renders from its own commit while the session views a placement; otherwise from the live tip.
   const data = viewedProjection(session.store, viewed);
   const inRegion = (region: Region): boolean => active.module.layout.includes(region);
 
@@ -765,9 +741,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
             from City2TABULA's geometry, and that geometry only exists once this run has been asked for. */}
         <BuildingPreparation />
 
-        {/* The follow-up sections a finished run offers (§6). Each is a **plan addition**: taking one appends
-            its nodes to the placed flow as `pending` placements — nothing runs until a module does. The list
-            is `recommendedFor`'s answer, so this is only its rendering. */}
+        {/* The follow-up sections a finished run offers; each is a plan addition that appends pending placements. */}
         {recommendations.length > 0 && (
           <div className="relative z-50 shrink-0 border-t border-border bg-card px-6 py-3">
             <p className="mb-2 text-xs font-medium text-muted-foreground">

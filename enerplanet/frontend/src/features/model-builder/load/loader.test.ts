@@ -1,8 +1,6 @@
 /**
- * The Loader — the mirror of the save: adopt the artefact, reattach the flow by reference, and
+ * The loader — the mirror of the save: adopt the artefact, take the placed flow it carried, and
  * re-derive the states.
- *
- * Written failing first.
  */
 import { describe, it, expect } from "vitest";
 import { loadSession } from "./loader";

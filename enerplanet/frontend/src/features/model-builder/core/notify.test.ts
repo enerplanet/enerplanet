@@ -1,12 +1,5 @@
 /**
- * Store notification — the frame's prerequisite.
- *
- * The frame reads the store in four places and history moves from three controls, so every *applied*
- * change must announce itself. The point of these cases is the one a seal-only hook gets wrong: `undo`
- * and `redo` change the projection **without sealing a transaction** (`core/store.ts`), so a listener
- * wired to the transaction path would stay silent exactly while the user navigates history.
- *
- * Written failing first.
+ * Store notification — every applied change, undo and redo included, announces itself to listeners.
  */
 import { describe, it, expect } from "vitest";
 import { createStore } from "./store";

@@ -1,16 +1,6 @@
 /**
- * The edit-while-behind prompt.
- *
- * With v2 (`spec/history-v2.md` §1, §9) there is no redo tail to truncate: the log is append-only,
- * and an undo is a rollback commit. `needsPrompt` is still "is there something to redo" (a rollback
- * is available), and the three choices still each have one outcome — but `discard-redo` now
- * **appends** the edit rather than dropping a tail, so nothing in the log is ever lost.
- *
- * The core owns the decision and the guarantees. The save/copy calls around the branch are the
- * shell's, and `previewOf` is what keeps the "save the current model first" step from sealing a
- * commit on the session the user is still deciding about.
- *
- * Written failing first against the new design.
+ * The edit-while-behind prompt: `needsPrompt` is "is a redo available", and `discard-redo` appends
+ * the edit rather than dropping a tail.
  */
 import { describe, it, expect } from "vitest";
 import { needsPrompt, previewOf, resolveEdit, type EditChoice } from "./prompt";

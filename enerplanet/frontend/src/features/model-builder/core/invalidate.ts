@@ -1,29 +1,13 @@
 /**
- * The invalidator: *the cascade is the affected closure, minus what it cannot touch*.
+ * The invalidator: the cascade is the affected closure, minus what it cannot touch.
  *
- * One pure function of `(primary, projection)`: given what a change wrote, which other ports does
- * this model no longer have a right to keep? Three rules, and nothing else:
+ * One pure function of `(primary, projection)`: given what a change wrote, the ports this model
+ * can no longer keep — the transitive `affect` closure of the changed ports, present in the
+ * projection, minus the ports the change itself wrote. The closure is breadth-first from the
+ * changed ports.
  *
- * 1. **the `affect` closure** of the changed ports — transitive, because an edge is
- *    `input → the outputs that input affects`, and one edge's outputs are the next edge's inputs;
- * 2. **present** in the projection — an absent port has nothing to discard;
- * 3. **not written by the primary** — a change supersedes its own port, and pruning it would throw
- *    away the value the action is in the middle of writing.
- *
- * It never invents a prune outside the declared closure, and it never tries to predict what a
- * re-run would produce (impossible without running it — that finer minimality belongs at the
- * re-run boundary). The order of the closure is breadth-first from the changed ports, so a cascade
- * reads in the order things became affected.
- *
- * **Where it runs.** At seal, through the store's `deriveCascade` seam when a caller omits the
- * cascade. A caller that passes a cascade — including `[]` — gets exactly what it passed, which is
- * how a rollback opts out: an undo or a redo is a complete inverse of its own (§4.1), so it passes
- * `[]` rather than deriving a second cascade.
- *
- * **Coarseness worth knowing:** the granularity is the *port*, not the nested path. A write under
- * `/buildingParams/gas` prunes the whole `buildingParams` port, so a module reading only
- * `electricity` is recomputed too. Correct, just not minimal — and `influence.ts`'s prober is
- * what keeps the *declarations* honest, which is the part that would be dangerous if wrong.
+ * Coarseness: the granularity is the port, not the nested path — a write under
+ * `/buildingParams/gas` prunes the whole `buildingParams` port.
  */
 
 import { portPath, type DiffOp } from "./diff";
@@ -36,12 +20,7 @@ export type Invalidator = (
   data: Readonly<ModelData>,
 ) => DiffOp[];
 
-/**
- * Build an invalidator from the flow it serves.
- *
- * The flow is needed because `affect` lives on the modules: the closure is their union, and only
- * the modules actually in this workflow can contribute an edge.
- */
+/** Build an invalidator from the flow it serves; `affect` lives on the modules. */
 export function createInvalidator(flow: Flow, registry: ModuleRegistry): Invalidator {
   return (primary, data) => {
     const changed = writtenPorts(primary);
@@ -66,12 +45,7 @@ function writtenPorts(ops: readonly DiffOp[]): PortKey[] {
   return ports;
 }
 
-/**
- * Every port reachable from `seeds` through the flow's `affect` maps, breadth-first.
- *
- * The seeds themselves are not included: they are what *changed*, so a cascade naming them would
- * be pruning the change rather than its consequences.
- */
+/** Every port reachable from `seeds` through the flow's `affect` maps, breadth-first; the seeds themselves are excluded. */
 function closureOf(
   seeds: readonly PortKey[],
   flow: Flow,

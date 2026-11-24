@@ -1,17 +1,8 @@
 /**
  * Replay — rebuild a projection from the log, and read a placement's own commit.
  *
- * The log is self-contained *materialized* diffs, so replaying it needs no
- * module and no backend. That gives this primitive two jobs:
- *
- * - the **recovery path** for the artefact: if a stored projection disagrees with its log, the
- *   log wins;
- * - a pure way to inspect what the model looked like at any revision.
- *
- * A **placement** has at most one commit — a re-run appends a *new* placement with a new id
- * rather than rewriting one — so looking a placement up is a find, never a scan over a
- * `nodeId` union (§2). `lastActionOf` and `writtenPortsOf` are that lookup; the union and the
- * jump scan v1 needed are gone.
+ * The log is self-contained materialized diffs, so replaying it needs no module and no backend:
+ * it is the artefact's recovery path, and a pure way to inspect the model at any revision.
  */
 
 import { applyDiffs, type Transaction } from "./diff";
@@ -40,12 +31,7 @@ export function replayBefore(initial: ModelData, log: readonly Transaction[], re
   return replay(initial, log, revision - 1);
 }
 
-/**
- * The placement's own single commit, or `undefined` when it has none yet (`pending`).
- *
- * A rollback carries no node, so it never answers here — a placement's state is a statement
- * about its *work*, and a resolution of the model is not work.
- */
+/** The placement's own single commit, or `undefined` when it has none yet. */
 export function lastActionOf(
   log: readonly Transaction[],
   nodeId: string,

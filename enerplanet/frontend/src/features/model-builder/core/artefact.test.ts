@@ -1,16 +1,6 @@
 /**
- * The artefact — persisting a session.
- *
- * v2 model (`spec/history-v2.md` §3.1): a session is `(projection, flow, log)`. The stored
- * projection is used directly on load (**no replay**) so a session opens instantly, and the
- * **placed flow** rides along as data (§3.1) — the seed placements plus appends, to-run nodes
- * included. The fingerprint guards the cache: when it disagrees with the stored projection, the
- * loader replays the log instead and says so. Replay stays the recovery path, never the load path.
- *
- * Because the log is append-only with no redo tail and the view is not persisted, `cursor` and
- * `discarded` are gone; a rollback (an undo) is just a commit in the log.
- *
- * Written failing first against the new design.
+ * The artefact — persisting a session: the projection, the placed flow and the log, with the
+ * fingerprint guarding the cache and replay kept as the recovery path.
  */
 import { describe, it, expect } from "vitest";
 import { fromArtefact, replayArtefact, toArtefact, type Artefact } from "./artefact";
@@ -98,7 +88,7 @@ describe("the artefact carries the state, the flow and the log", () => {
 
     expect(divergence).toBeUndefined();
     expect(artefact.log).toHaveLength(store.log.length); // the append-only log, whole
-    expect(artefact.flow).toEqual(FLOW); // the placed flow rides along (§3.1)
+    expect(artefact.flow).toEqual(FLOW); // the placed flow rides along
     expect(artefact).toMatchObject({ version: 1, modelId: 42 });
     expect(artefact.workflow).toEqual(WORKFLOW);
     expect("cursor" in artefact).toBe(false);

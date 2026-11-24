@@ -1,11 +1,5 @@
 /**
- * The ledger bar's state.
- *
- * The ledger is `store.log` — append-only, and never rewritten even by undo, which is a rollback commit like
- * any other rather than a cursor move (§4.1). So there is **no cursor and no discard stack**: every entry is
- * applied, newest first, and the cases below pin that reading.
- *
- * Written failing first.
+ * The ledger bar's state — a pure reading of the log, newest first.
  */
 import { describe, it, expect } from "vitest";
 import type { PortKey } from "@model-builder/core";

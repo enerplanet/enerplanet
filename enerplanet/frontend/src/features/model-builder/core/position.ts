@@ -1,24 +1,12 @@
 /**
  * Position — the transcript's derived state.
  *
- * The session holds no stored position: it is *derived*, per **placement**, from that
- * placement's own single commit (§4, §7 H7). With one commit per placement (a re-run appends a
- * new placement rather than rewriting one), a placement's state is a statement about *its own*
- * commit — no union over a `nodeId`, no exclusion of jumps, no log scan.
+ * The session holds no stored position: it is derived per placement from that placement's own
+ * single commit. A placement is `done` when it has a commit whose work is still in the store, with
+ * its inputs present and the module's gate satisfied; `stale` when that work was pruned or its
+ * inputs went away; `pending` when it has no commit yet.
  *
- * The derivation, per placement:
- *
- * - **done** — the placement has a commit, what that commit wrote is still in the store, its
- *   declared inputs are still there, and the module's own gate reports no issues.
- * - **stale** — it ran, but its work was pruned or its inputs went away: it must run again. A
- *   statement about **data** only — a move writes no value, so nothing a *view* does can make a
- *   placement stale.
- * - **pending** — it has no commit yet.
- *
- * **One index, not two.** v1 carried a second position (where a *jump* left the session resting)
- * because a move was a zero-diff transaction. v2 moves the view out of the log, so there is only
- * the **frontier**: `index` is the first placement that is not done — where the work resumes.
- * `restingIndex` and the "two positions" doctrine are gone.
+ * `index` is the frontier — the first placement that is not done — where the work resumes.
  */
 
 import { nodeName, type Flow, type ModuleRegistry } from "./flow";
@@ -33,7 +21,7 @@ export type DerivedState = "done" | "stale" | "pending";
 export interface NodePosition {
   nodeId: string;
   moduleId: string;
-  /** The placement's name (§2) — stable across re-runs, unlike `nodeId`. */
+  /** The placement's name — stable across re-runs, unlike `nodeId`. */
   name: string;
   state: DerivedState;
   /** Ports this placement wrote that are no longer in the store. */
@@ -43,10 +31,7 @@ export interface NodePosition {
 }
 
 export interface Position {
-  /**
-   * The **frontier**: index of the first placement that is not done; `flow.length` when every
-   * placement is done. There is nothing else — no `restingIndex`, because a view is not a commit.
-   */
+  /** The frontier: index of the first placement that is not done; `flow.length` when all are done. */
   index: number;
   /** The frontier placement's id, absent when the transcript is complete. */
   nodeId?: string;
@@ -76,19 +61,14 @@ export function positionReport(
       };
     }
 
-    // The placement's own commit is the truth about what it wrote, so a re-run that pruned it
-    // reads stale the moment the value leaves the store.
+    // The placement's own commit is the truth about what it wrote.
     const written = writtenPortsOf(store.log, node.id) as PortKey[];
     const pruned = written.filter((port) => store.data[port] === undefined);
 
-    // The module's own verdict on the store. Asked here, not only at the save node, because this is
-    // what makes "every node is done" mean the model is *whole*: a placement that ran without
-    // producing work it stands behind is not finished.
+    // The module's own verdict on the store — what makes "every node is done" mean the model is whole.
     const issues = module?.validate?.({ store: store.data }) ?? [];
 
-    // **Running with nothing to write is a finished run**, so `written.length === 0` is not a reason
-    // to hold a placement back: an optional editing step writes only what the user changed, and a
-    // completed run against an untouched store writes nothing at all.
+    // Running with nothing to write is a finished run; `written.length === 0` is not a reason to hold back.
     const state: DerivedState =
       pruned.length > 0 || blocked.length > 0 || issues.length > 0 ? "stale" : "done";
 
@@ -107,9 +87,7 @@ export function nodeStates(
   return states;
 }
 
-/**
- * Where the work resumes: the frontier — the first placement that is not done (§3, §7 H7).
- */
+/** Where the work resumes: the frontier — the first placement that is not done. */
 export function position(flow: Flow, registry: ModuleRegistry, store: Store): Position {
   const report = positionReport(flow, registry, store);
   const notDone = report.findIndex((entry) => entry.state !== "done");

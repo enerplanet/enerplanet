@@ -1,8 +1,6 @@
 /**
  * The `model-save` node — what it seals, what it refuses, and the status it earns.
  *
- * Written failing first.
- *
  * The flow here has a node *before* the save, and that is load-bearing: "the model is complete" is a
  * statement about the *other* nodes, so a one-node flow would be complete before it started and could
  * never tell a finished save from an unfinished one.

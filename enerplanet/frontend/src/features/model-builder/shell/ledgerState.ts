@@ -1,13 +1,8 @@
 /**
- * The ledger bar's state.
+ * The ledger bar's state — the log newest first.
  *
- * The ledger is `store.log` — **append-only**, and never rewritten even by undo, which is a rollback commit
- * like any other rather than a cursor move (§4.1). With v2 there is no cursor and no discard stack: every
- * entry in the log is applied, and a rollback is simply the newest entry that resolves the model backwards.
- * So the ledger is a pure reading of the log — no second source of truth to drift from.
- *
- * This module is deliberately presentation-free: rows newest first, signed ports, and nothing else. The bar
- * decides how that looks.
+ * A presentation-free reading of `store.log`: rows newest first, signed ports, and nothing else. The
+ * bar decides how that looks.
  */
 
 import type { DiffOp, PortKey, Transaction } from "@model-builder/core";
@@ -21,7 +16,7 @@ export interface LedgerChange {
 
 export interface LedgerRow {
   revision: number;
-  /** The placement the commit belongs to, absent on a rollback (which resolves the model, not a placement). */
+  /** The placement the commit belongs to; absent on a rollback. */
   nodeId?: string;
   auto: boolean;
   /** The ports this transaction touched: its primary writes, plus what it pruned. */

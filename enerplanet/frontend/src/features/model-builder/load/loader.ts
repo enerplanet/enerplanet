@@ -1,17 +1,6 @@
 /**
- * The Loader — opening a session from the backend.
- *
- * Loading is the mirror of the save: the artefact comes back from its own call, `fromArtefact` rebuilds the
- * session **without replaying** (the stored projection is adopted and its fingerprint checked; replay is only
- * the recovery path), and it returns the **placed flow** the artefact carried (§3.1) — the flow is a stored
- * fact now, not reconstructed from the plan. Node states and the position re-derive from
- * `(flow, projection, log)` exactly as they do live, which is why this returns them rather than leaving them to
- * the caller to remember.
- *
- * A model with **no session** is a normal answer, not an error: every legacy model is in that state,
- * as is a builder model that has never been saved. What to do about that is deliberately left to the
- * caller — adopting a legacy model's `config` into a builder session is a capability decision (it
- * needs the inverse of the save payload mapping), not something the loader should assume.
+ * The loader — opening a session from the backend: the artefact comes back from its own call and
+ * `fromArtefact` rebuilds the session, without replaying, returning the placed flow it carried.
  */
 
 import { fromArtefact, type Divergence } from "../core/artefact";

@@ -3,8 +3,6 @@
  *
  * Invalidation is minimal
  * and influence-aware, derived from each module's declared `affect` map.
- *
- * Written failing first.
  */
 import { describe, it, expect } from "vitest";
 import { changedPorts, stageCascade } from "./invalidator";
