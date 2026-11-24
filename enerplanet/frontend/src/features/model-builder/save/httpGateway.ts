@@ -1,9 +1,6 @@
 /**
  * The real adapter: the gateway bound to the backend over the shared axios client.
  *
- * The endpoints it uses are exactly the ones that already exist for a save, plus the isolated session
- * API:
- *
  * | call | endpoint |
  * |---|---|
  * | `createModel` | `POST /models` (+ the legacy create's side-effects, below) |
@@ -11,12 +8,7 @@
  * | `saveSession` / `loadSession` | `PUT` / `GET /models/:id/session` |
  *
  * It imports `@/lib/axios` — the app-wide, CSRF-aware client — rather than another feature's service
- * module. The feature owns its own I/O; reaching into `model-dashboard`'s service would tie this
- * feature's save path to a decision in that one.
- *
- * The client is injectable so the request shapes can be pinned in tests, which is the whole reason
- * this file has tests of its own: an endpoint path or a payload key is the kind of thing that breaks
- * silently.
+ * module, and the client is injectable so the request shapes can be pinned in tests.
  */
 
 import axios from "@/lib/axios";
@@ -53,9 +45,7 @@ export function createHttpGateway(client: HttpClient = axios): ModelGateway {
         throw new Error("Model created but no ID returned");
       }
 
-      // The legacy create's side-effects, kept here so the save logic never grows a legacy special
-      // case. Both are non-fatal in the legacy path — a transformer that could not be finalised must
-      // not lose a model that is already saved.
+      // The legacy create's side-effects; both are non-fatal in the legacy path.
       if (context?.draftId !== undefined && context.userId !== undefined) {
         try {
           await client.post("/v1/pylovo/finalize-transformers", {
@@ -99,8 +89,7 @@ export function createHttpGateway(client: HttpClient = axios): ModelGateway {
         const response = await client.get<{ data: SessionBody }>(`/models/${modelId}/session`);
         body = response.data?.data;
       } catch (error) {
-        // 404 is an answer, not a failure: the model has no session — a legacy model, or a builder
-        // model that was never saved. Anything else is a real error and must surface.
+        // 404 is an answer: the model has no session. Anything else must surface.
         if (isNotFound(error)) return undefined;
         throw error;
       }

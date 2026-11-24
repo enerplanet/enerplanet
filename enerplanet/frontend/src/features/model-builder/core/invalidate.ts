@@ -1,13 +1,8 @@
 /**
  * The invalidator: the cascade is the affected closure, minus what it cannot touch.
  *
- * One pure function of `(primary, projection)`: given what a change wrote, the ports this model
- * can no longer keep — the transitive `affect` closure of the changed ports, present in the
- * projection, minus the ports the change itself wrote. The closure is breadth-first from the
- * changed ports.
- *
- * Coarseness: the granularity is the port, not the nested path — a write under
- * `/buildingParams/gas` prunes the whole `buildingParams` port.
+ * One pure function of `(primary, projection)`: the ports the change leaves stale — the `affect`
+ * closure of the changed ports, present in the projection, minus the ports the change itself wrote.
  */
 
 import { portPath, type DiffOp } from "./diff";

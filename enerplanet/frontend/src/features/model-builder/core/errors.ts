@@ -1,8 +1,8 @@
 /**
  * Typed failures of the write boundary.
  *
- * A rejected write must never leave the store half-changed: the engine validates every
- * commit *before* a transaction exists, so these errors always mean "nothing happened".
+ * The engine validates every commit *before* a transaction exists, so a rejection always means
+ * "nothing happened".
  */
 
 import type { PortKey } from "./ports";
@@ -13,13 +13,7 @@ export type PortWriteRejection =
   | "undeclared"
   /** The module would blind-overwrite a value it never read (anti-clobber). */
   | "clobber"
-  /**
-   * The value carries nothing: an empty string, `null`, or `undefined`.
-   *
-   * A zero-member collection is *not* empty here — "no transformers in this area" is a fact a module is
-   * entitled to record, and whether that result is finished is the module's own call in `validate()`.
-   * Removing a port is the invalidator's job, never a module's.
-   */
+  /** The value carries nothing: an empty string, `null`, or `undefined` (a zero-member collection is a value). */
   | "empty";
 export class PortWriteRejected extends Error {
   readonly moduleId: string;
@@ -35,14 +29,7 @@ export class PortWriteRejected extends Error {
   }
 }
 
-/**
- * A node was asked to run at a position whose inputs do not exist.
- *
- * The available-set the palette uses is a *planning* aid and is deliberately optimistic — a
- * port a module only reads may look "available" before anything produced it. The store is the
- * runtime truth, so the engine refuses rather than letting a node run against a position the
- * flow never actually satisfied.
- */
+/** A node was asked to run at a position whose required inputs do not exist in the store. */
 export class MissingRequiredPorts extends Error {
   readonly moduleId: string;
   readonly missing: PortKey[];
@@ -58,14 +45,7 @@ export class MissingRequiredPorts extends Error {
 }
 
 /**
- * A listener tried to write to the store from inside a notification.
- *
- * **Notification is not re-entry**: a listener re-reads the projection, and may never change it. This is
- * enforced rather than merely documented because a writing listener *recurses* — the store notifies again
- * from inside its own notification, so a single user action can become an unbounded chain.
- *
- * The guard is checked before anything is installed, so a refused write changes nothing, exactly like the
- * rest of the write boundary.
+ * A listener tried to write to the store from inside a notification — notification is not re-entry.
  */
 export class ReentrantStoreWrite extends Error {
   constructor() {

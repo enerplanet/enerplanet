@@ -1,25 +1,10 @@
 /**
  * A stable, value-based fingerprint of a store value.
  *
- * Two things it must get right:
- * - **key order does not matter** — the DB and the code can disagree on it (the legacy
- *   save path needed a workaround for exactly this),
- * - **array order does** — a list of features is ordered.
- *
- * This is the comparison elision uses to decide "nothing changed" and the artefact
- * check uses to notice that a stored projection and its log disagree.
- *
- * **The result is a fixed-width digest, not the canonical string.** The canonical string is
- * built first and then hashed, because an artefact stores its fingerprint in a `varchar(255)`
- * column (`model_sessions.fingerprint`): a projection holding a grid and its buildings
- * canonicalises to kilobytes, and a projection that cannot be stored is a save that cannot
- * happen. Hashing also makes the cost of the artefact check independent of the model's size.
- *
- * SHA-256, implemented here rather than pulled in, because a fingerprint is what decides
- * whether a load trusts a stored projection — a collision there is a silently wrong model,
- * and that is worth 60 lines of well-specified arithmetic (`FIPS 180-4`) over a
- * collision-prone string hash with no dependency cost to weigh against. The test vectors are
- * the published ones.
+ * Key order does not matter (the DB and the code can disagree on it); array order does (a list of
+ * features is ordered). A fixed-width hex SHA-256 digest of the value's canonical string — elision
+ * uses it to decide "nothing changed", and the artefact check uses it to notice that a stored
+ * projection and its log disagree.
  */
 
 /** A hex SHA-256 digest of a value's canonical form. Always 64 characters. */
@@ -65,13 +50,7 @@ function canonicalString(value: unknown, seen: Set<unknown>): string {
   return String(value);
 }
 
-/**
- * SHA-256 in hex (`FIPS 180-4`).
- *
- * Straight from the specification: the round constants and the initial hash values are the
- * document's, the message schedule is expanded from the 32-bit words below, and the padding
- * is the standard `0x80` sentinel followed by the bit length as a 64-bit big-endian tail.
- */
+/** The SHA-256 round constants (`FIPS 180-4`). */
 const K = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
   0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -83,6 +62,7 @@ const K = new Uint32Array([
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ]);
 
+/** SHA-256 in hex (`FIPS 180-4`). */
 function sha256Hex(input: string): string {
   const bytes = new TextEncoder().encode(input);
 

@@ -1,20 +1,8 @@
 /**
- * The invalidator — turns a change into the **stale ports** it leaves behind.
+ * The invalidator — turns a change into the stale ports it leaves behind.
  *
- * A pure function of the change, the projection and the modules currently in the flow:
- * each module's `affect` map supplies the static potential edges, and three rules make the
- * result minimal —
- *
- * 1. **affected closure** — transitively reachable over the declared edges,
- * 2. **present** — a port that isn't in the store has nothing to prune,
- * 3. **not superseded** — a port the change itself writes is already the newest value.
- *
- * What it deliberately does *not* do is predict what a re-run would compute: that is
- * unknowable without running it. The finer minimality is bought at the re-run boundary,
- * where a node that re-derives an identical value seals no transaction.
- *
- * The cascade is expressed as ports, never as nodes — mapping stale ports back onto the flow
- * is the flow layer's job, which keeps history and invalidation free of workflow knowledge.
+ * A pure function of the change, the projection and the modules in the flow: the affected closure,
+ * present in the store, minus what the change itself wrote. Expressed as ports, never as nodes.
  */
 
 import { portPath, type DiffOp } from "./diff";
@@ -28,10 +16,7 @@ export interface CascadeInput {
   primary: readonly DiffOp[];
   /** The projection the cascade will be applied to. */
   data: Readonly<ModelData>;
-  /**
-   * The modules currently in the flow. Only their `affect` maps matter here; a module whose
-   * `params` don't include a changed port declares no edge from it.
-   */
+  /** The modules currently in the flow; only their `affect` maps matter here. */
   modules: readonly Module[];
 }
 
@@ -62,8 +47,7 @@ export function stageCascade({ changed, primary, data, modules }: CascadeInput):
   const stale: PortKey[] = [];
   const queue: PortKey[] = [...changed];
 
-  // Breadth-first over the declared edges. No cycle guard is needed: `seen` already bounds
-  // the walk, and the flow itself is acyclic.
+  // Breadth-first over the declared edges; `seen` bounds the walk.
   while (queue.length > 0) {
     const port = queue.shift() as PortKey;
 
