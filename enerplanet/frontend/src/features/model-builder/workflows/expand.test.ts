@@ -1,10 +1,6 @@
 /**
- * The expansion. Everything else rests on this piece, so the cases
- * pin the two properties that are correctness rather than tidiness — a subflow's ids are namespaced by its
- * container, and the same subflow twice yields disjoint ids — and the three refusals: a composition cycle, a
- * subflow naming a workflow nobody stores, and a node naming a module nobody declared.
- *
- * Written failing first.
+ * The expansion: the id-namespacing of a composed node, the disjoint ids of a subflow inserted twice, and the
+ * three refusals (a cycle, an unresolved subflow, an undeclared module).
  */
 import { describe, expect, it } from "vitest";
 import type { ModuleRegistry } from "../core/flow";
@@ -30,10 +26,7 @@ const lookupFrom = (...documents: WorkflowDocument[]) => {
 const registryFor = (...ids: string[]): ModuleRegistry =>
   Object.fromEntries(ids.map((id) => [id, { id } as Module]));
 
-/**
- * A registry declaring every module the documents below place. `expand` refuses a module node whose module
- * nobody declared, so the flattening cases must place only declared modules — the refusal has its own case.
- */
+/** A registry declaring every module the documents below place. */
 const MODULES: ModuleRegistry = registryFor("a", "b", "f", "n", "s", "x", "y", "z");
 
 describe("flattening a document", () => {
@@ -60,8 +53,6 @@ describe("flattening a document", () => {
       { id: "z", moduleId: "z", label: "Z" },
     ]);
 
-    // X → Y(adjust: A → B) → Z flattens to X, A, B, Z — with Y's children namespaced by Y's id and labelled
-    // under Y's label, and Y itself never emitted (it is not a module).
     expect(expand(outer, lookupFrom(outer, inner), MODULES)).toEqual([
       { id: "x", moduleId: "x", label: "X" },
       { id: "y/a", moduleId: "a", label: "Y / A" },
@@ -184,9 +175,6 @@ describe("the refusals", () => {
   });
 
   it("refuses a node carrying both fields, rather than reading it as a subflow", () => {
-    // Everything else about this node passes: its moduleId is declared and its subflow target resolves. Only
-    // the discriminant can catch it — and reading it as a subflow would have silently ignored the module it
-    // also names, which is why the walk asks `nodeProblem` before it asks either kind.
     const inner = doc("adjust", [{ id: "n", moduleId: "n" }], "Adjust");
     const outer = doc("outer", [
       { id: "x", moduleId: "a", workflows: ["adjust"] } as WorkflowNodeDocument,

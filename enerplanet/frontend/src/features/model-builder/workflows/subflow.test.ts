@@ -1,12 +1,4 @@
-/**
- * The subflow picker's data: every stored workflow judged, fragments first.
- *
- * The verdict itself is proven in `gate.test.ts`; these pin the ordering and that the list is exactly the
- * stored workflows — nothing excluded here, so the workflow being edited is judged (`recursive`) rather than
- * filtered out by a second rule.
- *
- * Written failing first.
- */
+/** The subflow picker's data: every stored workflow judged, fragments first. */
 import { describe, expect, it } from "vitest";
 import type { ModuleRegistry } from "../core/flow";
 import type { Module, Param } from "../core/module";

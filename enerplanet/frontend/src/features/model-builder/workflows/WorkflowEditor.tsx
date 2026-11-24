@@ -1,22 +1,10 @@
 /**
  * The workflow editor — a linear chain, and the palette that gates what may be appended.
  *
- * The chain is the document's `nodes`, in order. Appending offers a module only once every `required` port
- * it declares is produced by the chain so far; the palette lists the whole catalogue and greys what cannot
- * go next, naming the port it waits for. **The gate is editor-level guidance, not a core invariant** — a
- * module may declare a port it never writes, so the engine, not this palette, decides whether a node runs
- * (`gate.ts` carries the full caveat).
- *
- * A **subflow** is not a module, so it is not a row in the palette: its own control opens a picker
- * (`subflowCandidates`) listing every stored workflow judged for this position. Choosing one appends a
- * subflow node, which renders as a **bracket** around the expansion of the workflow it references — the
- * nodes that workflow brings in, shown as belonging to it and not editable here. The bracket names that
- * workflow and carries a control to change it (the same picker, pre-set, appending nothing). A node's list
- * of candidates may hold several; this renders the first, and the per-candidate tabs attach inside the
- * bracket (see `renderSubflow`).
- *
- * Removing an entry drops it and everything after it: a linear chain cannot have a hole, and the confirm
- * says so. Unsaved changes are shown in the header.
+ * The chain is the document's `nodes`, in order. The palette lists the whole catalogue and greys what cannot
+ * go next, naming the port it waits for. A **subflow** is not a module: its own control opens a picker
+ * (`subflowCandidates`), and a chosen subflow renders as a **bracket** around the expansion of the workflow
+ * it references. Removing an entry drops it and everything after it.
  */
 
 import { useMemo, useState } from "react";
@@ -63,23 +51,14 @@ import { documentProblem, isSubflowNode } from "./types";
 export interface WorkflowEditorProps {
   document: WorkflowDocument;
   catalogue: readonly BuilderModule[];
-  /**
-   * Every stored workflow **with its document** — the candidates a subflow picker offers and the documents a
-   * subflow node's expansion resolves through (`WorkflowLookup`). The page passes the list it already holds;
-   * the workflow being edited is left in it, since `subflowVerdict` refuses it as `recursive`.
-   */
+  /** Every stored workflow with its document — the picker's candidates and the lookup a subflow resolves through. */
   workflows: readonly WorkflowDocument[];
   /** Whether the server already has a row for this document (create vs. update on save). */
   persisted: boolean;
   dirty: boolean;
   saving: boolean;
   error: string | null;
-  /**
-   * The document as edited. The editor authors the chain **and** the `recommended` map, so it hands back
-   * the whole document rather than the node list alone: the page keeps a `recommended` edit the same way it
-   * keeps a chain edit. Everything the editor does not author (`seed`, the key order of the stored document) is
-   * carried through unchanged, exactly as `documentWithNodes` does for the node list.
-   */
+  /** The document as edited — the editor authors both the chain and the `recommended` map. */
   onChange: (document: WorkflowDocument) => void;
   onSave: () => void;
   onBack: () => void;
@@ -127,7 +106,6 @@ const PaletteRow: React.FC<{ entry: PaletteEntry; onAdd: () => void }> = ({ entr
           </p>
         )}
 
-        {/* The refusal says which port it is waiting for, rather than only that it is refused. */}
         {!available && (
           <p className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400">
             <span>{t("modelBuilder.workflows.editor.needs", "needs")}</span>
@@ -154,17 +132,9 @@ const PaletteRow: React.FC<{ entry: PaletteEntry; onAdd: () => void }> = ({ entr
 };
 
 /**
- * The up/down controls for one chain entry, with the reason a direction is refused.
- *
- * Movement is buttons rather than drag: the editor is rendered and tested in a **node** environment with no
- * DOM, so a drag could not be exercised here. A direction that cannot take effect — the ends have no
- * neighbour, or the move would add an unmet requirement — is rendered **disabled**, never hidden: a control
- * that vanishes reads as a bug, and the palette already states its refusals in place. A boundary needs no
- * explanation; a move the data flow refuses names the ports it would leave unmet, because that is the fact
- * the user can act on.
- *
- * `children` is the row's other controls (the remove button), so the three sit in one cluster exactly as the
- * remove control did alone.
+ * The up/down controls for one chain entry; a refused direction is rendered disabled with the ports it would
+ * leave unmet. Movement is a button rather than a drag because the editor is tested in a node environment
+ * with no DOM.
  */
 const MoveControls: React.FC<{
   index: number;
@@ -179,7 +149,6 @@ const MoveControls: React.FC<{
   const buttonClass =
     "shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30";
 
-  /** The refusal for a direction that is blocked by the data flow, not merely by the chain's end. */
   const refusal = (verdict: MoveVerdict): React.ReactNode =>
     verdict.ok ? null : (
       <p className="flex flex-wrap items-center justify-end gap-1 text-[11px] text-amber-700 dark:text-amber-400">
@@ -213,22 +182,15 @@ const MoveControls: React.FC<{
         </button>
         {children}
       </div>
-      {/* A boundary is disabled by position, not by the data flow, so it shows no port refusal. */}
       {!first && refusal(up)}
       {!last && refusal(down)}
     </div>
   );
 };
 
-/**
- * The fragment notice: a fragment is validated where it is inserted, so the gate is off here — stated as a
- * warning panel rather than the palette's muted hint, because an off safety net should not read as a footnote.
+/** The fragment notice: validation is off while editing a fragment, plus the ports it will need from the flow that inserts it.
  *
- * Beneath the warning, the ports the fragment will need from the flow around it: the union of its modules'
- * unmet `required` ports, read by the same positional walk a candidate's verdict uses (`unmetRequiredPorts`
- * via `fragmentRequiredPorts`) with an empty prefix. `inputs === null` means the fragment could not be
- * flattened, so there is nothing to name — the chain reports that per node, and the panel stays silent rather
- * than duplicating it. An empty list is a real, good state and is said plainly instead of shown as an empty box.
+ * `inputs === null` means the fragment could not be flattened, so the notice names nothing.
  */
 const FragmentNotice: React.FC<{ inputs: readonly PortKey[] | null }> = ({ inputs }) => {
   const { t } = useTranslation();
@@ -268,15 +230,7 @@ const FragmentNotice: React.FC<{ inputs: readonly PortKey[] | null }> = ({ input
   );
 };
 
-/**
- * The subflow picker: every stored workflow, its label and description, and the verdict as a row state.
- *
- * An `ok` verdict leaves the row selectable; `missing`, `recursive` and `unresolved` grey it and name the
- * reason. `missing` names the ports the chain prefix has not produced, in the same chip as the palette; the
- * other two are a single sentence, because they name a whole-document defect rather than a port. `current`
- * marks the candidate a "change" was opened from; it is not a second filter — a candidate the verdict
- * refuses stays refused whether or not it is current.
- */
+/** The subflow picker: every stored workflow, its label and description, and the verdict as a row state. */
 const SubflowPicker: React.FC<{
   candidates: readonly SubflowCandidate[];
   current: string | null;
@@ -341,7 +295,6 @@ const SubflowPicker: React.FC<{
                     <p className="mt-1 text-[11px] text-muted-foreground">{candidate.document.description}</p>
                   )}
 
-                  {/* The refusal says why, rather than only that it is refused. */}
                   {!ok && (
                     <p className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400">
                       {candidate.verdict.reason === "missing" ? (
@@ -385,16 +338,7 @@ const SubflowPicker: React.FC<{
   );
 };
 
-/**
- * Recommended sections, authored. The map is keyed by a terminal node's **stable name** — a module's
- * `moduleId`, or a seed node's own `id` — so a terminal is named first and its sections authored under it.
- * Each section carries its own workflow-local `key`, a `label`, a `description` (the goal), and the module
- * nodes appended as one unit when the section is taken.
- *
- * Every edit is a pure `recommendedEdit` call: the panel renders the map it is handed and hands the new one
- * back through `onChange`, so the page and the validator see exactly what the user typed — a malformed map is
- * reported by `problem` (below the panel) rather than silently corrected here.
- */
+/** Recommended sections, authored: the map keyed by a terminal node's **stable name**. */
 const RecommendedPanel: React.FC<{
   recommended: RecommendedMap | undefined;
   problem: string | undefined;
@@ -403,19 +347,16 @@ const RecommendedPanel: React.FC<{
 }> = ({ recommended, problem, catalogue, onChange }) => {
   const { t } = useTranslation();
   const [terminalDraft, setTerminalDraft] = useState("");
-  /** The section being authored for a terminal, or `null` when no add-section form is open. */
   const [sectionDraft, setSectionDraft] = useState<{
     terminal: string;
     key: string;
     label: string;
     description: string;
   } | null>(null);
-  /** The module selected for each section's node picker, keyed by `terminal::key`. */
   const [nodePicks, setNodePicks] = useState<Record<string, string>>({});
 
   const map = recommended ?? {};
   const terminals = Object.keys(map);
-  // Only node modules can be a section's node — a host module is not a step (see `paletteFor`).
   const nodeModules = catalogue.filter((entry) => !isHostModule(entry.module));
 
   const addTerminal = (): void => {
@@ -460,7 +401,6 @@ const RecommendedPanel: React.FC<{
         )}
       </p>
 
-      {/* A malformed map is reported here, before a save is attempted — the same rule the save refuses on. */}
       {problem !== undefined && (
         <p className="mb-3 flex items-start gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
@@ -567,7 +507,6 @@ const RecommendedPanel: React.FC<{
                         </button>
                       </div>
 
-                      {/* The nodes appended as one unit when the section is taken. */}
                       <div className="mt-2 border-t border-border pt-2">
                         {section.nodes.length === 0 ? (
                           <p className="text-[11px] text-muted-foreground">
@@ -690,7 +629,6 @@ const RecommendedPanel: React.FC<{
         </ul>
       )}
 
-      {/* Name a terminal the map does not carry yet — the stable name a section is offered under. */}
       <div className="mt-3 flex items-end gap-2">
         <label className="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground">
           {t("modelBuilder.workflows.editor.addTerminal", "Add a terminal")}
@@ -728,7 +666,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 }) => {
   const { t } = useTranslation();
   const [pendingRemove, setPendingRemove] = useState<number | null>(null);
-  /** Which picker is open: appending at the end, or changing the subflow node at `index`. */
   const [picker, setPicker] = useState<{ kind: "append" } | { kind: "change"; index: number } | null>(
     null,
   );
@@ -738,10 +675,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     onChange({ ...document, nodes: [...nodes] });
   };
 
-  /**
-   * The document with the recommended map replaced. An emptied map drops the field entirely rather than leaving
-   * `recommended: {}` behind, so a workflow that offers no follow-ups reads as one that never did.
-   */
+  /** The document with the recommended map replaced; an empty map drops the field. */
   const changeRecommended = (recommended: RecommendedMap): void => {
     const next: WorkflowDocument = { ...document };
     if (Object.keys(recommended).length === 0) delete next.recommended;
@@ -756,31 +690,21 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     () => new Map(catalogue.map((entry) => [entry.module.id, entry])),
     [catalogue],
   );
-  // The documents a subflow node's expansion resolves through, keyed by the id a subflow references — the same
-  // shape `expand` takes, built once from the workflow list the page already holds.
   const lookup = useMemo<WorkflowLookup>(() => {
     const byWorkflowId = new Map(workflows.map((workflow) => [workflow.id, workflow]));
     return (workflowId) => byWorkflowId.get(workflowId);
   }, [workflows]);
-  // The registry `subflowVerdict` flattens a candidate through — the catalogue's modules by id.
   const registry = useMemo<ModuleRegistry>(
     () => Object.fromEntries(catalogue.map((entry) => [entry.module.id, entry.module])),
     [catalogue],
   );
-  // A fragment is authored to be spliced into another flow, so its own prefix is not the test for what it may
-  // contain: the palette offers every module and the picker drops the positional `missing` verdict. A flow is
-  // gated as before (`GateOptions`).
   const fragment = document.isSubflow === true;
   const palette = useMemo(
     () => paletteFor(catalogue, document.nodes, lookup, { fragment }),
     [catalogue, document.nodes, lookup, fragment],
   );
 
-  /**
-   * What the fragment will need from the flow that inserts it: its own expansion read with an empty prefix
-   * (`fragmentRequiredPorts`). `null` when the fragment cannot be flattened — an unresolved subflow or a
-   * module this build lacks, which the chain reports per node, so the notice adds nothing to say.
-   */
+  /** What the fragment needs from the flow that inserts it (`fragmentRequiredPorts`); `null` when it cannot be flattened. */
   const fragmentInputs = useMemo(() => {
     if (!fragment) return null;
     try {
@@ -790,10 +714,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     }
   }, [fragment, document, lookup, registry]);
 
-  /**
-   * The candidates for the open picker, judged against the chain prefix that ends where the subflow sits:
-   * the whole chain for an append, the nodes before it for a change.
-   */
+  /** The candidates for the open picker, judged against the chain prefix ending where the subflow sits. */
   const candidates = useMemo(() => {
     if (picker === null) return [];
     const prefix = picker.kind === "append" ? document.nodes.length : picker.index;
@@ -801,12 +722,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     return subflowCandidates(workflows, produced, registry, lookup, document.id, { fragment });
   }, [picker, document.nodes, document.id, workflows, catalogue, lookup, registry, fragment]);
 
-  /**
-   * Each subflow node's expansion: the referenced workflow's module nodes, ids namespaced by the node and
-   * labels prefixed with it, exactly as `expand` composes them inside this document. Read per node — a
-   * one-node document holding just that node — so a defect inside one subflow does not blank the others.
-   * `null` when the expansion cannot be walked (an unresolved reference, a module this build lacks).
-   */
+  /** Each subflow node's expansion, composed as `expand` does it; `null` when it cannot be walked. */
   const expansions = useMemo(() => {
     const byNode = new Map<string, FlowNode[] | null>();
     for (const node of document.nodes) {
@@ -826,17 +742,11 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   const askRemove = (index: number): void => {
-    // The last entry drops nothing but itself, so there is no consequence to confirm. Anything earlier
-    // takes its dependents with it, and that is what the confirm states.
     if (removedCount(document.nodes, index) <= 1) remove(index);
     else setPendingRemove(index);
   };
 
-  /**
-   * The verdict for moving one entry a direction. A fragment is judged where it is inserted, so no move can
-   * break its own (empty-prefix) flow: the check is skipped entirely here — the same relaxation the palette
-   * has for a fragment (`GateOptions`), applied to movement.
-   */
+  /** The verdict for moving one entry a direction; a fragment skips the check (it is judged where inserted). */
   const moveVerdict = (index: number, direction: MoveDirection): MoveVerdict =>
     fragment ? { ok: true } : moveIsAllowed(document, index, direction, lookup, registry);
 
@@ -910,8 +820,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           </MoveControls>
         </div>
 
-        {/* The bracket proper: the nodes this workflow contributes, marked as belonging to it and read-only
-            here — they live in that document, and that is where they are edited. */}
         <div className="mt-3 ml-3 border-l-2 border-violet-300 pl-3 dark:border-violet-800">
           <p className="mb-1.5 text-[11px] text-muted-foreground">
             {t(
@@ -951,8 +859,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             </ol>
           )}
 
-          {/* A node's candidate list may hold several workflows; this renders the first (`expand`'s default
-              `choose`). The per-candidate tabs attach here, selecting which one this bracket shows. */}
           {picker?.kind === "change" && picker.index === index && (
             <div className="mt-3">
               <SubflowPicker
@@ -970,7 +876,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      {/* Header — label, id, version, and the unsaved marker. */}
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-6 py-3">
         <button
           type="button"
@@ -984,7 +889,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 truncate text-base font-semibold text-foreground">
             {document.label}
-            {/* Visible so an ungated palette, and a refused run, read as authored rather than as a bug. */}
             {fragment && (
               <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
                 {t("modelBuilder.workflows.editor.fragment", "fragment")}
@@ -1031,7 +935,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto p-6">
         <div className="flex min-h-0 flex-col gap-6 lg:flex-row">
-        {/* The chain, in order. */}
         <section className="min-w-0 flex-1">
           <h3 className="mb-2 text-sm font-semibold text-foreground">
             {t("modelBuilder.workflows.editor.chain", "Chain")}
@@ -1044,15 +947,9 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           ) : (
             <ol className="space-y-2">
               {document.nodes.map((node, index) => {
-                // A subflow node is not a module — it references a workflow to splice in here, so it renders
-                // as the bracket around that workflow's expansion rather than as an ordinary chain row.
                 if (isSubflowNode(node)) return renderSubflow(node, index);
 
                 const entry = byId.get(node.moduleId);
-                // Two ways a stored node can name something that is not a step this build can run. Both are
-                // data conditions to report — naming the node and the module — rather than exceptions that
-                // take the surface down: a module the catalogue no longer declares, and a host
-                // module, which is in the catalogue but was never a node.
                 const problem =
                   entry === undefined
                     ? t(
@@ -1119,7 +1016,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             </ol>
           )}
 
-          {/* The consequence of a middle cut, stated where the click happened. */}
           {pendingRemove !== null && (
             <div className="mt-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
               <p className="text-destructive">
@@ -1149,7 +1045,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           )}
         </section>
 
-        {/* The palette — the whole catalogue, gated — and, above it, the subflow's own control. */}
         <section className="min-w-0 flex-1 lg:max-w-sm">
           <h3 className="mb-2 text-sm font-semibold text-foreground">
             {t("modelBuilder.workflows.editor.palette", "Modules")}
@@ -1165,8 +1060,6 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             </p>
           )}
 
-          {/* A subflow is not a module, so it does not sit in the list below: its own control opens the
-              picker, which appends nothing until a workflow is chosen. */}
           <button
             type="button"
             onClick={() => setPicker({ kind: "append" })}

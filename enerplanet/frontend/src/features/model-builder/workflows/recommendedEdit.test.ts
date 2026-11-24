@@ -1,10 +1,4 @@
-/**
- * Editing the `recommended` map. The editor surfaces these through `onChange`; the validator
- * (`documentProblem`) is the authority on well-formedness, so these tests pin what each helper **authors** —
- * a new map, the old one untouched — not that it gates.
- *
- * Written failing first.
- */
+/** Editing the `recommended` map: what each helper authors (a new map, the old one untouched). */
 import { describe, expect, it } from "vitest";
 import type { Module, Param } from "../core/module";
 import type { BuilderModule } from "../shell/contract";
@@ -170,9 +164,6 @@ describe("purity", () => {
 
 describe("a map authored here round-trips through copyPayload", () => {
   it("survives the copy's canonicalisation unchanged — the map, its sections and its nodes", () => {
-    // The editor hands `changeRecommended`'s result to the page, which saves and copies it. `copyPayload`
-    // reorders the document, so what it produces must parse back equal to what the author built — otherwise an
-    // authored follow-up would reshuffle on the first paste into the seed file.
     const map = withSectionNode(
       withSection(withTerminal(undefined, "model-start"), "model-start", INSULATE),
       "model-start",

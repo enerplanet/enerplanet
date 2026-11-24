@@ -1,9 +1,4 @@
-/**
- * The workflows API client. These pin the routes, the method-per-call, and the `{data: …}`
- * envelope — the contract the backend is built against in parallel, so the client must not drift from it.
- *
- * Written failing first.
- */
+/** The workflows API client: the routes, the method-per-call, and the `{data: …}` envelope. */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const get = vi.fn();

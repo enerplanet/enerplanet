@@ -1,10 +1,4 @@
-/**
- * The node union's discriminant. `moduleId` xor `workflows` is the
- * structural rule every consumer branches on, so the two failures — a node with neither field, and one with
- * both — are pinned here rather than left to whatever a reader infers.
- *
- * Written failing first.
- */
+/** The node union's discriminant: `moduleId` xor `workflows`. */
 import { describe, expect, it } from "vitest";
 import { documentProblem, isSubflowNode, nodeProblem, type RecommendedSection, type WorkflowDocument, type WorkflowNodeDocument } from "./types";
 

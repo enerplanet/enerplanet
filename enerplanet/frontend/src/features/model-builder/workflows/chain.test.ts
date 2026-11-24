@@ -1,9 +1,4 @@
-/**
- * Chain operations. The one that matters: removing an entry drops it **and everything after it**,
- * because a linear chain cannot have a hole.
- *
- * Written failing first.
- */
+/** Chain operations: removing an entry drops it and everything after it. */
 import { describe, expect, it } from "vitest";
 import type { Module, Param } from "../core/module";
 import type { BuilderModule } from "../shell/contract";

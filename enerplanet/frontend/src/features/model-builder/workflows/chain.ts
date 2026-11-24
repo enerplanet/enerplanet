@@ -1,14 +1,5 @@
 /**
  * Chain operations — the editor's linear list, as pure functions over the document's `nodes`.
- *
- * A linear chain cannot have a hole. Removing an entry therefore drops it **and everything after it**:
- * a middle cut would either leave a gap or silently promote a module whose requirements the new tail no
- * longer satisfies, and both are worse than the honest answer that the tail is gone. The editor's confirm
- * states that consequence.
- *
- * A **move** reorders the same entries by one position — a swap with a neighbour, nothing added or dropped.
- * Whether the resulting order is allowed is not this file's business (`gate.moveIsAllowed` judges it against
- * the data flow); here a move is just the reordering.
  */
 
 import type { BuilderModule } from "../shell/contract";
@@ -38,13 +29,7 @@ export function appendModule(
   ];
 }
 
-/**
- * Append a subflow node referencing `workflowId`. No label is set: `expand` falls back to the referenced
- * workflow's own label (`node.label ?? child.label ?? child.id`), so the composed step reads correctly and
- * keeps reading correctly if the reference is later switched — a label copied in here would go stale the
- * moment the choice changes. The id is minted like a module's, off the workflow id, so it stays unique in
- * the document.
- */
+/** Append a subflow node referencing `workflowId`; no label is set, so `expand` reads the referenced workflow's own. */
 export function appendSubflow(
   chain: readonly WorkflowNodeDocument[],
   workflowId: string,
@@ -52,10 +37,7 @@ export function appendSubflow(
   return [...chain, { id: nodeIdFor(workflowId, chain), workflows: [workflowId] }];
 }
 
-/**
- * Point the subflow node at `index` at `workflowId` — the choice changed, so nothing is appended and the
- * chain's length and the node's position are untouched. A non-subflow node at `index` is left as it is.
- */
+/** Point the subflow node at `index` at `workflowId`; a non-subflow node at `index` is left as it is. */
 export function chooseSubflowWorkflow(
   chain: readonly WorkflowNodeDocument[],
   index: number,
@@ -66,14 +48,7 @@ export function chooseSubflowWorkflow(
   );
 }
 
-/**
- * Move the entry at `index` one position toward the start (`up`) or the end (`down`) — a swap with its
- * neighbour, and nothing else. The list is returned new, never mutated.
- *
- * The ends have no neighbour to trade with, and an out-of-range index names no entry, so those are returned
- * unchanged rather than throwing: the editor disables such a control, and a pure function that quietly
- * ignores a move with nowhere to go is simpler than one callers must guard.
- */
+/** Move the entry at `index` one position, swapping with its neighbour; a boundary or out-of-range index is returned unchanged. */
 export function moveNode(
   chain: readonly WorkflowNodeDocument[],
   index: number,
@@ -86,11 +61,7 @@ export function moveNode(
   return next;
 }
 
-/**
- * Remove the entry at `index`, and everything after it.
- *
- * The count the confirm reports is what this drops: `chain.length - index`.
- */
+/** Remove the entry at `index` and everything after it. */
 export function removeFrom(
   chain: readonly WorkflowNodeDocument[],
   index: number,

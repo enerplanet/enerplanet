@@ -1,10 +1,6 @@
 /**
  * Recommended sections: the follow-up node groups a workflow offers once a run finishes, and how taking
- * one grows the placed flow.
- *
- * Pure — no commit, no run. `sectionsFor` answers what a terminal node offers; `appendRecommended`
- * returns a new `Flow` with a section's nodes appended as fresh placements; `recommendedFor` decides
- * which sections are on offer right now.
+ * one grows the placed flow. Pure — no commit, no run.
  */
 
 import { nodeName, placementId, type Flow, type FlowNode } from "../core/flow";
@@ -60,7 +56,6 @@ export function recommendedFor(flow: Flow, store: Store, document: WorkflowDocum
   }
   if (terminal === undefined) return [];
 
-  // Finished only when the terminal stands at the tip.
   if (terminal !== flow[flow.length - 1]) return [];
 
   return sectionsFor(document, nodeName(terminal));

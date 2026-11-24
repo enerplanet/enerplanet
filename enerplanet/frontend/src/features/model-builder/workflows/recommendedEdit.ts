@@ -1,8 +1,6 @@
 /**
- * Editing a workflow's `recommended` map: the pure half of the editor's section authoring.
- *
- * Every function here is pure over that map — it returns a new map and never edits the one it is given —
- * and accepts `undefined` wherever a map is read.
+ * Editing a workflow's `recommended` map — the pure half of the editor's section authoring. Every function
+ * returns a new map and accepts `undefined` wherever a map is read.
  */
 
 import { nodeIdFor } from "./chain";
@@ -33,11 +31,8 @@ export function withoutTerminal(map: RecommendedMap | undefined, terminal: strin
 }
 
 /**
- * The map with the terminal key `from` renamed to `to`, keeping its position.
- *
- * A rename onto a name another terminal already holds merges the two section lists onto the new name (the
- * moved terminal's sections after the ones already there). A blank `to`, an unchanged name, or a `from` the
- * map does not carry all return the map unchanged.
+ * The map with the terminal key `from` renamed to `to`, keeping its position. A rename onto a name another
+ * terminal holds merges the two section lists onto the new name (the moved terminal's after the existing).
  */
 export function renamedTerminal(
   map: RecommendedMap | undefined,
@@ -51,7 +46,6 @@ export function renamedTerminal(
     if (name === from) {
       result[to] = to in base ? [...(base[to] ?? []), ...sections] : sections;
     } else if (name === to) {
-      // `to` may already be set — a `from` that came first merged into it; skip it.
       if (!(to in result)) result[to] = sections;
     } else {
       result[name] = sections;
@@ -89,8 +83,8 @@ export function withoutSection(
 }
 
 /**
- * The map with the section `key` under `terminal` patched with `fields`. A key change renames the section in
- * place; whether the new key stays unique is `documentProblem`'s call, not this helper's.
+ * The map with the section `key` under `terminal` patched with `fields`; whether the new key stays unique is
+ * `documentProblem`'s call, not this helper's.
  */
 export function updatedSection(
   map: RecommendedMap | undefined,

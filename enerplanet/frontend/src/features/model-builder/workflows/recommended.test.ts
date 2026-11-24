@@ -1,12 +1,4 @@
-/**
- * Recommended sections: what a terminal node offers, and how taking a section grows the flow.
- *
- * `appendRecommended` is a **plan addition** — it grows the transcript, it does not run anything — so the
- * tests pin the two facts that make that true: fresh, monotonic placement ids in order, and an input flow that
- * is left untouched.
- *
- * Written failing first.
- */
+/** Recommended sections: what a terminal node offers, and how taking a section grows the flow. */
 import { describe, expect, it } from "vitest";
 import type { Flow } from "../core/flow";
 import { createStore, type Store } from "../core/store";
@@ -95,8 +87,6 @@ describe("appendRecommended — a plan addition", () => {
   });
 
   it("replaces the placed flow with a longer one — monotonic ids, the appended node present", () => {
-    // What the shell's `takeSection` does to the session's placed flow: a new, longer list, the section's
-    // nodes appended at the next positions — never an edit of the flow it was handed.
     const placed: Flow = SEED;
     const grown = appendRecommended(placed, INSULATE);
 
@@ -128,8 +118,6 @@ describe("recommendedFor — the sections on offer after a run", () => {
   });
 
   it("offers nothing while a placement after the terminal is still pending", () => {
-    // The newest done placement is `0-model-start`, but the tip is `1-extra` — the run has not reached a
-    // settled end, so nothing is offered.
     const flow: Flow = [...SEED, { id: "1-extra", moduleId: "run-pypsa" }];
     expect(recommendedFor(flow, startedStore(), DOC)).toEqual([]);
   });
