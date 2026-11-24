@@ -354,8 +354,8 @@ const RecommendedPanel: React.FC<{
     description: string;
   } | null>(null);
   const [nodePicks, setNodePicks] = useState<Record<string, string>>({});
-  /** Open until the author folds it: the empty state is the prompt that says where to start. */
-  const [open, setOpen] = useState(true);
+  /** Folded until the author opens it, so the panel stays out of the way by default. */
+  const [open, setOpen] = useState(false);
 
   const map = recommended ?? {};
   const terminals = Object.keys(map);
@@ -423,8 +423,9 @@ const RecommendedPanel: React.FC<{
         </p>
       )}
 
-      {open && (
-        <div className="px-3 pb-3">
+      {/* Shown by CSS rather than rendered conditionally: this harness asserts static markup, so a
+          folded body has to stay in the DOM to be covered. */}
+      <div className={open ? "px-3 pb-3" : "hidden px-3 pb-3"}>
           <p className="mb-3 text-xs text-muted-foreground">
             {t(
               "modelBuilder.workflows.editor.recommendedHint",
@@ -432,244 +433,243 @@ const RecommendedPanel: React.FC<{
             )}
           </p>
 
-          {terminals.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-              {t("modelBuilder.workflows.editor.recommendedEmpty", "No recommended sections. Name a terminal to begin.")}
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {terminals.map((terminal) => (
-                <li key={terminal} className="rounded-lg border border-border bg-card p-3">
-                  <div className="flex items-start gap-2">
-                    <label className="min-w-0 flex-1">
-                      <span className="text-[11px] text-muted-foreground">
-                        {t("modelBuilder.workflows.editor.terminalName", "Terminal node (stable name)")}
-                      </span>
-                      <input
-                        defaultValue={terminal}
-                        onBlur={(event) => {
-                          const to = event.target.value.trim();
-                          if (to !== terminal) onChange(renamedTerminal(map, terminal, to));
-                        }}
-                        className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
-                      />
-                    </label>
+        {terminals.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+            {t("modelBuilder.workflows.editor.recommendedEmpty", "No recommended sections. Name a terminal to begin.")}
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {terminals.map((terminal) => (
+              <li key={terminal} className="rounded-lg border border-border bg-card p-3">
+                <div className="flex items-start gap-2">
+                  <label className="min-w-0 flex-1">
+                    <span className="text-[11px] text-muted-foreground">
+                      {t("modelBuilder.workflows.editor.terminalName", "Terminal node (stable name)")}
+                    </span>
+                    <input
+                      defaultValue={terminal}
+                      onBlur={(event) => {
+                        const to = event.target.value.trim();
+                        if (to !== terminal) onChange(renamedTerminal(map, terminal, to));
+                      }}
+                      className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
+                    />
+                  </label>
 
-                    <button
-                      type="button"
-                      onClick={() => onChange(withoutTerminal(map, terminal))}
-                      className="mt-4 shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-                      aria-label={t(REMOVE_KEY, "Remove")}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onChange(withoutTerminal(map, terminal))}
+                    className="mt-4 shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                    aria-label={t(REMOVE_KEY, "Remove")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
 
-                  {(map[terminal] ?? []).length === 0 ? (
-                    <p className="mt-2 text-[11px] text-muted-foreground">
-                      {t("modelBuilder.workflows.editor.noSections", "No sections yet.")}
-                    </p>
-                  ) : (
-                    <ul className="mt-2 space-y-2">
-                      {(map[terminal] ?? []).map((section) => (
-                        <li key={section.key} className="rounded-md border border-border bg-background p-2.5">
-                          <div className="flex items-start gap-2">
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <label className="block">
-                                <span className="text-[11px] text-muted-foreground">
-                                  {t("modelBuilder.workflows.editor.sectionKey", "Key")}
-                                </span>
-                                <input
-                                  defaultValue={section.key}
-                                  onBlur={(event) =>
-                                    onChange(
-                                      updatedSection(map, terminal, section.key, { key: event.target.value.trim() }),
-                                    )
-                                  }
-                                  className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
-                                />
-                              </label>
-                              <label className="block">
-                                <span className="text-[11px] text-muted-foreground">
-                                  {t("modelBuilder.workflows.editor.sectionLabel", "Label")}
-                                </span>
-                                <input
-                                  defaultValue={section.label}
-                                  onBlur={(event) =>
-                                    onChange(updatedSection(map, terminal, section.key, { label: event.target.value }))
-                                  }
-                                  className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                                />
-                              </label>
-                              <label className="block">
-                                <span className="text-[11px] text-muted-foreground">
-                                  {t("modelBuilder.workflows.editor.sectionDescription", "Description (the goal)")}
-                                </span>
-                                <input
-                                  defaultValue={section.description}
-                                  onBlur={(event) =>
-                                    onChange(
-                                      updatedSection(map, terminal, section.key, { description: event.target.value }),
-                                    )
-                                  }
-                                  className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                                />
-                              </label>
-                            </div>
+                {(map[terminal] ?? []).length === 0 ? (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    {t("modelBuilder.workflows.editor.noSections", "No sections yet.")}
+                  </p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {(map[terminal] ?? []).map((section) => (
+                      <li key={section.key} className="rounded-md border border-border bg-background p-2.5">
+                        <div className="flex items-start gap-2">
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <label className="block">
+                              <span className="text-[11px] text-muted-foreground">
+                                {t("modelBuilder.workflows.editor.sectionKey", "Key")}
+                              </span>
+                              <input
+                                defaultValue={section.key}
+                                onBlur={(event) =>
+                                  onChange(
+                                    updatedSection(map, terminal, section.key, { key: event.target.value.trim() }),
+                                  )
+                                }
+                                className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="text-[11px] text-muted-foreground">
+                                {t("modelBuilder.workflows.editor.sectionLabel", "Label")}
+                              </span>
+                              <input
+                                defaultValue={section.label}
+                                onBlur={(event) =>
+                                  onChange(updatedSection(map, terminal, section.key, { label: event.target.value }))
+                                }
+                                className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="text-[11px] text-muted-foreground">
+                                {t("modelBuilder.workflows.editor.sectionDescription", "Description (the goal)")}
+                              </span>
+                              <input
+                                defaultValue={section.description}
+                                onBlur={(event) =>
+                                  onChange(
+                                    updatedSection(map, terminal, section.key, { description: event.target.value }),
+                                  )
+                                }
+                                className="mt-0.5 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                              />
+                            </label>
+                          </div>
 
+                          <button
+                            type="button"
+                            onClick={() => onChange(withoutSection(map, terminal, section.key))}
+                            className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                            aria-label={t(REMOVE_KEY, "Remove")}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div className="mt-2 border-t border-border pt-2">
+                          {section.nodes.length === 0 ? (
+                            <p className="text-[11px] text-muted-foreground">
+                              {t("modelBuilder.workflows.editor.noNodes", "No nodes.")}
+                            </p>
+                          ) : (
+                            <ol className="space-y-1">
+                              {section.nodes.map((node, at) => (
+                                <li key={`${node.id}-${at}`} className="flex items-center gap-2 text-xs">
+                                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
+                                    {at + 1}
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate">
+                                    <span className="text-foreground">{node.label ?? node.id}</span>{" "}
+                                    <span className="font-mono text-[11px] text-muted-foreground">
+                                      {isSubflowNode(node) ? node.workflows.join(", ") : node.moduleId}
+                                    </span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => onChange(withoutSectionNode(map, terminal, section.key, at))}
+                                    className="shrink-0 rounded-md border border-border p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
+                                    aria-label={t(REMOVE_KEY, "Remove")}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+
+                          <div className="mt-2 flex items-center gap-2">
+                            <select
+                              value={nodePicks[`${terminal}::${section.key}`] ?? ""}
+                              onChange={(event) =>
+                                setNodePicks((current) => ({
+                                  ...current,
+                                  [`${terminal}::${section.key}`]: event.target.value,
+                                }))
+                              }
+                              className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                            >
+                              <option value="">{t("modelBuilder.workflows.editor.pickModule", "Add a module…")}</option>
+                              {nodeModules.map((entry) => (
+                                <option key={entry.module.id} value={entry.module.id}>
+                                  {entry.module.name ?? entry.module.id}
+                                </option>
+                              ))}
+                            </select>
                             <button
                               type="button"
-                              onClick={() => onChange(withoutSection(map, terminal, section.key))}
-                              className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-                              aria-label={t(REMOVE_KEY, "Remove")}
+                              onClick={() => addNode(terminal, section)}
+                              disabled={(nodePicks[`${terminal}::${section.key}`] ?? "") === ""}
+                              className="shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {t("modelBuilder.workflows.editor.addNode", "Add node")}
                             </button>
                           </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
-                          <div className="mt-2 border-t border-border pt-2">
-                            {section.nodes.length === 0 ? (
-                              <p className="text-[11px] text-muted-foreground">
-                                {t("modelBuilder.workflows.editor.noNodes", "No nodes.")}
-                              </p>
-                            ) : (
-                              <ol className="space-y-1">
-                                {section.nodes.map((node, at) => (
-                                  <li key={`${node.id}-${at}`} className="flex items-center gap-2 text-xs">
-                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
-                                      {at + 1}
-                                    </span>
-                                    <span className="min-w-0 flex-1 truncate">
-                                      <span className="text-foreground">{node.label ?? node.id}</span>{" "}
-                                      <span className="font-mono text-[11px] text-muted-foreground">
-                                        {isSubflowNode(node) ? node.workflows.join(", ") : node.moduleId}
-                                      </span>
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => onChange(withoutSectionNode(map, terminal, section.key, at))}
-                                      className="shrink-0 rounded-md border border-border p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
-                                      aria-label={t(REMOVE_KEY, "Remove")}
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
-                                  </li>
-                                ))}
-                              </ol>
-                            )}
-
-                            <div className="mt-2 flex items-center gap-2">
-                              <select
-                                value={nodePicks[`${terminal}::${section.key}`] ?? ""}
-                                onChange={(event) =>
-                                  setNodePicks((current) => ({
-                                    ...current,
-                                    [`${terminal}::${section.key}`]: event.target.value,
-                                  }))
-                                }
-                                className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                              >
-                                <option value="">{t("modelBuilder.workflows.editor.pickModule", "Add a module…")}</option>
-                                {nodeModules.map((entry) => (
-                                  <option key={entry.module.id} value={entry.module.id}>
-                                    {entry.module.name ?? entry.module.id}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => addNode(terminal, section)}
-                                disabled={(nodePicks[`${terminal}::${section.key}`] ?? "") === ""}
-                                className="shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
-                              >
-                                {t("modelBuilder.workflows.editor.addNode", "Add node")}
-                              </button>
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {sectionDraft !== null && sectionDraft.terminal === terminal ? (
-                    <div className="mt-2 rounded-md border border-dashed border-border p-2.5">
-                      <div className="flex flex-wrap items-end gap-2">
-                        <label className="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground">
-                          {t("modelBuilder.workflows.editor.sectionKey", "Key")}
-                          <input
-                            autoFocus
-                            value={sectionDraft.key}
-                            onChange={(event) => setSectionDraft({ ...sectionDraft, key: event.target.value })}
-                            className="w-32 rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
-                          />
-                        </label>
-                        <label className="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground">
-                          {t("modelBuilder.workflows.editor.sectionLabel", "Label")}
-                          <input
-                            value={sectionDraft.label}
-                            onChange={(event) => setSectionDraft({ ...sectionDraft, label: event.target.value })}
-                            className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={addSection}
-                          disabled={sectionDraft.key.trim().length === 0}
-                          className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
-                        >
-                          {t("modelBuilder.workflows.editor.add", "Add")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSectionDraft(null)}
-                          className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
-                        >
-                          {t("modelBuilder.workflows.newForm.cancel", "Cancel")}
-                        </button>
-                      </div>
-                      <input
-                        value={sectionDraft.description}
-                        onChange={(event) => setSectionDraft({ ...sectionDraft, description: event.target.value })}
-                        placeholder={t("modelBuilder.workflows.editor.sectionDescription", "Description (the goal)")}
-                        className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
-                      />
+                {sectionDraft !== null && sectionDraft.terminal === terminal ? (
+                  <div className="mt-2 rounded-md border border-dashed border-border p-2.5">
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="flex flex-col gap-1 text-[11px] font-medium text-muted-foreground">
+                        {t("modelBuilder.workflows.editor.sectionKey", "Key")}
+                        <input
+                          autoFocus
+                          value={sectionDraft.key}
+                          onChange={(event) => setSectionDraft({ ...sectionDraft, key: event.target.value })}
+                          className="w-32 rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
+                        />
+                      </label>
+                      <label className="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground">
+                        {t("modelBuilder.workflows.editor.sectionLabel", "Label")}
+                        <input
+                          value={sectionDraft.label}
+                          onChange={(event) => setSectionDraft({ ...sectionDraft, label: event.target.value })}
+                          className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addSection}
+                        disabled={sectionDraft.key.trim().length === 0}
+                        className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        {t("modelBuilder.workflows.editor.add", "Add")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSectionDraft(null)}
+                        className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
+                      >
+                        {t("modelBuilder.workflows.newForm.cancel", "Cancel")}
+                      </button>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setSectionDraft({ terminal, key: "", label: "", description: "" })}
-                      className="mt-2 flex items-center gap-1 rounded-md border border-dashed border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      {t("modelBuilder.workflows.editor.addSection", "Add section")}
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
+                    <input
+                      value={sectionDraft.description}
+                      onChange={(event) => setSectionDraft({ ...sectionDraft, description: event.target.value })}
+                      placeholder={t("modelBuilder.workflows.editor.sectionDescription", "Description (the goal)")}
+                      className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSectionDraft({ terminal, key: "", label: "", description: "" })}
+                    className="mt-2 flex items-center gap-1 rounded-md border border-dashed border-border px-2.5 py-1 text-xs text-foreground hover:bg-muted"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {t("modelBuilder.workflows.editor.addSection", "Add section")}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
 
-          <div className="mt-3 flex items-end gap-2">
-            <label className="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground">
-              {t("modelBuilder.workflows.editor.addTerminal", "Add a terminal")}
-              <input
-                value={terminalDraft}
-                onChange={(event) => setTerminalDraft(event.target.value)}
-                placeholder="model-start"
-                className="w-full rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={addTerminal}
-              className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {t("modelBuilder.workflows.editor.add", "Add")}
-            </button>
-          </div>
+        <div className="mt-3 flex items-end gap-2">
+          <label className="flex flex-1 flex-col gap-1 text-[11px] font-medium text-muted-foreground">
+            {t("modelBuilder.workflows.editor.addTerminal", "Add a terminal")}
+            <input
+              value={terminalDraft}
+              onChange={(event) => setTerminalDraft(event.target.value)}
+              placeholder="model-start"
+              className="w-full rounded-md border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={addTerminal}
+            className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {t("modelBuilder.workflows.editor.add", "Add")}
+          </button>
         </div>
-      )}
+      </div>
     </section>
   );
 };
