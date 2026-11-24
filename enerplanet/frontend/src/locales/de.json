@@ -271,7 +271,9 @@
       },
       "security": {
         "title": "Sicherheit",
-        "description": "Konto-Sicherheitsdaten"
+        "description": "Konto-Sicherheitsdaten",
+        "inviteDescription": "Wie der Nutzer sein Passwort erhält",
+        "passwordTitle": "Passwort jetzt festlegen"
       },
       "fields": {
         "fullName": "Vollständiger Name",
@@ -280,7 +282,8 @@
         "emailVerified": "E-Mail verifiziert",
         "password": "Passwort",
         "confirmPassword": "Passwort bestätigen",
-        "modelLimit": "Modelllimit"
+        "modelLimit": "Modelllimit",
+        "sendInvite": "Dem Nutzer einen Link zum Festlegen des Passworts senden"
       },
       "placeholders": {
         "fullName": "Vollständigen Namen eingeben",
@@ -291,7 +294,8 @@
       },
       "descriptions": {
         "emailVerified": "E-Mail als verifiziert markieren",
-        "modelLimit": "Benutzerdefiniertes Modellerstellungslimit (0 = unbegrenzt, leer = Standard)"
+        "modelLimit": "Benutzerdefiniertes Modellerstellungslimit (0 = unbegrenzt, leer = Standard)",
+        "sendInvite": "Empfohlen. Der Link gilt 72 Stunden und öffnet danach die App."
       },
       "accessLevels": {
         "veryLow": "Sehr niedriger Zugriff",
@@ -1235,7 +1239,8 @@
       "bulkMoveToGroup": "In Gruppe verschieben",
       "deselectAll": "Auswahl aufheben",
       "selectAll": "Alle auswählen",
-      "selected": "{{count}} ausgewählt"
+      "selected": "{{count}} ausgewählt",
+      "sendPasswordEmail": "Link zum Festlegen eines neuen Passworts senden"
     },
     "groups": {
       "selectOrCreate": "Gruppe auswählen oder erstellen",
@@ -1295,7 +1300,9 @@
       "bulkDeletePartial": "{{succeeded}} von {{total}} Benutzern gelöscht. {{failed}} fehlgeschlagen.",
       "bulkDeleted": "{{count}} Benutzer erfolgreich gelöscht",
       "bulkGroupChangeFailed": "Benutzer konnten nicht in die Gruppe verschoben werden",
-      "bulkGroupChanged": "{{count}} Benutzer erfolgreich in neue Gruppe verschoben"
+      "bulkGroupChanged": "{{count}} Benutzer erfolgreich in neue Gruppe verschoben",
+      "inviteSent": "Nutzer erstellt. Eine E-Mail zum Festlegen des Passworts wurde an {{email}} gesendet.",
+      "inviteFailed": "Nutzer erstellt, aber die Einladungs-E-Mail konnte nicht gesendet werden. Senden Sie sie erneut über das Nutzermenü."
     },
     "confirmations": {
       "disableUserDescription": "Dies verhindert, dass der Benutzer sich anmelden kann.",
@@ -1304,6 +1311,13 @@
       "enableGroupDescription": "Das Aktivieren einer Gruppe aktiviert alle ihre Benutzer.",
       "deleteGroupDescription": "Dies löscht die Gruppe und alle ihre Benutzer. Diese Aktion kann nicht rückgängig gemacht werden.",
       "bulkDeleteDescription": "Dadurch werden {{count}} ausgewählte Benutzer dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "passwordEmail": {
+      "title": "Passwort-E-Mail senden?",
+      "description": "{{email}} erhält einen Link zum Festlegen eines neuen Passworts. Der Link gilt 72 Stunden.",
+      "confirm": "E-Mail senden",
+      "sent": "Passwort-E-Mail an {{email}} gesendet.",
+      "failed": "Die E-Mail konnte nicht gesendet werden. Prüfen Sie die Mail-Einstellungen und versuchen Sie es erneut."
     }
   },
   "modelsManagement": {

@@ -976,7 +976,8 @@
       "bulkMoveToGroup": "Naar groep verplaatsen",
       "deselectAll": "Alles deselecteren",
       "selectAll": "Alles selecteren",
-      "selected": "{{count}} geselecteerd"
+      "selected": "{{count}} geselecteerd",
+      "sendPasswordEmail": "Een link sturen voor een nieuw wachtwoord"
     },
     "groups": {
       "selectOrCreate": "Selecteer of maak een groep aan",
@@ -1036,7 +1037,9 @@
       "bulkDeletePartial": "{{succeeded}} van {{total}} gebruikers verwijderd. {{failed}} mislukt.",
       "bulkDeleted": "{{count}} gebruikers succesvol verwijderd",
       "bulkGroupChangeFailed": "Gebruikers verplaatsen naar groep mislukt",
-      "bulkGroupChanged": "{{count}} gebruikers succesvol naar nieuwe groep verplaatst"
+      "bulkGroupChanged": "{{count}} gebruikers succesvol naar nieuwe groep verplaatst",
+      "inviteSent": "Gebruiker aangemaakt. Er is een e-mail om het wachtwoord in te stellen gestuurd naar {{email}}.",
+      "inviteFailed": "Gebruiker aangemaakt, maar de uitnodiging kon niet worden verstuurd. Stuur hem opnieuw via het gebruikersmenu."
     },
     "confirmations": {
       "disableUserDescription": "Dit voorkomt dat de gebruiker kan inloggen.",
@@ -1045,6 +1048,13 @@
       "enableGroupDescription": "Het inschakelen van een groep schakelt al zijn gebruikers in.",
       "deleteGroupDescription": "Dit verwijdert de groep en al zijn gebruikers. Deze actie kan niet ongedaan worden gemaakt.",
       "bulkDeleteDescription": "Hiermee worden {{count}} geselecteerde gebruikers permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "passwordEmail": {
+      "title": "Wachtwoord-e-mail versturen?",
+      "description": "{{email}} krijgt een link om een nieuw wachtwoord in te stellen. De link werkt 72 uur.",
+      "confirm": "E-mail versturen",
+      "sent": "Wachtwoord-e-mail verstuurd naar {{email}}.",
+      "failed": "De e-mail kon niet worden verstuurd. Controleer de e-mailinstellingen en probeer het opnieuw."
     }
   },
   "modelsManagement": {
@@ -2165,7 +2175,9 @@
       },
       "security": {
         "title": "Beveiliging",
-        "description": "Beveiligingsgegevens van account"
+        "description": "Beveiligingsgegevens van account",
+        "inviteDescription": "Hoe de gebruiker een wachtwoord krijgt",
+        "passwordTitle": "Nu een wachtwoord instellen"
       },
       "fields": {
         "fullName": "Volledige Naam",
@@ -2174,7 +2186,8 @@
         "emailVerified": "E-mail Geverifieerd",
         "password": "Wachtwoord",
         "confirmPassword": "Bevestig Wachtwoord",
-        "modelLimit": "Modellimiet"
+        "modelLimit": "Modellimiet",
+        "sendInvite": "De gebruiker een link sturen om een wachtwoord in te stellen"
       },
       "placeholders": {
         "fullName": "Voer volledige naam in",
@@ -2185,7 +2198,8 @@
       },
       "descriptions": {
         "emailVerified": "Markeer e-mail als geverifieerd",
-        "modelLimit": "Aangepaste limiet voor het maken van modellen (0 = onbeperkt, leeg = standaard)"
+        "modelLimit": "Aangepaste limiet voor het maken van modellen (0 = onbeperkt, leeg = standaard)",
+        "sendInvite": "Aanbevolen. De link werkt 72 uur en opent daarna de app."
       },
       "accessLevels": {
         "veryLow": "Zeer Lage Toegang",

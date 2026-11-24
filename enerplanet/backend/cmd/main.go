@@ -847,6 +847,7 @@ func registerUserManagementRoutes(api *gin.RouterGroup, handler *usershandler.Ha
 	api.DELETE(routeUsersByID, handler.DeleteUser)
 	api.PUT(routeUsersByID+"/disable", handler.DisableUser)
 	api.PUT(routeUsersByID+"/enable", handler.EnableUser)
+	api.POST(routeUsersByID+"/password-email", handler.SendPasswordEmail)
 	api.POST("/users/bulk-delete", handler.BulkDeleteUsers)
 
 	// Managed tokens
