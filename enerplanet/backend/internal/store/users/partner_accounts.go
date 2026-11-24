@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"net/http"
 	urlpkg "net/url"
+	"sync"
+	"time"
 
-	"platform.local/common/pkg/constants"
 	"spatialhub_backend/internal/bearerauth"
 	"spatialhub_backend/internal/config"
+
+	"platform.local/common/pkg/constants"
 )
 
 // AdminTokenSource issues Keycloak admin API tokens.
@@ -24,12 +27,26 @@ type PartnerAccounts struct {
 	store  *Store
 	tokens AdminTokenSource
 	alias  string
+	ttl    time.Duration
+
+	mu    sync.Mutex
+	cache map[string]cachedAccount
 }
+
+type cachedAccount struct {
+	account *bearerauth.Account
+	expires time.Time
+}
+
+const partnerAccountTTL = 2 * time.Minute
+
+const maxPartnerAccounts = 10000
 
 // NewPartnerAccounts resolves users of the identity provider named by
 // cfg.BearerAuth.IdentityProvider.
 func NewPartnerAccounts(cfg *config.Config, tokens AdminTokenSource) *PartnerAccounts {
-	return &PartnerAccounts{store: New(cfg), tokens: tokens, alias: cfg.BearerAuth.IdentityProvider}
+	return &PartnerAccounts{store: New(cfg), tokens: tokens, alias: cfg.BearerAuth.IdentityProvider,
+		ttl: partnerAccountTTL, cache: map[string]cachedAccount{}}
 }
 
 // FindUsersByIdentityProvider returns the users linked to idpUserID at the
@@ -82,6 +99,28 @@ func (s *Store) CreateLinkedUser(authToken, alias string, id *bearerauth.Identit
 // to an unlinked account it returns ErrEmailInUse, since linking by email alone
 // would hand that account to whoever controls the partner account.
 func (p *PartnerAccounts) Resolve(id *bearerauth.Identity) (*bearerauth.Account, error) {
+	now := time.Now()
+	p.mu.Lock()
+	if e, ok := p.cache[id.Subject]; ok && now.Before(e.expires) {
+		p.mu.Unlock()
+		return e.account, nil
+	}
+	p.mu.Unlock()
+	account, err := p.resolve(id)
+	if err != nil {
+		return nil, err
+	}
+	p.mu.Lock()
+	if len(p.cache) >= maxPartnerAccounts {
+		p.cache = map[string]cachedAccount{}
+	}
+	p.cache[id.Subject] = cachedAccount{account: account, expires: now.Add(p.ttl)}
+	p.mu.Unlock()
+	return account, nil
+}
+
+// uncached lookup.
+func (p *PartnerAccounts) resolve(id *bearerauth.Identity) (*bearerauth.Account, error) {
 	token, err := p.tokens.GetToken()
 	if err != nil {
 		return nil, fmt.Errorf("admin token for partner user %s: %w", id.Subject, err)
