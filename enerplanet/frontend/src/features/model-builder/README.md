@@ -49,7 +49,7 @@ npx eslint src/features/model-builder --ext .ts,.tsx
 
 ## History — a move is a view, a run is a commit
 
-The feature's history is **commit-oriented** (`spec/history-v2.md`). Three things, and each owns
+The feature's history is **commit-oriented**. Three things, and each owns
 exactly one fact:
 
 - the **commit log** is append-only: every entry (`core/diff.ts`'s `Transaction`) is enacted work with

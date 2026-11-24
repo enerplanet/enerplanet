@@ -2,9 +2,7 @@
  * The workflow document, and the shape the API hands back.
  *
  * The document is exactly the one `shell/workflow.ts`'s `toWorkflow` consumes — `{id, version, label,
- * seed, nodes}` — and the editor edits this and nothing else. Nothing here reshapes it: the stored
- * document travels as the document's own bytes, so the two sides of the clipboard pair (`document.ts`)
- * stay equal by construction rather than by a rule someone has to remember.
+ * seed, nodes}` — and the editor edits this and nothing else.
  */
 
 /** One node of the chain that places a module: a module at a position, named the way history names a position. */
@@ -17,9 +15,8 @@ export interface ModuleNodeDocument {
 /**
  * One node of the chain that places a subflow: one or more workflows, any of which may be inserted here.
  *
- * Not a module — it declares no ports and no `run()` — so the runtime never sees it. `expand` replaces it
- * with the chosen workflow's nodes at that position, which is why a node of this kind has no `moduleId`.
- * The value is a list even when it holds one entry, because a position may offer several candidates.
+ * Not a module — it declares no ports and no `run()` — so the runtime never sees it: `expand` replaces it
+ * with the chosen workflow's nodes at that position. The value is a list even when it holds one entry.
  */
 export interface SubflowNodeDocument {
   id: string;
@@ -27,10 +24,7 @@ export interface SubflowNodeDocument {
   label?: string;
 }
 
-/**
- * A node is a module **xor** a subflow. `moduleId` xor `workflows` is the discriminant, and it is
- * structural, so every document stored before subflows existed is a module node untouched.
- */
+/** A node is a module xor a subflow: `moduleId` xor `workflows` is the discriminant, and it is structural. */
 export type WorkflowNodeDocument = ModuleNodeDocument | SubflowNodeDocument;
 
 /** Whether a node places a subflow rather than a module. */
@@ -38,13 +32,7 @@ export function isSubflowNode(node: WorkflowNodeDocument): node is SubflowNodeDo
   return "workflows" in node;
 }
 
-/**
- * Why a node is neither a module nor a subflow, or `undefined` when it is exactly one of them.
- *
- * The editor reports the answer, and the loader refuses on it, because a node is untrusted input the moment
- * it stops being a local literal. The two conditions are the two ways the discriminant fails: a node with
- * neither field names nothing to place, and one with both does not say which kind it is.
- */
+/** Why a node is neither a module nor a subflow, or `undefined` when it is exactly one of them. */
 export function nodeProblem(node: WorkflowNodeDocument): string | undefined {
   const record = node as unknown as Record<string, unknown>;
   const hasModule = record.moduleId !== undefined;
@@ -58,15 +46,7 @@ export function nodeProblem(node: WorkflowNodeDocument): string | undefined {
   return undefined;
 }
 
-/**
- * A follow-up node group a workflow offers **after a run finishes** — the malleable-flow side of "we start
- * with a predefined workflow and add to it". Appending one is a **plan addition** (§6): it grows the placed
- * flow by these nodes as fresh placements, and nothing runs until a module does.
- *
- * A section's `key` is unique **within its own workflow only** — not globally — because it is a local handle
- * the workflow builder assigns and the user picks one of. Its `description` states the goal, so the user knows
- * *why* to append it rather than only *what* it is.
- */
+/** A follow-up node group a workflow offers after a run finishes, appended to the placed flow as fresh placements. */
 export interface RecommendedSection {
   /** A workflow-local handle for this section; unique within the document, not across documents. */
   key: string;
@@ -81,18 +61,8 @@ export interface RecommendedSection {
 /**
  * Why a document's `recommended` map is malformed, or `undefined` when it is well-formed.
  *
- * The map is **untrusted input** the moment the document stops being a local literal — it arrives over the
- * wire with everything else — so it is checked the way a node is (`nodeProblem`), not trusted because the
- * editor happened to author it. Four ways it fails, each named:
- *
- * - a **blank terminal name**: the map is keyed by a node's stable name, and an empty key names nothing;
- * - a value that is **not a list of sections**: the shape is a list per terminal, by construction;
- * - a section whose own **`key` is blank or repeats another's** in the same workflow — the key is a
- *   workflow-local handle the user picks one of, so a blank one names nothing and a duplicate is ambiguous;
- * - a section naming a **node the discriminant refuses** (`nodeProblem`).
- *
- * Every section's key is compared against every other's, across the whole map, because the rule is
- * "unique within its workflow" and a workflow is the whole document.
+ * Four failures, each named: a blank terminal name, a value that is not a list of sections, a section `key`
+ * that is blank or repeats another's, and a node the discriminant refuses (`nodeProblem`).
  */
 export function documentProblem(document: WorkflowDocument): string | undefined {
   const recommended = document.recommended;
@@ -135,31 +105,20 @@ export interface WorkflowDocument {
   id: string;
   version: number;
   label: string;
-  /**
-   * A human line for wherever a user has to choose a workflow. Optional: a document may carry one or
-   * leave it out, and the column is derived from it the way `label` is.
-   */
+  /** A human line for wherever a user has to choose a workflow. Optional. */
   description?: string;
   /**
    * Marks the document as a fragment inserted into another flow — authored without standalone
-   * validation and never offered as a flow of its own. Optional; absent means a normal flow, and the
-   * column is derived from it the way `label` is.
+   * validation and never offered as a flow of its own. Optional; absent means a normal flow.
    */
   isSubflow?: boolean;
-  /**
-   * The seed file the definition names. Part of the stored shape, and preserved across an edit, but absent
-   * for a workflow authored here — there is no seed file for one yet, and inventing a path would be a lie.
-   */
+  /** The seed file the definition names. Part of the stored shape, preserved across an edit; absent for a workflow authored here. */
   seed?: string;
   nodes: WorkflowNodeDocument[];
   /**
-   * The follow-up node groups a run of this workflow may offer, keyed by the terminal node's **stable name**
-   * (§6). Each value is the list of sections offered for that terminal.
-   *
-   * The key is the terminal node's **stable name** — a module's `moduleId`, or a seed node's own `id` — the
-   * same name `nodeName` recovers from a placement (`core/flow.ts`). It is deliberately **not** the placement
-   * id (`"<n>-<name>"`), which changes on every re-run: a recommendation must survive the flow growing.
-   * Optional; absent means the workflow offers no follow-ups.
+   * The follow-up node groups a run of this workflow may offer, keyed by the terminal node's stable name
+   * (a module's `moduleId`, or a seed node's own `id`) — never the placement id, which changes on every
+   * re-run. Each value is the list of sections offered for that terminal. Optional.
    */
   recommended?: Record<string, RecommendedSection[]>;
 }
@@ -167,9 +126,7 @@ export interface WorkflowDocument {
 /**
  * One row of `GET /workflows`: the thin scalar surface the table queries on, plus the whole document.
  *
- * The scalar fields mirror the definition's own — `workflow_id` is the definition's `id` — because a
- * session references a workflow by that id, not by the row's serial. `description` and
- * `is_subflow` mirror the document's optional `description`/`isSubflow` for the same reason.
+ * The scalar fields mirror the definition's own — `workflow_id` is the definition's `id`.
  */
 export interface WorkflowSummary {
   workflow_id: string;

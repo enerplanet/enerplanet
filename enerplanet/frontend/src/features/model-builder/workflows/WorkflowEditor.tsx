@@ -75,7 +75,7 @@ export interface WorkflowEditorProps {
   saving: boolean;
   error: string | null;
   /**
-   * The document as edited. The editor authors the chain **and** the `recommended` map (§6), so it hands back
+   * The document as edited. The editor authors the chain **and** the `recommended` map, so it hands back
    * the whole document rather than the node list alone: the page keeps a `recommended` edit the same way it
    * keeps a chain edit. Everything the editor does not author (`seed`, the key order of the stored document) is
    * carried through unchanged, exactly as `documentWithNodes` does for the node list.
@@ -386,7 +386,7 @@ const SubflowPicker: React.FC<{
 };
 
 /**
- * Recommended sections (§6), authored. The map is keyed by a terminal node's **stable name** — a module's
+ * Recommended sections, authored. The map is keyed by a terminal node's **stable name** — a module's
  * `moduleId`, or a seed node's own `id` — so a terminal is named first and its sections authored under it.
  * Each section carries its own workflow-local `key`, a `label`, a `description` (the goal), and the module
  * nodes appended as one unit when the section is taken.

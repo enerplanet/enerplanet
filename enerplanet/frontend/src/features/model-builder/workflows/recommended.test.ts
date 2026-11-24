@@ -1,5 +1,5 @@
 /**
- * Recommended sections (§6): what a terminal node offers, and how taking a section grows the flow.
+ * Recommended sections: what a terminal node offers, and how taking a section grows the flow.
  *
  * `appendRecommended` is a **plan addition** — it grows the transcript, it does not run anything — so the
  * tests pin the two facts that make that true: fresh, monotonic placement ids in order, and an input flow that

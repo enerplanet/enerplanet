@@ -103,7 +103,7 @@ const WorkflowsPage: React.FC = () => {
   };
 
   /**
-   * Keep the document the editor hands back — the chain edit and the `recommended` map (§6) travel the same
+   * Keep the document the editor hands back — the chain edit and the `recommended` map travel the same
    * way now, so one setter carries both. The editor owns the merge; this only stores the result and marks the
    * session dirty.
    */

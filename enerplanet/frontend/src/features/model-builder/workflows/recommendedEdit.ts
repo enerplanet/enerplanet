@@ -1,16 +1,8 @@
 /**
- * Editing a workflow's `recommended` map (§6) — the pure half of the editor's section authoring.
+ * Editing a workflow's `recommended` map: the pure half of the editor's section authoring.
  *
- * The map is keyed by a terminal node's **stable name** (a module's `moduleId`, or a seed node's own `id`),
- * and each value is the list of **sections** offered for that terminal. Everything here is a pure function
- * over that map: it returns a new map and never edits the one it is given, exactly as `chain.ts` does for the
- * node list. The editor renders the result and hands it back through `onChange`; the validator
- * (`documentProblem`, `types.ts`) is the authority on whether the result is well-formed, so these helpers do
- * not gate — they only author.
- *
- * `undefined` is accepted everywhere a map is read, because a document that offers no follow-ups simply has no
- * `recommended` field; a helper that only took a defined map would force every caller to spell out the empty
- * case.
+ * Every function here is pure over that map — it returns a new map and never edits the one it is given —
+ * and accepts `undefined` wherever a map is read.
  */
 
 import { nodeIdFor } from "./chain";
@@ -43,10 +35,9 @@ export function withoutTerminal(map: RecommendedMap | undefined, terminal: strin
 /**
  * The map with the terminal key `from` renamed to `to`, keeping its position.
  *
- * A rename onto a name another terminal already holds **merges** the two section lists onto the new name
- * (the moved terminal's sections after the ones already there), because a duplicate key in a JS object cannot
- * stand: one of the two would silently win. A blank `to`, an unchanged name, or a `from` the map does not
- * carry all return the map unchanged.
+ * A rename onto a name another terminal already holds merges the two section lists onto the new name (the
+ * moved terminal's sections after the ones already there). A blank `to`, an unchanged name, or a `from` the
+ * map does not carry all return the map unchanged.
  */
 export function renamedTerminal(
   map: RecommendedMap | undefined,
@@ -60,7 +51,7 @@ export function renamedTerminal(
     if (name === from) {
       result[to] = to in base ? [...(base[to] ?? []), ...sections] : sections;
     } else if (name === to) {
-      // The `to` entry may have been reached already (from came first, and merged into it); if so, skip it.
+      // `to` may already be set — a `from` that came first merged into it; skip it.
       if (!(to in result)) result[to] = sections;
     } else {
       result[name] = sections;
@@ -99,8 +90,7 @@ export function withoutSection(
 
 /**
  * The map with the section `key` under `terminal` patched with `fields`. A key change renames the section in
- * place; whether the new key stays unique is not decided here — `documentProblem` reports a collision, and the
- * editor surfaces it, so a mid-typing duplicate is visible rather than silently refused.
+ * place; whether the new key stays unique is `documentProblem`'s call, not this helper's.
  */
 export function updatedSection(
   map: RecommendedMap | undefined,
@@ -154,12 +144,7 @@ export function withoutSectionNode(
   return { ...base, [terminal]: next };
 }
 
-/**
- * A module node for a section — the same shape `appendModule` authors for the chain, and minted the same way:
- * the id is the module's own id, made unique against the section's existing nodes (`nodeIdFor`), and the label
- * is the module's name so the node reads as what it is. An id the section already carries gets the `-2`
- * suffix, so a section may append the same module twice without a collision.
- */
+/** A module node for a section: the id is the module's own, made unique against the section's nodes (`nodeIdFor`), with the module's name as the label. */
 export function recommendedNode(
   module: BuilderModule,
   existing: readonly WorkflowNodeDocument[],

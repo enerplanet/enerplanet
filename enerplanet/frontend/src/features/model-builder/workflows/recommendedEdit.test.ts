@@ -1,5 +1,5 @@
 /**
- * Editing the `recommended` map (§6). The editor surfaces these through `onChange`; the validator
+ * Editing the `recommended` map. The editor surfaces these through `onChange`; the validator
  * (`documentProblem`) is the authority on well-formedness, so these tests pin what each helper **authors** —
  * a new map, the old one untouched — not that it gates.
  *
