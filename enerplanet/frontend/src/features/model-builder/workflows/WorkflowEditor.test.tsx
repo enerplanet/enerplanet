@@ -337,4 +337,13 @@ describe("authoring recommended sections", () => {
     expect(html).toContain("Recommended sections");
     expect(html).toContain("No recommended sections");
   });
+
+  it("is a disclosure: the heading toggles it, so folding it away keeps the fact of it", () => {
+    const html = render(withRecommended);
+
+    // The heading is the button, and its state is announced — folding the panel must not remove
+    // the only sign that the workflow offers follow-ups.
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain("Recommended sections</span>");
+  });
 });
