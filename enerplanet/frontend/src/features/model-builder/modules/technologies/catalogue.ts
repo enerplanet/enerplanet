@@ -2,19 +2,7 @@
  * The technology catalogue: what a building can be given, what each type converts, and which type the
  * expected-fit autoresolve picks.
  *
- * **Three things live here, and they are deliberately different in kind.**
- *
- * 1. **The slot.** The catalogue itself — products with their constraints — comes from a host through an
- *    injected source, exactly like the grid engine and the demand estimate. This module knows nothing about
- *    the app's HTTP client, and the legacy's own load path (`GET /technologies`, falling back to a bundled
- *    `default_technologies.json`) stays in the shell where the app's client lives.
- * 2. **The vector map.** Which carrier a type converts, and to what. This is a redesign — the
- *    legacy keys assignments by a type slug with no vector typing at all — and it is what makes a heat pump
- *    (`electricity → heat`) a first-class device rather than a special case.
- * 3. **The expected-fit table.** Portable **verbatim** from the legacy's `utils/heatResolution.ts`, because an
- *    invented heuristic would be a number with no author. Its own rationale is worth keeping too: the
- *    fallback is a gas boiler not because it is clean, but because gas draws on the unlimited import and stays
- *    solvable where electric heating would exceed the transformer capacity pylovo sized for ordinary use.
+ * Three things: the injected catalogue slot, the carrier vector map, and the expected-fit table.
  */
 
 import { useEffect, useSyncExternalStore } from "react";
@@ -39,12 +27,7 @@ export interface CatalogueSource {
   load(): Promise<readonly CatalogueProduct[]>;
 }
 
-/**
- * What the picker knows right now.
- *
- * The list lives here, outside React, for the same reason `model-start`'s regions do: a load has to be
- * startable from the install, not only from a component's mount, or it is never started at all.
- */
+/** What the picker knows right now. The list lives here, outside React, so a load can be started from the install. */
 export interface CatalogueState {
   products: readonly CatalogueProduct[];
   /** True until the first answer lands: the picker cannot say "no products" before it has asked. */
@@ -70,20 +53,11 @@ export function setCatalogueSource(next: CatalogueSource | null): void {
   inFlight = null;
   publish({ products: [], loading: next !== null, failed: false });
 
-  // **Installing a source is what asks for the catalogue.** The panel mounts before the shell's install
-  // effect runs — React runs child effects first — so the mount-time load in `useCatalogue` finds no source
-  // and bails, and nothing would ever ask again. Without this the picker sits on "loading" and the request is
-  // never made at all.
+  // Installing a source is what asks for the catalogue: the panel mounts before the shell's install effect runs.
   if (next !== null) void loadCatalogue();
 }
 
-/**
- * Load the catalogue, once per source.
- *
- * Deduplicated while a load is in flight, and a no-op once one has landed: `loading` is the flag that says a
- * load is owed. `setCatalogueSource` raises it and starts the load, the answer lowers it — so a panel that
- * mounts later joins the running load instead of asking again.
- */
+/** Load the catalogue, once per source — deduplicated while in flight and a no-op once one has landed. */
 export function loadCatalogue(): Promise<void> {
   if (!state.loading) return Promise.resolve();
   if (inFlight !== null) return inFlight;
@@ -132,11 +106,7 @@ export function useCatalogue(): CatalogueState {
   return snapshot;
 }
 
-/**
- * What each technology type converts. The set of *types* is the catalogue's business (a product added
- * server-side appears in the picker); the set of *vectors* is this module's, because it is what the store
- * reasons about.
- */
+/** What each technology type converts; the set of types is the catalogue's business, the vectors this module's. */
 export const VECTORS_BY_TYPE: Record<string, { input?: EnergyVector; output: EnergyVector }> = {
   // Electricity provided on site, and stored.
   pv_supply: { output: "electricity" },
@@ -197,18 +167,9 @@ export function defaultParams(product: CatalogueProduct): Record<string, unknown
   return Object.fromEntries((product.constraints ?? []).map((c) => [c.key, c.default_value]));
 }
 
-// ── The expected-fit autoresolve ─────────────────────────────────────────────
-//
-// Ported from the legacy's `utils/heatResolution.ts`. Heuristic, review-flagged, user-overridable — which is
-// why an assignment it makes is flagged `estimated` rather than presented as fact.
+// ── The expected-fit autoresolve — heuristic, review-flagged, user-overridable (hence `estimated`). ──
 
-/**
- * The fallback for a class the table does not know.
- *
- * A gas boiler draws on the unlimited gas import, so it stays solvable where electric heating would exceed the
- * transformer capacity pylovo sized for ordinary electricity use. That reasoning is the legacy's, and it is
- * the reason this is not simply "the most efficient option".
- */
+/** The fallback for a class the table does not know: a gas boiler, the legacy's class-agnostic choice. */
 export const SIMPLE_DEFAULT_TECH = "gas_boiler";
 
 /** f-class → heat technology type, as the legacy resolves it. */
@@ -260,12 +221,7 @@ export function expectedFitTypes(): string[] {
   return Array.from(new Set(Object.values(EXPECTED_FIT)));
 }
 
-/**
- * The heat technology a building should be given, or undefined when there is nothing to resolve.
- *
- * Undefined for a class that *means* no heating demand (a shed, a garage) or a building with no heat demand —
- * so a zero-demand building never gets a bogus assignment.
- */
+/** The heat technology a building should be given, or undefined when there is nothing to resolve. */
 export function expectedFitTech(
   fClass: string | undefined,
   heatKwh: number | undefined,
@@ -280,13 +236,7 @@ export function normalizeFClass(fClass: string): string {
   return fClass.toLowerCase().replace(/[\s-]+/g, "_");
 }
 
-/**
- * Classes that mean no heating demand.
- *
- * Duplicated from `building-demand/heat.ts` rather than imported: a module is a package of its own, and this
- * direction of dependency would make `technologies` depend on `building-demand`'s internals. The list is
- * short and mirrors the backend, so the two copies are checkable against one source of truth — the backend.
- */
+/** Classes that mean no heating demand; duplicated from `building-demand/heat.ts` (a module is its own package). */
 const ZERO_DEMAND_CLASSES: readonly string[] = [
   "shed",
   "roof",

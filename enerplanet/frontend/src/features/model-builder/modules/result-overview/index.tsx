@@ -1,29 +1,9 @@
 /**
  * The `result-overview` module — a small summary of what a model run produced, with a link to the full page.
  *
- * **An interactive view.** It is a step the user looks at and moves on from. There is no `auto`: nothing runs
- * on arrival, and no run is dispatched here — the run belongs to `run-meme-calliope`, and this node reads its
- * outcome. It declares `sidebar` (the summary) and `bottom` (a status strip); the summary is a handful of
- * lines, so the overlay would be more chrome than content.
- *
- * **It writes nothing, and that is the honest declaration.** A module's `params` is the store surface it may
- * *write* (`core/ports.ts`), and a viewer has nothing to commit. So the two ports it reads are declared and no
- * port is invented to give it one: `modelId` and `memeRun`, both `required`, which is also what places this
- * node *after* the run that produced the results — the port requirement is the ordering, by construction. Its
- * `run()` therefore commits nothing; it seals the zero-diff transaction a placement needs to be left behind —
- * a placement is `done` only once it has a commit, so a viewer that wrote nothing would otherwise read
- * `pending` forever.
- *
- * **Where the numbers come from.** The summary arrives through a slot the host installs (`./source.ts`,
- * `setResultOverviewGateway`); the module never learns the endpoint. There is no default: a missing gateway is
- * an error the view reports, naming the installer. The view handles all three states — loading, results, and a
- * failed fetch.
- *
- * **The link is a plain anchor.** A module may import only `@model-builder/core` and `@spatialhub/i18n`, so it
- * cannot use `react-router`'s `Link`/`useNavigate`, which is how the rest of the app navigates
- * (`features/model-dashboard/hooks/useModelDashboardHandlers.ts`: `navigate('/app/model-results/' + id)`). An
- * `<a href>` to the same route still opens the page in this app and this tab; it only forgoes the client-side
- * transition.
+ * An interactive view: no `auto`, and it writes nothing. Declares `modelId` and `memeRun` (both required),
+ * which orders it after the run that produced the results. The summary arrives through an injected slot
+ * (`source.ts`). Regions: `sidebar`, `bottom`.
  */
 
 import { type ReactNode } from "react";
@@ -37,10 +17,7 @@ import {
 import { useTranslation } from "@spatialhub/i18n";
 import { resultOverviewGateway, useResultOverview, type ResultOverviewSummary } from "./source";
 
-/**
- * The module's own surface, re-exported: a host installs a gateway through the same entry point it imports the
- * module from, so it never reaches into the module's files. Same shape as `setMemeRunGateway`.
- */
+/** The module's own surface, re-exported so a host installs a gateway through the module's entry point. */
 export {
   setResultOverviewGateway,
   type ResultOverviewGateway,
@@ -52,14 +29,7 @@ export function resultsPagePath(modelId: number): string {
   return `/app/model-results/${modelId}`;
 }
 
-/**
- * What this module stands behind: a **completed** Calliope run — with no results to show, there is nothing to
- * overview.
- *
- * An absent run, or one still `pending`/`running`, is unfinished, so the session rests on this node rather than
- * walking past a page with nothing in it. A `failed` run is reported with its own message, carried from the run
- * record's vocabulary. Once the run completed the gate is clean.
- */
+/** What this module stands behind: a completed Calliope run — with no results, there is nothing to overview. */
 export function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   const run = projection.memeRun;
   if (run === undefined) {
@@ -78,24 +48,20 @@ const module = defineModule({
   id: "result-overview",
   name: "Result overview",
 
-  // `modelId` (which model's page the summary is for) and `memeRun` (proof a run produced results) are both
-  // required: the latter is what orders this node after `run-meme-calliope`. Nothing is written — see the file
-  // comment — so no other port is declared.
+  // `modelId` (which model's page) and `memeRun` (proof a run produced results) are both required; nothing is written.
   params: [
     { port: "modelId", required: true },
     { port: "memeRun", required: true },
   ],
 
-  // It reads both ports and writes nothing, so nothing of its own can be invalidated: the honest answer is no
-  // edges, not a pair invented to look connected.
+  // It reads both ports and writes nothing, so nothing of its own can be invalidated.
   affect: {},
 
   // The summary is a few lines in the sidebar; the strip in `bottom` names where the fetch stands.
   layout: ["sidebar", "bottom"],
 
   run: (ctx) => {
-    // A view commits nothing. The call is still made: a run that changes nothing seals its zero-diff trace,
-    // which is what lets this node be marked done and left (`core/engine.ts`).
+    // A view commits nothing; the run still seals its zero-diff trace, which lets the node be marked done.
     ctx.commit({});
   },
 
@@ -125,11 +91,7 @@ function summaryRows(
   ];
 }
 
-/**
- * The `bottom` region: a status strip naming the node and where its fetch stands.
- *
- * Intrinsic height on purpose — its box is a cap, so a strip that fits renders as a strip.
- */
+/** The `bottom` region: a status strip naming the node and where its fetch stands. */
 const StatusStrip: React.FC<ModuleViewProps> = ({ data, nodeId }) => {
   const { t } = useTranslation();
   const { summary, failed } = useResultOverview(data.modelId);
@@ -195,8 +157,7 @@ const Sidebar: React.FC<ModuleViewProps> = ({ data, run }) => {
           ))}
         </dl>
 
-        {/* A plain anchor: the module may not import react-router (see the file comment). No `target`, so it
-            opens in this app and this tab. */}
+        {/* A plain anchor: the module may not import react-router. No `target`, so it opens in this app and this tab. */}
         <a
           href={resultsPagePath(data.modelId ?? 0)}
           className="w-full shrink-0 rounded-lg border border-border px-3 py-2 text-center text-sm text-foreground hover:bg-muted"
@@ -218,9 +179,7 @@ const Sidebar: React.FC<ModuleViewProps> = ({ data, run }) => {
 
       {body}
 
-      {/* The forward action an interactive step needs to be left behind — the frame renders none of its own
-          (`shell/WorkflowBar.tsx`: "there is no forward control at all — an interactive module advances by
-          running itself"). It commits nothing; pressing it is the zero-diff trace that marks the node done. */}
+      {/* The forward action an interactive step needs; it commits nothing — pressing it is the zero-diff trace that marks the node done. */}
       <button
         type="button"
         onClick={() => void run()}
@@ -239,9 +198,7 @@ const Component: React.FC<ModuleViewProps> = (props) =>
 const builderModule: BuilderModule = {
   module,
   Component,
-  // The test data: the inputs the node cannot run without — a saved model with a completed run, so its gate is
-  // satisfied. The gateway is not mocked here (the module has no default); a test installs a fake through
-  // `setResultOverviewGateway`.
+  // The test data: the inputs the node cannot run without — a saved model with a completed run.
   mock: {
     modelId: 1,
     memeRun: { framework: "calliope", status: "completed" },

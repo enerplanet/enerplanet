@@ -1,14 +1,7 @@
 /**
  * The region slot — what `model-start` needs from a host, and nothing more.
  *
- * The module declares that it *can* offer regions and never learns where they come from; a host installs the
- * implementation at startup, the same shape as the grid engine and the weather source. That is what keeps this
- * module free of the app's HTTP client, and what lets its tests run against a fake.
- *
- * **The list lives here, outside React.** A module's `Component` renders once per region it declares — this
- * one declares two (`sidebar`, `map`) — so a value both regions need cannot sit in component state: each
- * instance would fetch its own copy and they would disagree. One load, one list, every region subscribes —
- * the same reason `area-draw` keeps its draft in `draft.ts`.
+ * The list lives here, outside React, so every region of the module shares one load (see `modules/model-start.md`).
  */
 
 import { useEffect, useSyncExternalStore } from "react";
@@ -55,22 +48,11 @@ export function setRegionSource(next: RegionSource | null): void {
   inFlight = null;
   publish({ regions: [], loading: next !== null, failed: false });
 
-  // **Installing a source is what asks for the list.** A module's regions mount before the shell's install
-  // effect runs — React runs child effects first — so the mount-time load in `useRegions` finds no source and
-  // bails, and nothing would ever ask again. Without this the picker sits on "loading" for good.
+  // Installing a source is what asks for the list: regions mount before the shell's install effect runs.
   if (next !== null) void loadRegions();
 }
 
-/**
- * Load the list, once per source.
- *
- * Deduplicated because both regions mount together: without this, opening the node would ask the backend
- * twice for the same list. A loaded list is never fetched again here — the caching and re-asking a failed
- * answer belong to the shell (`regionSource.ts`), which mirrors the legacy's own time-boxed cache.
- *
- * `loading` is the flag that says a load is owed: `setRegionSource` raises it and starts the load, and the
- * answer lowers it. So a region that mounts later is a no-op rather than a second request.
- */
+/** Load the list, once per source — deduplicated because both regions mount together. */
 export function loadRegions(): Promise<void> {
   if (!state.loading) return Promise.resolve();
   if (inFlight !== null) return inFlight;
@@ -130,10 +112,8 @@ export function optionFor(
 }
 
 /**
- * The options the picker offers: the loaded regions, plus the stored region when the source no longer lists
- * it. A model whose region has left the list still belongs to that region — omitting it would make the choice
- * read as unset, a lie about a value the store holds. The stand-in carries no real bounds: the map frames only
- * what the source listed, so it is for display, never for framing.
+ * The options the picker offers: the loaded regions, plus the stored region when the source no longer lists it.
+ * The stand-in carries no real bounds, so it is for display, never for framing.
  */
 export function optionsFor(
   regions: readonly RegionOption[],

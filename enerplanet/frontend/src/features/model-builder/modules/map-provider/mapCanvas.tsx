@@ -1,24 +1,9 @@
 /**
  * The provider's canvas: MapLibre, and the translation between the host's layer stack and a MapLibre style.
  *
- * **This is the only file that knows which engine is underneath**, which is the entire point of the provider
- * — it is a **blackbox**: swapping MapLibre for another engine means replacing this file, and
- * nothing outside it — not the frame, not a module — has to change.
- *
- * Deliberately **not unit-tested**: it needs a browser, WebGL and vector tiles. What it *decides* lives in
- * `capture.ts` and `mapHost.ts` (both tested); this file wires those decisions to MapLibre.
- *
- * The setup and the capture behaviour are the legacy's, on purpose — the MapLibre overlay's options, and the
- * `PolygonDrawer`'s way of drawing. Three of those behaviours are load-bearing, and each came from a real
- * failure:
- *
- *   - **dragPan is disabled while a capture runs.** Without it a click that slips a pixel or two is a *pan*, so
- *     no click event fires at all and the polygon can never be completed. The legacy disables it for the same
- *     reason ("a slip while placing a vertex cannot move it").
- *   - **The cursor goes on the map's canvas**, via `map.getCanvas()`. That is the element MapLibre sets
- *     `grab`/`grabbing` on, so setting it on the container leaves the engine's cursor showing through.
- *   - **A click near the first vertex closes the polygon**, with a marker that says so. The legacy's
- *     `SNAP_DISTANCE` affordance beats hoping someone discovers a double-click.
+ * The only file that knows which engine is underneath — swapping engines means replacing just this file.
+ * Deliberately not unit-tested (needs a browser, WebGL and vector tiles); what it decides lives in
+ * `capture.ts` and `mapHost.ts`, both tested.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -40,17 +25,10 @@ import {
   hasOwnVolumes,
 } from "./extrusion";
 
-// maplibre-gl loads its worker relative to its own module, which Vite's dependency bundling moves; the worker
-// file is self-contained, so its own URL works in dev and in a build. Same fix as the legacy overlay.
+// maplibre-gl loads its worker relative to its own module, which Vite's bundling moves; its own URL works in dev and build.
 maplibregl.setWorkerUrl(workerUrl);
 
-/**
- * OpenStreetMap: raster tiles, no API key — the standard OSM layer, the same one the legacy 2D map uses.
- *
- * Raster, so unlike the previous OpenFreeMap vector style it carries no `building` source-layer, and the map's
- * own 3D building fallback (`extrusion.ts`) simply does not apply — the city's volumes were the basemap's, and a
- * raster basemap has none to extrude. Module layers' own extrusions are unaffected.
- */
+/** OpenStreetMap: raster tiles, no API key — the standard OSM layer. */
 const BASE_STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -67,11 +45,7 @@ const BASE_STYLE: StyleSpecification = {
 
 const sourceOf = (id: string): string => `mb-source-${id}`;
 
-/**
- * One module layer is three MapLibre layers, not one: a GeoJSON source can hold points, lines and polygons at
- * once, and MapLibre styles one geometry type per layer. They are added, ordered and removed together — and a
- * layer that asked for volume has a fourth, over the same source.
- */
+/** One module layer is a fill, a line, a circle, and an extrusion — MapLibre styles one geometry type per layer. */
 const styleIdsOf = (id: string): readonly [string, string, string, string] => [
   `mb-layer-${id}-fill`,
   `mb-layer-${id}-line`,
@@ -108,8 +82,7 @@ function featuresOf(runtime: HostRuntime, id: string): GeoJSON.Feature[] {
 export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  // The start marker is real DOM rather than a map layer: it carries a translated label, and MapLibre labels
-  // would need glyphs from the style for something this incidental.
+  // The start marker is real DOM rather than a map layer: it carries a translated label.
   const [marker, setMarker] = useState<StartMarker | null>(null);
 
   useEffect(() => {
@@ -136,26 +109,11 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
     };
 
     /**
-     * One layer: make sure its source and its trio exist, then push its features in.
-     *
-     * **The features go in *with* the source, not after it.** A `setData` on a source the style has not ingested
-     * yet is dropped without a word, so a freshly added layer sat empty until some later sync happened to set it
-     * again — which is why a grid arrived one layer per visit, and why the cables never showed at all while the
-     * stack held every one of them.
-     *
-     * Failing here must not take the rest of the draw with it either: a throw in this loop used to abort every
-     * layer after it and tell nobody.
+     * One layer: make sure its source and its trio exist, then push its features in — with the source, not after
+     * it, or a `setData` against a source the style has not ingested is dropped. A throw here must not abort the
+     * rest of the draw.
      */
-    /**
-     * Every volume on the map at this pitch — which is only the layers that asked for one.
-     *
-     * They are the buildings a module put there, so they are the ones in hand; the basemap's own buildings are
-     * never extruded, because a tilted map that showed every building of the city would show the ones outside the
-     * area as loudly as the ones inside it.
-     *
-     * MapLibre cannot express the fade in the style (`pitch` is not an expression input), so it follows the map's
-     * `pitch` event instead — the same approach the legacy map takes for its own 3D layers.
-     */
+    /** Every volume on the map at this pitch — only the layers that asked for one; the basemap's own are never extruded. */
     const setExtrusionOpacity = (active: maplibregl.Map, pitch: number): void => {
       const styleIds = [CITY_3D_LAYER_ID, ...runtime.stack.getLayerOrder().map(extrusionIdOf)];
       for (const styleId of styleIds) {
@@ -164,13 +122,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       }
     };
 
-    /**
-     * The city's own buildings: added once, then shown or hidden to suit what else is on the map.
-     *
-     * They are the fallback, so they are visible until a module layer stands up volumes of its own — and hidden
-     * from then on. Two volumes on one footprint is what looked broken; one layer with its visibility toggled is
-     * what makes both states available without ever drawing both.
-     */
+    /** The city's own buildings: added once, then shown or hidden to suit what else is on the map. */
     const applyCity3d = (active: maplibregl.Map): void => {
       if (active.getLayer(CITY_3D_LAYER_ID) === undefined) {
         const spec = cityBuildings3dLayer(active.getStyle());
@@ -204,8 +156,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
           rendered.add(id);
         }
 
-        // A layer that asked for volume gets a fourth MapLibre layer over the same source, guarded on the layer
-        // itself rather than on `rendered`: an extrusion declared after the trio was drawn still has to appear.
+        // A layer that asked for volume gets a fourth layer over the same source, guarded on the layer itself.
         const extrusion = runtime.stack.optionsOf(id)?.extrusion;
         if (extrusion !== undefined && active.getLayer(extrusionIdOf(id)) === undefined) {
           active.addLayer(extrusionLayer(id, sourceOf(id), extrusion));
@@ -216,10 +167,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       }
     };
 
-    /**
-     * Bottom to top, each raised in turn — and the clickable layer raised last, so it is up front *without* the
-     * stored order having been touched. That rule is the stack's (F); this only draws it.
-     */
+    /** Bottom to top, each raised in turn — and the clickable layer last, so it is up front without touching the stored order. */
     const orderLayers = (active: maplibregl.Map, order: readonly string[], interactive: string | null): void => {
       const raise = (id: string): void => {
         for (const layerId of styleIdsOf(id)) {
@@ -228,18 +176,11 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       };
       for (const id of order) raise(id);
       if (interactive !== null) raise(interactive);
-      // After the clickable layer, never before: a layer that asked to sit on top is an annotation over the very
-      // layer it marks, and the clickable raise above would otherwise bury it.
+      // After the clickable layer, never before: an `onTop` layer marks the very layer a raise above would bury.
       for (const id of order) if (runtime.stack.optionsOf(id)?.onTop === true) raise(id);
     };
 
-    /**
-     * Draw the stack as it now stands.
-     *
-     * `ready` is the map's own `load` event saying the style is in place, and it is what makes the first draw
-     * happen: inside that event `isStyleLoaded()` still reports false, so gating on it there would drop the only
-     * call that can paint what the stack already holds.
-     */
+    /** Draw the stack as it now stands. `ready` is the map's `load` event, which makes the first draw happen. */
     const draw = (ready: boolean): void => {
       if (map === null || (!ready && !map.isStyleLoaded())) return;
       const active = map;
@@ -250,18 +191,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       applyCity3d(active);
     };
 
-    /**
-     * Redraw, once per burst of stack changes rather than once per change.
-     *
-     * A module that draws its own layer changes the stack several times in a row — a create and a fill per layer —
-     * and a draw taken between two of those changes paints a stack that is only half built and is never asked
-     * again, because every later change was folded into the same turn. That is the whole of a bug that looked like
-     * MapLibre refusing to overlay layers: a generated grid arrived as buildings on the map and cables in the
-     * store, and nowhere.
-     *
-     * The `load` path draws immediately: it is a single call, there is nothing to coalesce with, and it is the
-     * moment the map first becomes able to draw at all.
-     */
+    /** Redraw once per burst of stack changes, not once per change (a module fills a layer over several changes). */
     let queued = false;
     const sync = (ready = false): void => {
       if (ready) {
@@ -276,19 +206,11 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       });
     };
 
-    /**
-     * One module layer is three MapLibre layers over one source, because a source may hold points, lines and
-     * polygons at once and MapLibre styles one geometry type per layer.
-     *
-     * **Each is filtered to the geometry it draws**, and that is the whole point: an unfiltered circle layer puts
-     * a dot at every vertex of every geometry, so a grid came out as filled building areas dotted along their
-     * corners, with the cables lost among them. Points belong to the circle layer, and nothing else does.
-     */
+    /** One module layer is three MapLibre layers over one source; each is filtered to the geometry it draws. */
     const addLayerTrio = (active: maplibregl.Map, id: string): void => {
       const [fill, line, circle] = styleIdsOf(id);
       const source = sourceOf(id);
-      // A layer given its own colour is an annotation over something else, so it draws more solidly than the
-      // default wash — that is what lets a highlight read against the layer it sits on.
+      // A layer given its own colour draws more solidly than the default wash, so a highlight reads against its base.
       const color = runtime.stack.optionsOf(id)?.color;
       const fillColor = color ?? "#3b82f6";
       const lineColor = color ?? "#1e3a5f";
@@ -338,11 +260,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       });
     };
 
-    /**
-     * Let the user draw one, the way the legacy drawer does: click to place corners and close by clicking the
-     * start marker (right-click, Enter and a double-click also close). From three corners the preview closes,
-     * so what the polygon will be is visible before it is finished.
-     */
+    /** Let the user draw one: click to place corners, close by clicking the start marker (right-click, Enter, double-click). */
     const capture = (kind: "point" | "polygon"): Promise<MapFeature> => {
       if (map === null) return Promise.reject(new Error("the map canvas is not on screen yet"));
       const active = map;
@@ -396,9 +314,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
         const closePolygon = (): void => {
           // Too few corners is not an area: keep drawing rather than failing the capture under the user.
           if (vertices.length < 3) return;
-          // A double-click places a second corner on top of its first. Trim that one duplicate — and only a
-          // genuine one, never below four corners, because removing a real corner leaves a polygon that cannot
-          // close and a capture that hangs with nothing on screen to explain why.
+          // A double-click places a duplicate corner; trim that one, but never below four corners.
           const last = vertices[vertices.length - 1];
           const before = vertices[vertices.length - 2];
           if (last !== undefined && before !== undefined) {
@@ -436,9 +352,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
         };
 
         const onCaptureDoubleClick = (): void => {
-          // Both clicks of the pair place a corner; closePolygon trims the duplicate. Popping here instead lost a
-          // real corner whenever the user drew three and double-clicked to finish — the polygon then had too few
-          // corners to close, so the capture hung and the module never received anything.
+          // Both clicks of the pair place a corner; closePolygon trims the duplicate.
           closePolygon();
         };
 
@@ -482,8 +396,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
           });
         }
 
-        // A slip of a pixel or two would otherwise pan the map and swallow the click, so panning waits until
-        // the polygon is closed. The legacy does the same, for the same reason.
+        // A slip of a pixel or two would pan the map and swallow the click, so panning waits until the polygon is closed.
         active.dragPan.disable();
         canvas.style.cursor = captureCursor(false);
 
@@ -509,11 +422,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       hasFitOnce = true;
     };
 
-    /**
-     * Build the map once the box has a size. A MapLibre map created in a zero-height container comes up blank —
-     * the legacy hit this too — and on the first frame the slot often has no height yet, so this is driven by
-     * the observer below rather than by mount alone.
-     */
+    /** Build the map once the box has a size — a MapLibre map in a zero-height container comes up blank. */
     const start = (): void => {
       if (cancelled || map !== null) return;
       if (container.clientWidth === 0 || container.clientHeight === 0) return;
@@ -547,11 +456,7 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
       created.on("click", onClick);
       map = created;
 
-      /**
-       * A dev aid, not a feature. The draw has failed invisibly twice now, and the layer state is what says
-       * whether the stack ever held a layer or the map never drew it — two causes that look identical on screen.
-       * In the console: `__mbMap.stack.getLayerOrder()`, and `__mbMap.stack.featuresOf("lines").length`.
-       */
+      /** A dev aid, not a feature: inspect layer state via `__mbMap.stack` in the console. */
       if (import.meta.env.DEV) {
         (window as { __mbMap?: unknown }).__mbMap = {
           map: created,

@@ -1,16 +1,7 @@
 /**
- * The provider's **engine-free half**: the layer stack, the click listeners and the geometry requests, wired
- * into a real `MapService` — plus the small contract a canvas satisfies to actually draw.
- *
- * A module would never see this file. It exists because the service must be *real before any map exists*: the
- * frame mounts the provider once, and modules come and go on top of it, so a module that calls `createLayer`
- * during its first render has to have that layer waiting when the canvas appears. Keeping the bookkeeping here
- * — no MapLibre, no DOM — is also what makes it testable, since the canvas next door (`mapCanvas.tsx`) needs a
- * browser and is deliberately not unit-tested.
- *
- * This is a **blackbox**: what is inside a layer, and how it is drawn, is the
- * provider's business. What crosses the edge is this: layers with features in them, and clicks coming back
- * with the feature that was hit.
+ * The provider's engine-free half: the layer stack, the click listeners and the geometry requests, wired into
+ * a real `MapService` — plus the contract a canvas satisfies to draw. No MapLibre, no DOM, so it is testable;
+ * the canvas (`mapCanvas.tsx`) needs a browser and is deliberately not unit-tested.
  */
 
 import {
@@ -23,12 +14,7 @@ import {
   type MapStack,
 } from "@model-builder/core";
 
-/**
- * What a canvas must be able to do for the service to mean anything.
- *
- * `sync` is deliberately a pull — the canvas reads the stack and draws it — so there is one description of
- * what should be on the map (the stack), rather than a stream of deltas the canvas has to keep up with.
- */
+/** What a canvas must be able to do for the service to mean anything; `sync` is a pull, not a delta stream. */
 export interface MapRenderer {
   /** Draw the stack as it now stands: layers, their order, their features, and which one takes clicks. */
   sync(): void;
@@ -41,11 +27,7 @@ export interface MapRenderer {
 export interface HostRuntime {
   /** The service the frame hands to every module's `map` region. */
   readonly service: MapService;
-  /**
-   * The stack the service reads and writes. Exposed for the **canvas only** — the canvas draws what the stack
-   * holds, and reads the order and the clickable layer from it, rather than the runtime keeping a second copy
-   * of either.
-   */
+  /** The stack the service reads and writes; exposed for the canvas only. */
   readonly stack: MapStack;
   /** The canvas calls this once its map exists; the returned function detaches it. */
   attach(renderer: MapRenderer): () => void;
@@ -89,10 +71,7 @@ export function createHostRuntime(): HostRuntime {
     getLayerOrder: () => stack.getLayerOrder(),
     setLayerOrder: (order) => stack.setLayerOrder(order),
 
-    /**
-     * A fit asked for before the canvas exists is **remembered**, not dropped: a module framing its region on
-     * mount is the normal case, and the canvas is usually a commit behind it.
-     */
+    /** A fit asked for before the canvas exists is remembered, not dropped. */
     fitTo(geometry) {
       const extent = boundsOf(geometry);
       if (extent === undefined) return;

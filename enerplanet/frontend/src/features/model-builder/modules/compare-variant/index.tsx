@@ -2,30 +2,9 @@
  * The `compare-variant` module — a small, at-a-glance comparison of a family's root model against the variant,
  * with a link to the full compare page.
  *
- * **An interactive view.** It is a step the user looks at and moves on from. There is no `auto`: nothing runs
- * on arrival. It declares `sidebar` (the comparison) and `bottom` (a status strip); a handful of lines does not
- * warrant the overlay's full-screen chrome.
- *
- * **It writes nothing, and that is the honest declaration.** A module's `params` is the store surface it may
- * *write* (`core/ports.ts`), and a viewer has nothing to commit. So the one port it reads is declared and no
- * port is invented to give it one: `modelVariant`, `required`, which is also what places this node *after* the
- * variant by construction. The compared models come from that record — `rootModelId` and `variantModelId` — so
- * `modelId` is not declared at all: reading it would tell the node nothing the pair does not already carry. Its
- * `run()` therefore commits nothing; it seals the zero-diff transaction a placement needs to be left behind
- * (`result-overview` draws the same line) — a placement is `done` only once it has a commit, so a viewer that
- * wrote nothing would otherwise read `pending` forever.
- *
- * **Where the numbers come from.** Both sides arrive through one slot the host installs (`./source.ts`,
- * `setCompareVariantGateway`); the module never learns the endpoint. There is no default: a missing gateway is
- * an error the view reports, naming the installer. The view handles the three real states — both sides have
- * results, only the root does (the common case right after the variant was made), and a failed fetch — and a
- * side with no results is named as not run yet rather than rendered as a zero.
- *
- * **The link is a plain anchor.** A module may import only `@model-builder/core` and `@spatialhub/i18n`, so it
- * cannot use `react-router`'s `Link`/`useNavigate`. An `<a href>` to the same route still opens the page in this
- * app and this tab; it only forgoes the client-side transition. The compare page seeds both sides from the two
- * query parameters (`features/simulation-charts/SimulationCharts.tsx`: `?model1=`/`?model2=`), so the user lands
- * on a populated comparison.
+ * An interactive view: no `auto`, and it writes nothing. It declares `modelVariant` (required) and reads both
+ * sides from that record. Both sides arrive through one injected slot (`source.ts`). Regions: `sidebar`,
+ * `bottom`.
  */
 
 import { type ReactNode } from "react";
@@ -44,36 +23,19 @@ import {
   type SideState,
 } from "./source";
 
-/**
- * The module's own surface, re-exported: a host installs a gateway through the same entry point it imports the
- * module from, so it never reaches into the module's files. Same shape as `setResultOverviewGateway`.
- */
+/** The module's own surface, re-exported so a host installs a gateway through the module's entry point. */
 export {
   setCompareVariantGateway,
   type CompareVariantGateway,
   type CompareVariantSummary,
 } from "./source";
 
-/**
- * Where the full comparison lives — the route the model dashboard opens for two finished models
- * (`ModelDashboard.tsx`: `/app/simulation-reports?model1=<id>&model2=<id>`).
- */
+/** The route the full comparison lives at, for two finished models. */
 export function comparePath(rootModelId: number, variantModelId: number): string {
   return `/app/simulation-reports?model1=${rootModelId}&model2=${variantModelId}`;
 }
 
-/**
- * What this module stands behind: a **variant to compare against**.
- *
- * An absent record means there is nothing to compare — no root/variant pair — so the session rests on this
- * node rather than walking past a view with nothing in it.
- *
- * It deliberately does **not** report a variant with no results. A variant is a copy of the *model*, not of its
- * results (`duplicateModel` copies the config, and results are not part of the create request), so a freshly
- * made variant has none until someone runs it. Demanding them here would be a gate no run can clear — a
- * permanent deadlock — so "the variant has not been run yet" is information the UI states, not a blocking
- * issue.
- */
+/** What this module stands behind: a variant to compare against. A variant with no results is not an issue. */
 export function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   if (projection.modelVariant === undefined) {
     return [{ port: "modelVariant", message: "No variant of this model has been made yet, so there is nothing to compare." }];
@@ -85,21 +47,17 @@ const module = defineModule({
   id: "compare-variant",
   name: "Compare variant",
 
-  // `modelVariant` (required) supplies both sides — the family's root original and the variant — so it is the
-  // whole input, and declaring it `required` is what orders this node after `model-variant`. Nothing is written
-  // (see the file comment), so no other port is declared.
+  // `modelVariant` (required) supplies both sides, so it is the whole input and orders this node after `model-variant`.
   params: [{ port: "modelVariant", required: true }],
 
-  // It reads the pair and writes nothing, so nothing of its own can be invalidated: the honest answer is no
-  // edges, not a pair invented to look connected.
+  // It reads the pair and writes nothing, so nothing of its own can be invalidated.
   affect: {},
 
   // The comparison is a few lines in the sidebar; the strip in `bottom` names where the two fetches stand.
   layout: ["sidebar", "bottom"],
 
   run: (ctx) => {
-    // A view commits nothing. The call is still made: a run that changes nothing seals its zero-diff trace,
-    // which is what lets this node be marked done and left (`core/engine.ts`).
+    // A view commits nothing; the run still seals its zero-diff trace, which lets the node be marked done.
     ctx.commit({});
   },
 
@@ -123,11 +81,7 @@ function summaryRows(
   ];
 }
 
-/**
- * One side of the comparison: its label, then its numbers, or the reason there are none.
- *
- * A side with no results says so plainly rather than showing zeros — a zero would read as a measurement.
- */
+/** One side of the comparison: its label and numbers, or the reason there are none (never zeros). */
 const SidePanel: React.FC<{ labelKey: string; side: SideState }> = ({ labelKey, side }) => {
   const { t, i18n } = useTranslation();
 
@@ -162,11 +116,7 @@ const SidePanel: React.FC<{ labelKey: string; side: SideState }> = ({ labelKey, 
   );
 };
 
-/**
- * The `bottom` region: a status strip naming the node and where its two fetches stand.
- *
- * Intrinsic height on purpose — its box is a cap, so a strip that fits renders as a strip.
- */
+/** The `bottom` region: a status strip naming the node and where its two fetches stand. */
 const StatusStrip: React.FC<ModuleViewProps> = ({ data, nodeId }) => {
   const { t } = useTranslation();
   const { root, variant } = useCompareVariant(data.modelVariant);
@@ -224,8 +174,7 @@ const Sidebar: React.FC<ModuleViewProps> = ({ data, run }) => {
           <SidePanel labelKey="modelBuilder.compare-variant.comparison" side={variantSide} />
         </div>
 
-        {/* A plain anchor: the module may not import react-router (see `comparePath`). No `target`, so it
-            opens in this app and this tab. */}
+        {/* A plain anchor: the module may not import react-router. No `target`, so it opens in this app and this tab. */}
         <a
           href={comparePath(variant.rootModelId, variant.variantModelId)}
           className="w-full shrink-0 rounded-lg border border-border px-3 py-2 text-center text-sm text-foreground hover:bg-muted"
@@ -245,8 +194,7 @@ const Sidebar: React.FC<ModuleViewProps> = ({ data, run }) => {
 
       {body}
 
-      {/* The forward action an interactive step needs to be left behind — the frame renders none of its own
-          (`shell/actions.ts`). It commits nothing; pressing it is the zero-diff trace that marks the node done. */}
+      {/* The forward action an interactive step needs; it commits nothing — pressing it is the zero-diff trace that marks the node done. */}
       <button
         type="button"
         onClick={() => void run()}
@@ -265,9 +213,7 @@ const Component: React.FC<ModuleViewProps> = (props) =>
 const builderModule: BuilderModule = {
   module,
   Component,
-  // The test data: the input the node cannot run without — a recorded variant, so the comparison has a pair and
-  // its gate is satisfied. The gateway is not mocked here (the module has no default); a test installs a fake
-  // through `setCompareVariantGateway`.
+  // The test data: the input the node cannot run without — a recorded variant, so the gate is satisfied.
   mock: {
     modelVariant: { variantModelId: 11, rootModelId: 1, title: "Base v1" },
   },

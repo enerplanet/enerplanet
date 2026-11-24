@@ -1,28 +1,9 @@
 /**
  * `area-draw` — the model area, drawn on the map.
  *
- * *"Creates one or multiple polygons within the base region that define where the model
- * is built."* It is the **first consumer of `requestPolygon`**, and the module that turns a map interaction into
- * a store port: the drawn rings are `coordinates`, which everything downstream is built inside.
- *
- * Two regions, on purpose:
- *
- *   map       the draw interaction itself — ask the map for a polygon, show what is drawn
- *   sidebar   the list of drawn polygons, the area summary, and the actions: apply, discard, undo, clear
- *
- * **The area is a draft until it is applied.** Applying asks for a data-loss confirmation,
- * because changing the area invalidates the whole downstream grid — so the module keeps the draft locally, shows
- * it on the map, and commits only on Apply. Only that commit is a transaction; the drawing itself is transient
- * map interaction state.
- *
- * **A gesture replaces the area, never appends to it.** The UI owns the draft, so what it hands to `run()` is
- * the *whole* area. That is the same split as every other module's form: the module's own model is the draft,
- * and `hold()` carries a decision, not a delta.
- *
- * `affect` is empty, deliberately: it maps a module's *inputs* to the outputs they change, and nothing feeds
- * this one. The region constrains what may be drawn, it does not change what this module writes. The
- * invalidation (`coordinates` → the whole grid) is declared by the modules that *consume*
- * `coordinates`, through the cascade.
+ * Turns a map interaction into a store port: the drawn rings are `coordinates`, which everything downstream
+ * is built inside. Regions: `map` (the draw interaction), `sidebar` (the polygon list and actions). `affect`
+ * is empty — nothing feeds this module.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -45,13 +26,7 @@ const AREA_LAYER = "area-draw-polygons";
 /** Mean Earth radius (IUGG), in kilometres — the sphere `areaKm2` measures on. */
 const EARTH_RADIUS_KM = 6371.0088;
 
-/**
- * The module's own model: the draft its UI has built, and the node it was built for.
- *
- * A module's UI gathers values that only `run()` can commit, so it keeps them itself (see "Where a module's
- * work comes from" in `modules/README.md`). `nodeId` is the part that matters: the frame can move the session
- * to another node mid-draw, and an area drafted on one node must never be committed against another.
- */
+/** The module's own model: the draft its UI has built, keyed by the node it was built for. */
 const held: { nodeId: string | null; values: Partial<ModelData> } = { nodeId: null, values: {} };
 
 /** Hold these values for `nodeId`, dropping anything held for a different node. See the example module. */
@@ -76,17 +51,7 @@ function sameArea(a: Coordinates, b: Coordinates | undefined): boolean {
   return fingerprint(a) === fingerprint(b);
 }
 
-/**
- * The area of these rings, in km², on a sphere.
- *
- * A planar shoelace over degrees is not an area — at 49°N a degree of longitude is about 73 km, at the equator
- * 111 km — so this is the spherical form, summed over each ring:
- *
- *     A = R² · Σ (λ₂ − λ₁)(sin φ₁ + sin φ₂) / 2
- *
- * Ring winding is ignored (`Math.abs`), because GeoJSON does not promise one and a mirrored area is the same
- * area.
- */
+/** The area of these rings, in km², on a sphere (ring winding ignored). */
 export function areaKm2(rings: Coordinates): number {
   let total = 0;
   for (const ring of rings) {
@@ -104,16 +69,7 @@ export function areaKm2(rings: Coordinates): number {
   return total;
 }
 
-/**
- * The drawn rings as one geometry to frame, or `undefined` when there is nothing worth framing.
- *
- * **Each ring is its own polygon**, which is how this module draws them, so the area as a whole is a MultiPolygon.
- *
- * A ring of fewer than three points is not a shape yet — the same rule `validate` reports — and framing one would
- * zoom the map into a point.
- *
- * Here rather than beside the effect so it can be tested without a map, like the rest of this module's arithmetic.
- */
+/** The drawn rings as one MultiPolygon to frame, or `undefined` when there is nothing worth framing. */
 export function areaGeometry(rings: Coordinates | undefined): GeoJSON.MultiPolygon | undefined {
   const drawn = (rings ?? []).filter((ring) => ring.length >= 3);
   if (drawn.length === 0) return undefined;
@@ -131,13 +87,7 @@ function hasGrid(data: Readonly<ModelData>): boolean {
   );
 }
 
-/**
- * Whether applying this draft would destroy something.
- *
- * So the UI can ask before it does: applying an area invalidates the whole grid, and a user who is only
- * re-applying the area already in the store is not destroying anything,
- * so the confirmation must not cry wolf.
- */
+/** Whether applying this draft would destroy something — the whole grid, which `coordinates` feeds. */
 export function needsConfirmation(data: Readonly<ModelData>, draft: Coordinates): boolean {
   if (sameArea(draft, data.coordinates)) return false;
   return hasGrid(data);
@@ -165,13 +115,12 @@ const module = defineModule({
   id: "area-draw",
   name: "Area draw",
 
-  // An area is drawn inside a region, so the flow may not run this before one has been chosen. `coordinates` is
-  // what this module *produces* — requiring it would be requiring its own output.
+  // An area is drawn inside a region, so the flow may not run this before one has been chosen.
   params: [{ port: "region", required: true }, { port: "coordinates" }],
 
   affect: {},
 
-  // One gesture, one transaction: the whole ring list lands together or not at all (see the note above).
+  // One gesture, one transaction: the whole ring list lands together or not at all.
   seal: "per-commit",
 
   layout: ["sidebar", "map"],
@@ -180,8 +129,7 @@ const module = defineModule({
     const collected = takeHeld();
     if (collected.coordinates === undefined) return;
 
-    // Read before you write — the anti-clobber rule — and commit only what actually changed. Applying the area
-    // that is already there proposes nothing; the run's zero-diff trace is sealed either way.
+    // Read before you write, and commit only what changed; applying the area already there proposes nothing.
     const current = ctx.read("coordinates");
     if (sameArea(collected.coordinates, current)) return;
 
@@ -193,9 +141,7 @@ const module = defineModule({
 
 const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }) => {
   const { t } = useTranslation();
-  // The draft lives **outside React** (`draft.ts`): this module renders once per region it declares, so two
-  // `useState`s would mean two drafts, two counts, and two effects fighting over the same map layer. Both
-  // regions read the one store.
+  // The draft lives outside React (`draft.ts`): this module renders once per region, so two `useState`s would fight over the layer.
   const draft = useDraft();
   const [drawing, setDrawing] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -204,9 +150,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   const applied = data.coordinates ?? [];
   const pending = !sameArea(draft, applied);
 
-  // The frame can move the session to another node mid-draw, and the store can move under us (an undo). The
-  // draft follows the store; a node change throws the local state away with it. Both regions run this, which is
-  // harmless — the store is one value and setting the same value notifies nobody.
+  // The draft follows the store; a node change throws the local state away with it. Both regions run this harmlessly.
   useEffect(() => {
     setDraft(data.coordinates ?? []);
     setConfirmed(false);
@@ -220,9 +164,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     setConfirmed(false);
   }, [draft]);
 
-  // What is drawn is on the map — the draft, not the applied area, so the user sees what they are about to
-  // apply. **Only the `map` region does this**: the module renders once per region, and two instances writing
-  // the same layer would take turns clearing each other's work.
+  // What is drawn is on the map — the draft, not the applied area. Only the `map` region does this.
   useEffect(() => {
     if (region !== "map" || map === undefined) return;
     map.createLayer(AREA_LAYER);
@@ -239,8 +181,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     map.setInteractiveLayer(AREA_LAYER);
   }, [map, region, draft]);
 
-  // Where the model is, framed once, when its area first exists. Only the `map` instance does this — the module
-  // renders once per region, and two instances would make the fit twice, the second one animated.
+  // Where the model is, framed once, when its area first exists. Only the `map` instance does this.
   const framed = useRef(false);
   useEffect(() => {
     if (region !== "map" || map === undefined || framed.current) return;
@@ -275,13 +216,10 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
         setError(t("modelBuilder.area-draw.ringTooSmall"));
         return;
       }
-      // Appends: the model may be built in several polygons, and this is how a second one gets added. Read the
-      // store rather than a captured value — it is shared, and this handler may outlive the render that made it.
+      // Appends: the model may be built in several polygons. Read the store, since this handler may outlive its render.
       setDraft([...getDraft(), [...ring] as [number, number][]]);
     } catch (thrown) {
-      // A cancelled capture is a normal outcome — Escape, or a close with too few corners — so only a real
-      // failure is worth showing. A provider able to distinguish the two would make this exact; today the
-      // message is the only signal there is.
+      // A cancelled capture is a normal outcome — Escape, or a close with too few corners — so only a real failure shows.
       const message = thrown instanceof Error ? thrown.message : String(thrown);
       if (!/cancel/i.test(message)) setError(message);
     } finally {
@@ -300,8 +238,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     setConfirmed(false);
   };
 
-  // ── map: the draw interaction, and the area itself. A floating card over the real map (see the example
-  //    module for why it is narrow and opts back into pointer events).
+  // ── map: the draw interaction, and the area itself. A floating card over the real map.
   if (region === "map") {
     return (
       <div className="pointer-events-auto flex max-h-full max-w-md flex-col gap-3 overflow-auto rounded-lg border border-border bg-card/95 p-4 shadow-sm">
@@ -321,8 +258,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
               : t("modelBuilder.area-draw.drawAnother")}
         </button>
 
-        {/* The model may be built in several polygons, so the count is on the card the drawing happens on —
-            where the eye is — not only in the sidebar list. */}
+        {/* The model may be built in several polygons, so the count is on the card the drawing happens on. */}
         <p className="shrink-0 text-sm text-muted-foreground">
           {t("modelBuilder.area-draw.drawnCount", "Drawn: {{count}}", { count: draft.length })}
         </p>
@@ -449,8 +385,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
 const builderModule: BuilderModule = {
   module,
   Component,
-  // The seed for test mode: a region, so this module can be exercised on its own without a workflow (its only
-  // required port). No area — starting empty is exactly the state it exists to fill.
+  // The seed for test mode: a region (its only required port), so the module can run on its own. No area — starting empty is its job.
   mock: {
     region: { country: "DE", state: "BW" },
   },
