@@ -1,9 +1,5 @@
 /**
  * The steps panel's state — the whole workflow, in order.
- *
- * The panel asks "what is the state of every step", not "where am I", so it derives its own answer
- * from `positionReport` plus the node the session is looking at. The viewed node is passed in
- * (`view`), defaulting to the frontier; a view is not a commit.
  */
 
 import type { PortKey } from "@model-builder/core";

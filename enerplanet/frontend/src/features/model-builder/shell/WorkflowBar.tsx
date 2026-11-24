@@ -1,12 +1,9 @@
 /**
- * The workflow bar — the frame's top band. Dense by rule: it is chrome, and vertical space belongs
- * to the content.
+ * The workflow bar — the frame's top band. Dense by rule: it is chrome.
  *
- * The bar moves; it does not undo. Movement is a view: a prior click sets the placement the session
- * is looking at and writes nothing, so the moved-to node stays done. There is no forward control —
- * a module advances by running itself, and an auto node runs on arrival.
- *
- * Everything it renders in workflow mode comes from `barState`.
+ * The bar moves (a view that writes nothing) and saves; there is no forward control — an interactive
+ * module advances by running itself and an auto node runs on arrival. Everything it renders in workflow
+ * mode comes from `barState`.
  */
 
 import { Save } from "lucide-react";
@@ -24,13 +21,7 @@ const STATE_CLASS: Record<BarStep["state"], string> = {
   pending: "text-muted-foreground",
 };
 
-/**
- * One framed step: the role, and the node filling it.
- *
- * A step renders as a *control* only when clicking it can move the session; without an action it is plain
- * greyed text, which is the honest rendering — a disabled button still looks like something you are being kept
- * from, and the next step usually is not that.
- */
+/** One framed step: the role, and the node filling it. */
 const Step: React.FC<{
   label: string;
   step: BarStep | undefined;
@@ -100,8 +91,7 @@ export const WorkflowBar: React.FC<Props> = ({
   const { t } = useTranslation();
   const bar = barState(flow, workflow.registry, store, hold);
 
-  // Read the discriminant once, as a value: the chip, the select's value and its options all need it, and a
-  // boolean alias would have to re-narrow the union at every use.
+  // Read the discriminant once, as a value: the chip, the select's value and its options all need it.
   const testModuleId = mode.kind === "test" ? mode.moduleId : undefined;
   const drives = testModuleId === undefined;
 

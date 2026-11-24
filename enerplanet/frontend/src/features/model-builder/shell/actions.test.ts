@@ -79,9 +79,7 @@ describe("looking back at an earlier node — a view, not a commit", () => {
 
     const bar = barState(workflow.flow, workflow.registry, store, "first");
 
-    // The assertion that matters is that a *view* writes nothing: the log is unchanged, the frontier is past
-    // the whole flow (both nodes stay done), and only where the session looks follows the selection. There is
-    // no jump transaction and therefore no redo tail for the bar to walk.
+    // A *view* writes nothing: the log is unchanged, the frontier is past the whole flow.
     expect(position(workflow.flow, workflow.registry, store)).toMatchObject({ index: 2, complete: true });
     expect(store.log.length).toBe(before);
     expect(bar.current).toEqual({ id: "first", label: "First", state: "done" });
@@ -95,9 +93,7 @@ describe("looking back at an earlier node — a view, not a commit", () => {
 
     barState(workflow.flow, workflow.registry, store, "first");
 
-    // A view discards nothing *and* marks nothing: both nodes stay done. This is the whole point of a view over
-    // an undo — nothing the tail produced is lost, and nothing the target produced is called into question
-    // merely because the session looked at it.
+    // A view discards nothing and marks nothing: both nodes stay done.
     expect(nodeStates(workflow.flow, workflow.registry, store)).toEqual({
       first: "done",
       second: "done",
@@ -110,8 +106,7 @@ describe("looking back at an earlier node — a view, not a commit", () => {
     const store = createStore(workflow.initial);
     completeFlow(store);
 
-    // Worth pinning because it is the opposite of what "the session is at the last node" suggests: the position
-    // of a complete flow is `flow.length`, so the last node is genuinely behind the frontier and reachable.
+    // A complete flow's position is `flow.length`, so the last node is behind the frontier and reachable.
     expect(position(workflow.flow, workflow.registry, store)).toMatchObject({ index: 2, complete: true });
     const steps = stepsState(workflow.flow, workflow.registry, store);
     expect(steps.map((step) => step.movable)).toEqual([true, true]);
@@ -121,14 +116,13 @@ describe("looking back at an earlier node — a view, not a commit", () => {
     const workflow = workflowOf();
     const store = createStore(workflow.initial);
 
-    // Nothing has run: the frontier is the first node, so the first is where the session looks (not a control)
-    // and the second is past the frontier (not reachable) — there is nowhere to move.
+    // Nothing has run: the frontier is the first node, so there is nowhere to move.
     expect(stepsState(workflow.flow, workflow.registry, store).map((step) => step.movable)).toEqual([
       false,
       false,
     ]);
 
-    // The first runs: the session looks at the second (the frontier), and the first becomes reachable.
+    // The first runs: the session looks at the second, and the first becomes reachable.
     store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], {
       node: { id: "first", moduleId: example.module.id },
     });
@@ -139,23 +133,14 @@ describe("looking back at an earlier node — a view, not a commit", () => {
   });
 });
 
-/**
- * The worked case, at the shell's boundary: `A → B → C → D` with B requiring A and D
- * requiring B, and C writing a port nothing reads. A view writes nothing; a *change* invalidates by
- * influence. So changing A leaves B and D stale while **C is untouched** — the closure never reaches C — and
- * that must survive the movement change, which is the reason these cases exist.
- */
+/** `A → B → C → D` with B requiring A and D requiring B, and C writing a port nothing reads. */
 describe("a view writes nothing; a change invalidates by influence", () => {
   /** A drawn ring, in the store's coordinate type — and two more, to stand in for A changing its value. */
   const AREA_0: [number, number][][] = [[[9.7, 50.5], [9.71, 50.5], [9.71, 50.51]]];
   const AREA_1: [number, number][][] = [[[9.8, 50.6], [9.81, 50.6], [9.81, 50.61]]];
   const AREA_2: [number, number][][] = [[[9.9, 50.7], [9.91, 50.7], [9.91, 50.71]]];
 
-  /**
-   * One node's module: an entry that writes its port and requires nothing, or a link that requires an input
-   * and declares the honest `affect` edge (`input → output`). The edge is what the closure walks, so it is
-   * what makes B and D reachable from A and C not.
-   */
+  /** One node's module: an entry that writes its port, or a link that requires an input and declares the `affect` edge. */
   function influenceModule(id: string, writes: PortKey, reads?: PortKey): BuilderModule {
     return {
       module: defineModule({
@@ -218,12 +203,6 @@ describe("a view writes nothing; a change invalidates by influence", () => {
     });
   }
 
-  // ── the acceptance case: A → B → C → D → E → F ──────────────────────────────
-  //
-  // A change at **B** invalidates D and F by influence, so the reachable set is bounded by the first node that
-  // is not done — **D** — and does not reach E or F, however far down the flow they sit; once D is done again,
-  // F is reachable. Looking at B first, being a view, marks nothing stale.
-
   const SIX: readonly BuilderModule[] = [
     influenceModule("src", "coordinates"), // A — writes coordinates
     influenceModule("beta", "buildings", "coordinates"), // B — requires coordinates, writes buildings
@@ -236,8 +215,7 @@ describe("a view writes nothing; a change invalidates by influence", () => {
   const SIX_DEFINITION = {
     id: "chain-six",
     label: "Chain of six",
-    // The dev-flow seed the other definitions name, referenced from `DEFINITION` rather than spelled a third
-    // time (which would trip the duplicate-string lint).
+    // The dev-flow seed the other definitions name, referenced rather than spelled a third time.
     seed: DEFINITION.seed,
     nodes: [
       { id: "a", moduleId: "src" },
@@ -288,8 +266,7 @@ describe("a view writes nothing; a change invalidates by influence", () => {
       f: "done",
     });
 
-    // B then commits a change: `buildings` affects `technologies` (D) and, through it, `saveResult` (F) — never
-    // `advancedParams` (C) or `transformers` (E). So D and F go stale, and C and E are untouched.
+    // B then commits a change: `buildings` affects `technologies` (D) and, through it, `saveResult` (F).
     store.applyTransaction([replace("buildings", BUILDINGS_1, BUILDINGS_2)], undefined, {
       node: { id: "b", moduleId: "beta" },
     });
@@ -302,8 +279,7 @@ describe("a view writes nothing; a change invalidates by influence", () => {
       f: "stale",
     });
 
-    // The frontier is now D — the first node that is not done — so the reachable set from B stops there: E and
-    // F are not controls, however far down the flow they sit.
+    // The frontier is now D, so the reachable set from B stops there: E and F are not controls.
     expect(position(flow, registry, store).index).toBe(3);
     expect(stepsState(flow, registry, store, "b").map((step) => step.movable)).toEqual([
       true, // a
@@ -327,8 +303,7 @@ describe("a view writes nothing; a change invalidates by influence", () => {
     runChain(store);
     const before = store.log.length;
 
-    // Look at A: a view writes nothing, so all four ports are still there, every node is still done, and the
-    // log did not grow — nothing a view does makes a node stale.
+    // Look at A: a view writes nothing, so all four ports are still there and the log did not grow.
     barState(flow, registry, store, "a");
     expect(store.log.length).toBe(before);
     expect(nodeStates(flow, registry, store)).toEqual({
@@ -346,9 +321,7 @@ describe("a view writes nothing; a change invalidates by influence", () => {
     const { store, flow, registry } = chainSession();
     runChain(store);
 
-    // A change, not a view: the cascade is *omitted*, so it derives from A's `affect` closure — coordinates
-    // reaches buildings (B's edge) and technologies (D's edge), but never advancedParams, because nothing
-    // declares an edge to it.
+    // A change, not a view: the cascade is *omitted*, so it derives from A's `affect` closure.
     store.applyTransaction([replace("coordinates", AREA_1, AREA_2)], undefined, {
       node: { id: "a", moduleId: "src" },
     });

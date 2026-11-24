@@ -1,9 +1,6 @@
 /**
  * The workflow bar's state — where the session is: the node before it, the node it is looking at, and
  * the node after it.
- *
- * Once the flow is finished the bar sits on the last node, so it keeps naming what is on screen. The
- * viewed placement is passed in as `view`, else the frontier.
  */
 
 import type { Flow, FlowNode, ModuleRegistry } from "../core/flow";

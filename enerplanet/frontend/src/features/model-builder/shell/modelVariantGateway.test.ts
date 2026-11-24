@@ -1,11 +1,6 @@
 /**
- * `modelVariantGateway`'s copy rule — the one part worth pinning, and the part copied from the model dashboard.
- *
- * The gateway's axios calls are a thin wrapper and are left to the module's own tests (which drive them through
- * a fake); what can break silently is the *rule* — how `parent_model_id`, `group_id` and the ` v<n>` title are
- * derived from the original. It lives in a pure function (`familyCopyOf`), tested directly, without stubbing
- * axios, so the copy can be checked against `duplicateModel`'s own behaviour
- * (`features/model-dashboard/services/modelService.ts`).
+ * `modelVariantGateway`'s copy rule — the part copied from the model dashboard. It lives in a pure
+ * function (`familyCopyOf`), tested directly.
  */
 import { describe, expect, it } from "vitest";
 import { extractBaseTitle, familyCopyOf } from "./modelVariantGateway";
@@ -26,7 +21,7 @@ describe("extractBaseTitle — a trailing ` v<n>` is stripped, and nothing else 
 
 describe("familyCopyOf — the family rule copied from duplicateModel", () => {
   it("parents a copy of a root to the root and takes its id as the family", () => {
-    // `if (original.parent_model_id) { ... } else { parentModelId = original.id }`, `groupId || original.id`.
+    // `if (original.parent_model_id) { ... } else { parentModelId = original.id }`.
     const copy = familyCopyOf({ id: 1, title: "Base" }, [{ id: 1, title: "Base" }]);
 
     expect(copy.parentModelId).toBe(1);

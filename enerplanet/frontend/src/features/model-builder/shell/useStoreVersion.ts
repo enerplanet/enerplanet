@@ -1,11 +1,5 @@
 /**
  * The frame's subscription to the store.
- *
- * The store announces every applied change and this hook turns that into a re-render. It reads the
- * store's change token (`store.version`) rather than the projection, because a change can move the
- * frontier without moving `data`.
- *
- * `store` is optional so a host can render before it has a session.
  */
 
 import { useCallback, useSyncExternalStore } from "react";

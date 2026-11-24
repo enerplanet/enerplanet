@@ -1,14 +1,8 @@
 /**
  * The catalogue source the frame installs: `GET /technologies`, with the bundled defaults behind it.
  *
- * The module declares the slot (`modules/technologies/catalogue.ts`) and never learns which source it has. This
- * lives in the shell because a module may only depend on `@model-builder/core`, while the app's CSRF-aware
- * axios instance is the app's.
- *
- * **The fallback is the legacy's own.** Its catalogue loader tries the API and, on failure, reads
- * `/initial-data/techs/default_technologies.json` — a picker showing the shipped defaults is better than a
- * picker showing nothing, and the products are the same shape either way. Kept here rather than in the module
- * because it is a *data-loading* decision about this app's assets, which is exactly what a shell is for.
+ * The module declares the slot (`modules/technologies/catalogue.ts`) and never learns which source it has.
+ * The fallback is the legacy's own: a picker showing the shipped defaults is better than one showing nothing.
  */
 
 import axios from "@/lib/axios";

@@ -1,9 +1,5 @@
 /**
  * What a viewed placement's module renders from — the projection as of that placement's commit.
- *
- * No view, or a view naming nothing that committed, reads the live projection (`store.data`); a
- * viewed placement with a commit reads `replay(initial, log, commit.revision)`. Only the module on
- * screen reads this; the store a run reads stays on the live tip.
  */
 
 import type { ModelData } from "@model-builder/core";

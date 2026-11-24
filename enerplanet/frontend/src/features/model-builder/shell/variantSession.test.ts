@@ -91,7 +91,7 @@ describe("persistVariantSession", () => {
     // The projection is the live store: the switch moved `modelId` onto the copy and recorded the variant.
     expect(artefact.projection.modelId).toBe(11);
     expect(artefact.projection.modelVariant).toEqual(VARIANT);
-    // The switch is in the applied log — one transaction, on this node — replaying onto the root's own start.
+    // The switch is in the applied log — one transaction, on this node.
     expect(artefact.initial.modelId).toBe(1);
     expect(artefact.log).toHaveLength(1);
     expect(artefact.log[0]?.node?.id).toBe(NODE);
@@ -106,8 +106,7 @@ describe("persistVariantSession", () => {
 
     const { store, divergence } = fromArtefact(artefact);
 
-    // No divergence: `fingerprint(projection)` matched what was stored, so the reload adopts it as-is. A stale
-    // fingerprint over a patched projection is exactly the trap — it would be discarded and the log replayed.
+    // No divergence: `fingerprint(projection)` matched what was stored, so the reload adopts it as-is.
     expect(divergence).toBeUndefined();
     expect(store.data.modelId).toBe(11);
     expect(store.data.modelVariant).toEqual(VARIANT);

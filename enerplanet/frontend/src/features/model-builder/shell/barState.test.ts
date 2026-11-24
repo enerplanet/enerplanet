@@ -58,8 +58,7 @@ describe("the bar derives the session's position", () => {
     const workflow = workflowOf(TWO_NODES);
     const store = createStore(workflow.initial);
 
-    // The fixture takes the values its regions collect through `hold()` (see the note on it), so driving it
-    // for real means filling them the way a region does. A bare run commits nothing, by design.
+    // The fixture takes its values through `hold()`, so driving it for real means filling them.
     hold("first", { modelName: "  Bar fixture  " });
     await createEngine(store).runModule(example.module, { id: "first", moduleId: example.module.id });
 
@@ -102,8 +101,7 @@ describe("the bar derives the session's position", () => {
     expect(bar.current).toEqual({ id: "first", label: "First", state: "done" });
     // The tail keeps its work — a view discards nothing, so "second" is still done.
     expect(bar.next).toEqual({ id: "second", label: "Second", state: "done" });
-    // `complete` reads the *frontier*, not where the session looks: every node is done, so the model is whole
-    // even though the session is looking back at it.
+    // `complete` reads the *frontier*, not where the session looks: every node is done.
     expect(bar.complete).toBe(true);
   });
 
@@ -127,9 +125,7 @@ describe("the bar derives the session's position", () => {
     expect(bar.current).toBeUndefined();
     expect(bar.prior).toBeUndefined();
     expect(bar.next).toBeUndefined();
-    // An empty flow is vacuously complete per the core's own derivation (there is nothing left to do), so
-    // the bar passes that through rather than inventing a second reading — the *view* keys on having no
-    // current node when it needs to say "nothing to show here".
+    // An empty flow is vacuously complete per the core's own derivation, so the bar passes that through.
     expect(bar.complete).toBe(true);
   });
 });

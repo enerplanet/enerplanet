@@ -1,9 +1,7 @@
 /**
  * The ledger bar — the frame's bottom band.
  *
- * Collapsed by default and dense: the newest commit as a signed line. Expanded it is the whole log,
- * newest first — the one view that answers "what happened". The log is append-only, so there is no
- * cursor and no discarded tail to draw.
+ * Collapsed by default: the newest commit as a signed line. Expanded: the whole log, newest first.
  */
 
 import { useState } from "react";

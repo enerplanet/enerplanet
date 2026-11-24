@@ -1,11 +1,5 @@
 /**
  * The steps panel — the frame's right-hand band, a sibling of the module frame.
- *
- * A step behind the session is a control; clicking one moves the view there — the shell's session
- * state, which writes nothing. Steps ahead of the frontier are not clickable: a later node is
- * reached by running it, not by standing on it.
- *
- * Colours come from the theme's semantic pairs, so the states survive dark mode.
  */
 
 import { useState } from "react";

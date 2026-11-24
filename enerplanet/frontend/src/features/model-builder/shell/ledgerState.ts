@@ -1,8 +1,5 @@
 /**
  * The ledger bar's state — the log newest first.
- *
- * A presentation-free reading of `store.log`: rows newest first, signed ports, and nothing else. The
- * bar decides how that looks.
  */
 
 import type { DiffOp, PortKey, Transaction } from "@model-builder/core";

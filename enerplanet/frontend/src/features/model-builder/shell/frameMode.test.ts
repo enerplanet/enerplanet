@@ -81,8 +81,7 @@ describe("the frame's mode decides what is on screen, and what the session start
       SEED,
     );
 
-    // The workflow places only `unplaced`, so that is what workflow mode shows — regardless of what else is
-    // registered or which module was shown a moment ago.
+    // The workflow places only `unplaced`, so that is what workflow mode shows.
     const view = frameView(WORKFLOW_MODE, twoNode, ENTRIES, store, twoNode.flow);
 
     expect(view.entry?.module.id).toBe("unplaced");
@@ -109,9 +108,7 @@ describe("the frame's mode decides what is on screen, and what the session start
   });
 
   it("in test mode the module is always runnable — its test data satisfies its own declaration", () => {
-    // The rule that makes test mode work, asserted rather than assumed: `required` is not enforced here
-    // because nothing can be missing. A module whose test data does not cover its declaration fails its own
-    // contract test; this case is about the frame honouring that.
+    // `required` is not enforced here because nothing can be missing: the test data covers every required port.
     const view = frameView(
       { kind: "test", moduleId: "unplaced" },
       workflowOf(),
@@ -143,15 +140,8 @@ describe("the frame's mode decides what is on screen, and what the session start
   });
 });
 
+/** The mechanism an auto node depends on: the frame is held on a node while its run is in flight. */
 describe("the frame can be held on a node while its run is in flight", () => {
-  /**
-   * The mechanism an **auto** node depends on.
-   *
-   * The position is derived, and an auto node's own output is what makes it done — so the frame would move off
-   * the node in the very React commit that delivers its writes, and a module that draws from what it just
-   * produced (the grid generator, above all) would unmount before its effect ever drew. A `hold` keeps it on
-   * screen; the shell sets it for the duration of a run and clears it once the paint has landed (`BuilderShell`).
-   */
   it("shows the held node even though the derived position is a different one", () => {
     const workflow = toWorkflow(
       {
@@ -204,15 +194,13 @@ describe("the frame reports whether the module on screen is automatic", () => {
 });
 
 describe("the frame walks the transcript, not the seed — an appended successor placement shows up", () => {
-  /** A re-run appends a successor placement, so the frame must walk `transcript(session.flow, store.log)`, not the seed. */
   it("the derived flow is the transcript: the appended placement is a node, and the frame and bar show it", () => {
     const workflow = workflowOf();
     const store = createStore(workflow.initial);
 
     // The seed placement runs, so it is done and the frontier would otherwise move past it.
     store.applyTransaction([], [], { node: { id: "example", moduleId: "example" } });
-    // A re-run appends a successor placement — same module, a fresh placement id — and its work is then pruned,
-    // so it is the placement the session is *on* rather than a finished one.
+    // A re-run appends a successor placement — same module, a fresh placement id — and its work is then pruned.
     store.applyTransaction(
       [{ op: "replace", path: portPath("resolution"), prev: 60, next: 30 }],
       [],

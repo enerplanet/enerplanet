@@ -1,15 +1,5 @@
 /**
- * The bar's actions.
- *
- * Every control maps onto an operation the core already has — "*the bar only has to call
- * them*" — so this module is deliberately thin. It exists for the two places where "just call it" is not enough:
- *
- * - **Movement is a view, not a commit.** A move sets the viewed placement and writes nothing; there is no
- *   `moveToNode` here any more.
- * - **The bar's save is always `incomplete`.** The *full* save — the real `model.json`, promoted to
- *   `draft` so that a run accepts it — belongs to the save **node**, behind its completeness gate. A bar button
- *   that wrote a finished model on a complete flow would be bypassing that gate, which is why the status is
- *   pinned here instead of derived from completeness.
+ * The bar's actions: the bar's save, and the plain "one interactive step" utility.
  */
 
 import type { Flow, ModuleRegistry } from "../core/flow";
@@ -25,17 +15,7 @@ import type { ModelGateway } from "../save/gateway";
  * Walk forward one interactive step: run the node the session sits on, and keep going while the flow lands on
  * an `auto` node.
  *
- * **Superseded by the auto-run on arrival.** An auto node no longer waits to be started by a
- * forward action: `autoRun.ts` runs it the moment the session lands on it, and the position advances by itself
- * once the run lands a finished node. So this walk is no longer "the thing that starts an auto node's work",
- * and **nothing in the frame calls it any more** — the bar's `Continue` is gone, and an interactive module
- * advances by running itself (its own `Apply`). It is kept as the plain "one interactive step" utility a host
- * could still drive, and it stays correct: a node already `done` is passed over, and it stops *after* an
- * interactive node because that is the next place a user can act.
- *
- * It never moves backwards, and the loop is bounded by the flow's length so a malformed flow cannot spin.
- *
- * @returns the placement ids it ran, in order — the shell says what happened rather than guessing.
+ * @returns the placement ids it ran, in order.
  */
 export async function continueStep(request: {
   flow: Flow;
@@ -61,7 +41,7 @@ export async function continueStep(request: {
     });
     ran.push(node.id);
 
-    // An automatic module is not a place anyone can act, so the walk continues past it. An interactive one is.
+    // An automatic module is not a place anyone can act, so keep walking past it.
     if (!isAutoModule(module)) break;
   }
 
@@ -81,10 +61,7 @@ export interface SessionSaveRequest {
   userId?: string;
 }
 
-/**
- * The workflow bar's save: Call A (the legacy payload) then Call B (the session artefact), with the status
- * pinned to `incomplete`. A model that is not finished still round-trips, and still preserves its session.
- */
+/** The workflow bar's save: Call A (the legacy payload) then Call B (the session artefact), status `incomplete`. */
 export async function saveSession(
   gateway: ModelGateway,
   request: SessionSaveRequest,

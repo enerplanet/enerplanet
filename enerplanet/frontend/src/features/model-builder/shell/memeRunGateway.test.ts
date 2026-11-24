@@ -1,21 +1,11 @@
 /**
- * `memeRunGateway`'s mapping — the one part of the gateway worth pinning, and the part it shares with the
- * model dashboard.
- *
- * The gateway's submit/status calls are a thin axios wrapper and are left to the module's own tests (which
- * drive it through a fake); what can break silently is the *mapping* — the dashboard's status sets copied here
- * by value, and the failure message read out of `results`. So the mapping is a pure function and is tested
- * directly, without stubbing axios.
- *
- * Every status the dashboard's `ModelStatus` names is covered, so a status added to the dashboard's sets and
- * not to this copy (or the reverse) shows up here.
+ * `memeRunGateway`'s mapping — the dashboard's status sets copied here, and the failure message read out
+ * of `results`. The mapping is a pure function, tested directly.
  */
 import { describe, expect, it } from "vitest";
 import { memeRunOf, memeRunStatusOf } from "./memeRunGateway";
 
 describe("memeRunStatusOf — the dashboard's status sets, copied", () => {
-  // The active set is model-dashboard/utils/statusHelpers.ts `isActiveStatus`; the pre-solve split and the
-  // leg set are the gateway's own reading (useModelsQuery.ts `hasActiveRun`, `PYPSA_LEG_RUNNING`).
   it.each([
     ["queue", "pending"],
     ["buildings", "pending"],
@@ -49,8 +39,7 @@ describe("memeRunStatusOf — the dashboard's status sets, copied", () => {
   });
 
   it("counts an in-flight pypsa leg as an active run", () => {
-    // The leg is an add-on over a completed Calliope run and never touches the model's status; the dashboard
-    // keeps polling it via PYPSA_LEG_RUNNING. A completed model with its leg running is still active.
+    // The leg is an add-on over a completed Calliope run and never touches the model's status.
     expect(memeRunStatusOf("completed", "running")).toBe("running");
     expect(memeRunStatusOf("completed", "pending")).toBe("running");
   });
@@ -94,9 +83,7 @@ describe("memeRunOf — the failure message from results", () => {
   });
 
   it("names the model's status when nothing recorded a failure", () => {
-    // `draft` lands on `failed` because the port has no vocabulary for "not started": the dashboard neither
-    // polls it nor calls it complete, and defaulting to `pending` would poll forever. So the message carries
-    // the diagnosis the recorded failure fields cannot.
+    // `draft` lands on `failed` because the port has no vocabulary for "not started".
     expect(memeRunOf({ status: "draft" }).error).toBe('the run produced no result (model status: "draft")');
   });
 

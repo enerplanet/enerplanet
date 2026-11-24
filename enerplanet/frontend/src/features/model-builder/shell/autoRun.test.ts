@@ -111,8 +111,7 @@ describe("the auto-run decision (autoRunFor)", () => {
     // `auto-node` declares `auto`, so arriving at its node runs…
     expect(autoRunFor(FLOW, REGISTRY, store)?.module.id).toBe("auto-node");
 
-    // …and the same flow, with an interactive module at that same node, plans nothing. The node carries no
-    // flag of its own — the module does.
+    // …and the same flow, with an interactive module at that node, plans nothing — the module carries the flag.
     const interactiveAt: ModuleRegistry = {
       ...REGISTRY,
       "auto-node": { ...autoModule, auto: undefined },
@@ -146,9 +145,7 @@ describe("the auto-run decision (autoRunFor)", () => {
     await runNode(store, "a", "producer");
     await runNode(store, "auto", "auto-node", true);
 
-    // Coming back to look: a view changes no data — nothing is sealed and the auto node's work is still in the
-    // store, so there is nothing to re-run. The frontier is past the auto node (it is `done`), and `autoRun`
-    // reads the node's *work*, not where the session looks — the trap this rule exists to avoid.
+    // A view changes no data, so the auto node's work is still in the store and there is nothing to re-run.
     expect(autoRunFor(FLOW, REGISTRY, store)).toBeUndefined();
     expect(store.data.buildings).toBeDefined();
   });
@@ -158,8 +155,7 @@ describe("the auto-run decision (autoRunFor)", () => {
     await runNode(store, "a", "producer");
     await runNode(store, "auto", "auto-node", true);
 
-    // An input change: the invalidator prunes what that input affects. `coordinates` affects `buildings`,
-    // so the auto node's output is gone and it is genuinely stale — not merely re-armed.
+    // An input change prunes what it affects: `coordinates` affects `buildings`, so the auto node is stale.
     store.applyTransaction([replace(COORDINATES, AREA_0, AREA_1)], undefined, { node: { id: "a", moduleId: "producer" } });
 
     expect(position(FLOW, REGISTRY, store)).toMatchObject({ index: 1, nodeId: "auto" });
@@ -186,8 +182,7 @@ describe("the auto-run guard (createAutoGuard)", () => {
 
     expect(guard.claim(autoRunFor(FLOW, REGISTRY, store)!)).toBe(true);
 
-    // The change prunes the auto node's output and moves the store's change token, so the next plan is a new
-    // attempt — the same node, a different fingerprint.
+    // The change moves the store's change token, so the next plan is a new attempt — the same node, a new fingerprint.
     store.applyTransaction([replace(COORDINATES, AREA_0, AREA_1)], undefined, { node: { id: "a", moduleId: "producer" } });
     const next = autoRunFor(FLOW, REGISTRY, store)!;
 
