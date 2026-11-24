@@ -19,7 +19,7 @@ import {
   runInScratch,
   type MemeRun,
 } from "@model-builder/core";
-import { changedPorts, stageCascade } from "../../core/invalidator";
+import { createInvalidator } from "../../core/invalidate";
 import type { DiffOp } from "../../core/diff";
 import runMemeCalliope, { issuesFor } from "./index";
 
@@ -36,12 +36,10 @@ import runMemeCalliope, { issuesFor } from "./index";
       { op: "replace", path: "saveResult", prev: store.data.saveResult, next: { modelId: 7, created: false } },
     ];
 
-    const cascade = stageCascade({
-      changed: changedPorts(primary),
-      primary,
-      data: store.data,
-      modules: [runMemeCalliope.module],
-    });
+    const cascade = createInvalidator(
+      [{ id: runMemeCalliope.module.id, moduleId: runMemeCalliope.module.id }],
+      { [runMemeCalliope.module.id]: runMemeCalliope.module },
+    )(primary, store.data);
 
     expect(cascade.map((op) => op.path)).toContain("/memeRun");
   });

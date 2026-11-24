@@ -21,7 +21,7 @@ import {
   type MemePypsaLeg,
   type MemeRun,
 } from "@model-builder/core";
-import { changedPorts, stageCascade } from "../../core/invalidator";
+import { createInvalidator } from "../../core/invalidate";
 import type { DiffOp } from "../../core/diff";
 import runMemePypsa, { issuesFor } from "./index";
   it("is invalidated when the model is saved again, so an edited model is run again", () => {
@@ -37,12 +37,10 @@ import runMemePypsa, { issuesFor } from "./index";
       { op: "replace", path: "saveResult", prev: store.data.saveResult, next: { modelId: 7, created: false } },
     ];
 
-    const cascade = stageCascade({
-      changed: changedPorts(primary),
-      primary,
-      data: store.data,
-      modules: [runMemePypsa.module],
-    });
+    const cascade = createInvalidator(
+      [{ id: runMemePypsa.module.id, moduleId: runMemePypsa.module.id }],
+      { [runMemePypsa.module.id]: runMemePypsa.module },
+    )(primary, store.data);
 
     expect(cascade.map((op) => op.path)).toContain("/memePypsaLeg");
   });

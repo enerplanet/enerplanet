@@ -15,7 +15,7 @@ export * from "./store";
 export * from "./engine";
 export * from "./fingerprint";
 export * from "./influence";
-export * from "./invalidator";
+export * from "./invalidate";
 export * from "./flow";
 export * from "./replay";
 export * from "./position";
