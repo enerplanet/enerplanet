@@ -138,7 +138,7 @@ const (
 // @securityDefinitions.apikey SpatialHubBearer
 // @in header
 // @name Authorization
-// @description Bearer <SpatialHub access token>, obtained by the toolbox backend through JWT Authorization Grant. Requires configured integration and enerplanet:read scope. Direct RENvolveIT tokens are not accepted.
+// @description Bearer <RENvolveIT access token> issued to the toolbox client. Read-only; acts as the EnerPlanET account linked to the RENvolveIT user.
 
 func main() {
 	// Set GIN to release mode to disable debug messages
@@ -675,7 +675,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 	}
 	// Tokens before sessions.
 	protectedAPI.Use(middleware.APITokenAuth(apitoken.NewService(apitokenstore.NewStore(deps.DB))))
-	protectedAPI.Use(middleware.BearerAuth(bearerVerifier))
+	protectedAPI.Use(middleware.BearerAuth(bearerVerifier, usersstore.NewPartnerAccounts(deps.Cfg, deps.AdminTokenProvider)))
 	protectedAPI.Use(middleware.AuthServiceMiddleware(middleware.AuthServiceOptions{
 		AuthServiceURL:             deps.Cfg.AuthServiceURL,
 		SessionCookieMaxAgeSeconds: deps.Cfg.SessionTTLMinutes * 60,
@@ -683,7 +683,7 @@ func configureProtectedAPI(r *gin.Engine, deps RouteDeps) {
 		IsProduction:               deps.Cfg.AppEnv == "production",
 	}))
 
-	protectedAPI.GET("/auth/whoami", middleware.WhoAmI(deps.Cfg.BearerAuth.Issuer))
+	protectedAPI.GET("/auth/whoami", middleware.WhoAmI())
 
 	protectedAPI.GET("/auth/keep-alive", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -940,6 +940,7 @@ func registerModelRoutes(api *gin.RouterGroup, modelHandler *modelhandler.ModelH
 	api.POST(routeModelByID+"/series/claim-draft", modelHandler.ClaimDraftSeries)
 	api.GET(routeModelByID+"/results", resultHandler.GetModelResults)
 	api.GET(routeModelByID+"/results/structured", resultHandler.GetStructuredResults)
+	api.GET(routeModelByID+"/kpis", resultHandler.GetModelKPIs)
 	api.GET(routeModelByID+"/results/carrier-timeseries", resultHandler.GetCarrierTimeSeries)
 	api.GET(routeModelByID+"/results/location/:location", resultHandler.GetLocationTimeSeries)
 	api.GET(routeModelByID+"/results/pypsa", resultHandler.GetPyPSAResults)

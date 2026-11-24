@@ -274,22 +274,40 @@ this one screen.
 
 ---
 
-## SpatialHub tokens (RENvolveIT toolbox)
+## RENvolveIT tokens (toolbox)
 
-The toolbox backend sends a short-lived SpatialHub access token instead of a
-`whf_` token. These tokens:
+The toolbox backend sends the signed-in user's RENvolveIT access token instead
+of a `whf_` token. These tokens:
 
-- can only read (`GET`) models and results, and need the `enerplanet:read` scope;
-- act as the user, like a personal token (including the invite linking above);
-- are checked locally and cannot be revoked, so a disabled user keeps access
-  until the token expires.
+- can only call `GET /auth/whoami`, `GET /models`, `GET /models/{id}` and
+  `GET /models/{id}/kpis`;
+- act as the EnerPlanET account linked to the RENvolveIT user; on the first
+  call with a verified email and no linked account, that account is created;
+- are checked against that account on every request, so disabling the account
+  stops access at once.
 
-**For operators:** keep the `spatialhub` realm's *Access Token Lifespan*
-(5 minutes today) at or below `KEYCLOAK_API_MAX_TOKEN_LIFETIME_SECONDS`
-(900 seconds). This lifespan is how long a disabled user can still read data.
-Longer tokens are rejected.
+| Response | Cause | Retry helps |
+| --- | --- | --- |
+| `401 Unrecognised bearer token` | Signature, issuer, audience, client, type or lifetime check failed, or the token expired | After fetching a new token |
+| `403 No EnerPlanET account is linked to this user` | No linked account, and the token has no verified email to create one | After the user signs in once |
+| `403 An EnerPlanET account already uses this email` | The email belongs to an EnerPlanET account not yet linked to RENvolveIT | After the user signs in to EnerPlanET once with RENvolveIT |
+| `403 The linked EnerPlanET account is disabled` | The account was disabled in EnerPlanET | No |
+| `403 Token does not permit this operation` | Not a `GET`, or the route is not open to toolbox tokens | No |
+| `503 Account lookup unavailable` | The account lookup failed | Yes |
 
-After Keycloak rotates its signing key, new tokens can fail with `401` for up
+**For operators:** the RENvolveIT access token lifespan must not exceed
+`KEYCLOAK_API_MAX_TOKEN_LIFETIME_SECONDS` (900 seconds). Longer tokens are
+rejected. A correctly signed token that fails a claim check is logged with its
+`azp`, `aud` and lifetime, never the token itself.
+
+| Variable | Value |
+| --- | --- |
+| `KEYCLOAK_API_ISSUER` | Issuer URL of the RENvolveIT realm |
+| `KEYCLOAK_API_AUDIENCE` | Optional. Required audience; empty skips the audience check |
+| `KEYCLOAK_API_CLIENT_ID` | RENvolveIT toolbox client id (the `azp` claim) |
+| `KEYCLOAK_API_IDP_ALIAS` | Alias of the RENvolveIT identity provider in the `spatialhub` realm |
+
+After RENvolveIT rotates its signing key, new tokens can fail with `401` for up
 to 30 seconds while the API waits to download the new key.
 
 ## Troubleshooting

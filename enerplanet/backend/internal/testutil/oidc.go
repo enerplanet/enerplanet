@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// OIDC test server.
+// OIDC test server standing in for the partner identity provider.
 type OIDCFixture struct {
 	Issuer      string
 	mu          sync.Mutex
@@ -36,7 +36,7 @@ func NewOIDCFixture(t *testing.T) *OIDCFixture {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
-		if r.URL.Path != "/realms/spatialhub/protocol/openid-connect/certs" {
+		if r.URL.Path != "/realms/partner/protocol/openid-connect/certs" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -44,7 +44,7 @@ func NewOIDCFixture(t *testing.T) *OIDCFixture {
 		_ = json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{f.key.Public()}})
 	}))
 	t.Cleanup(server.Close)
-	f.Issuer = server.URL + "/realms/spatialhub"
+	f.Issuer = server.URL + "/realms/partner"
 	return f
 }
 
@@ -57,13 +57,13 @@ func (f *OIDCFixture) Rotate(t *testing.T) {
 	f.key = jose.JSONWebKey{Key: key, KeyID: fmt.Sprintf("key-%s", key.N.String()[:12]), Algorithm: string(jose.RS256), Use: "sig"}
 }
 
+// Claims of a partner access token for subject, the user id at the partner.
 func (f *OIDCFixture) Claims(subject string) map[string]any {
 	return map[string]any{
-		"iss": f.Issuer, "aud": []string{"enerplanet-api"}, "sub": subject,
+		"iss": f.Issuer, "aud": []string{"enerplanet", "account"}, "sub": subject,
 		"exp": time.Now().Add(5 * time.Minute).Unix(), "iat": time.Now().Unix(),
-		"typ": "Bearer", "azp": "renvolveit-toolbox", "scope": "openid email enerplanet:read",
-		"email": subject + "@example.com", "email_verified": true, "name": "Test User",
-		"access_level": "intermediate",
+		"typ": "Bearer", "azp": "toolbox", "scope": "openid email profile",
+		"email": subject + "@example.com", "email_verified": true,
 	}
 }
 
