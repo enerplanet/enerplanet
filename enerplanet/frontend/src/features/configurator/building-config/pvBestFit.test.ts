@@ -36,6 +36,23 @@ describe('arrayWithLayout', () => {
     const array = { surface_id: 'elsewhere', tilt: 30, azimuth: 200, area: 40, usable_share: 0.8 };
     expect(arrayWithLayout(array, undefined, DEFAULT_PV_MODULE)).toBe(array);
   });
+
+  it("lays out a flat roof edited to a pitch flush at the edited angles, not racked", () => {
+    const array = { surface_id: 'big', tilt: 0, azimuth: 180, area: 60, usable_share: 0.8 };
+    const racked = arrayWithLayout(array, flat('big', 10, 6), DEFAULT_PV_MODULE);
+    const edited = arrayWithLayout(array, flat('big', 10, 6), DEFAULT_PV_MODULE, { tilt: 35, azimuth: 90 });
+    expect([racked.tilt, racked.azimuth]).toEqual([15, 180]);
+    expect([edited.tilt, edited.azimuth]).toEqual([35, 90]);
+    // Flush modules need no row spacing, so more fit.
+    expect(edited.modules).toBeGreaterThan(racked.modules!);
+  });
+});
+
+describe('bestFitArrays with edited angles', () => {
+  it('lays out each roof at its own edited angles', () => {
+    const [big] = bestFitArrays([row('big', true)], [flat('big', 10, 6)], 0.8, DEFAULT_PV_MODULE, { big: { tilt: 30, azimuth: 270 } });
+    expect([big.tilt, big.azimuth]).toEqual([30, 270]);
+  });
 });
 
 describe('fetchBestFitArrays', () => {
