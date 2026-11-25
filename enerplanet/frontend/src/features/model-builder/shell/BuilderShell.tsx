@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "@spatialhub/i18n";
 import type { ModelData } from "@model-builder/core";
-import { setGridEngine } from "../modules/grid-generation";
+import { setGridEngine, drawGrid } from "../modules/grid-generation";
 import { setWeatherSource } from "../modules/weather";
 import { setRegionSource } from "../modules/model-start";
 import { setDemandSource } from "../modules/building-demand";
@@ -28,6 +28,7 @@ import { installResultOverviewGateway } from "./resultOverviewGateway";
 import { installModelVariantGateway } from "./modelVariantGateway";
 import { installCompareVariantGateway } from "./compareVariantGateway";
 import { setCatalogueSource } from "../modules/technologies";
+import { areaGeometry } from "../modules/area-draw";
 import { pylovoGridEngine } from "./gridEngine";
 import { backendWeatherSource } from "./weatherSource";
 import { backendRegionSource } from "./regionSource";
@@ -187,6 +188,21 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
         });
         setViewed(undefined);
         setError(null);
+
+        // Opening a model draws the model itself, not only its camera. A saved session resumes at its
+        // frontier — past area-draw and grid-generation — so the modules that own those layers are not
+        // mounted and nothing would put them on the map. Both helpers are the owning modules' own, so
+        // the frame and the modules cannot drift.
+        const loaded = outcome.session.store.data;
+        drawGrid(map, {
+          buildings: loaded.buildings,
+          transformers: loaded.transformers,
+          lines: loaded.lines,
+          mvLines: loaded.mvLines,
+        });
+        const area = areaGeometry(loaded.coordinates);
+        if (area !== undefined) map.fitTo(area);
+
         if (outcome.session.divergence !== undefined) {
           setError(
             t(
@@ -206,7 +222,7 @@ const BuilderFrame: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     return () => {
       cancelled = true;
     };
-  }, [requestedModel, gateway, workflow, t]);
+  }, [requestedModel, gateway, workflow, map, t]);
 
   /** A dev aid, not a feature — the same kind the map host exposes (`__mbMap`). */
   useEffect(() => {
