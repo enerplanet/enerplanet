@@ -204,9 +204,10 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
     technologies?.onRemove('pv_supply');
     setPvRemoved(true);
   }, [technologies]);
+  const shownPv = pvRemoved ? null : pv;
   const pvCatalogue = usePvCatalogue();
   const pvMode = usePvMode(
-    osmId, country, pvRemoved ? null : pv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null,
+    osmId, country, shownPv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null,
     technologies ? removePv : undefined, pvCatalogue,
   );
 
@@ -233,7 +234,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   // A geometry failure is reported rather than passed on as null, which the
   // view reads as still loading and would leave spinning for good.
   if (geometryError) return <Notice onBack={onExit}>{geometryError}</Notice>;
-  const pvWait = pvNotice(pv !== null, forPv, pvMode);
+  // The loading notice swaps the view out, and the view mounts again on its first tab.
+  const pvWait = pvNotice(shownPv !== null, forPv, pvMode);
   if (pvWait) return <Notice onBack={onExit}>{t(pvWait)}</Notice>;
 
   const detached = edited && geometry !== null
