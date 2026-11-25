@@ -60,7 +60,7 @@ export const MapLibre3DControls: React.FC<MapLibre3DControlsProps> = ({ mapRef, 
 
       {footprintOnly > 0 && (
         <div
-          className="absolute z-[60] pointer-events-none rounded-full bg-black/60 px-2.5 py-1 text-[11px] text-white shadow-md backdrop-blur-sm"
+          className="absolute z-50 pointer-events-none rounded-full bg-black/60 px-2.5 py-1 text-[11px] text-white shadow-md backdrop-blur-sm"
           style={{ bottom: 72, right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
         >
           {t('map.footprintOnlyBuildings', { count: footprintOnly })}

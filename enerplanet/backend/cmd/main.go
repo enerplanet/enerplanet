@@ -1041,6 +1041,7 @@ func registerBuemRoutes(api *gin.RouterGroup, handler *buemhandler.Handler) {
 	api.POST("/v1/buem/building", handler.RunBuilding)
 	api.POST("/models/:id/buildings/:building_ref/buem", handler.RunModelBuilding)
 	api.POST("/drafts/:draft_id/buildings/:building_ref/buem", handler.RunDraftBuilding)
+	api.GET("/drafts/:draft_id/buildings/:building_ref/series.csv", handler.DraftBuildingSeriesCSV)
 }
 
 func registerPylovoRoutes(api *gin.RouterGroup, handler *pylovo.PylovoHandler) {

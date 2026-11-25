@@ -149,7 +149,8 @@ func (p NewProfile) validate() error {
 }
 
 // Link writes links for owner at revision, replacing any existing link for
-// the same building, part and series.
+// the same building, part and series. A building part's BuEM links the new
+// links leave out are removed (see dropMissingBuemSeries).
 func (s *Store) Link(owner Owner, revision string, links []Link) error {
 	if err := owner.validate(); err != nil {
 		return err
@@ -170,9 +171,9 @@ func (s *Store) Link(owner Owner, revision string, links []Link) error {
 			rows[i].DraftID = &owner.DraftID
 		}
 	}
-	ownerColumn := "draft_id"
+	ownerColumn, ownerValue := "draft_id", any(owner.DraftID)
 	if owner.ModelID != 0 {
-		ownerColumn = "model_id"
+		ownerColumn, ownerValue = "model_id", owner.ModelID
 	}
 	// The conflict target names the partial unique index for this owner kind.
 	upsert := clause.OnConflict{
@@ -182,8 +183,36 @@ func (s *Store) Link(owner Owner, revision string, links []Link) error {
 		TargetWhere: clause.Where{Exprs: []clause.Expression{clause.Expr{SQL: ownerColumn + " IS NOT NULL"}}},
 		DoUpdates:   clause.AssignmentColumns([]string{"profile_id", "source", "revision", "linked_at"}),
 	}
-	if err := s.db.Clauses(upsert).Create(&rows).Error; err != nil {
-		return fmt.Errorf("write %d series links for %+v: %w", len(rows), owner, err)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := dropMissingBuemSeries(tx, ownerColumn, ownerValue, links); err != nil {
+			return err
+		}
+		if err := tx.Clauses(upsert).Create(&rows).Error; err != nil {
+			return fmt.Errorf("write %d series links for %+v: %w", len(rows), owner, err)
+		}
+		return nil
+	})
+}
+
+// dropMissingBuemSeries removes the owner's BuEM links of each building part
+// in links whose series the new links leave out, such as cooling after the
+// building's cooling output was switched off. PV and uploaded links stay.
+func dropMissingBuemSeries(tx *gorm.DB, ownerColumn string, ownerValue any, links []Link) error {
+	type place struct{ building, part string }
+	kept := map[place][]string{}
+	for _, l := range links {
+		at := place{l.BuildingRef, l.Part}
+		kept[at] = append(kept[at], l.Series)
+	}
+	buemProfiles := tx.Model(&models.SeriesProfile{}).Select("id").Where("origin = ?", models.SeriesOriginBuem)
+	for at, names := range kept {
+		err := tx.Where(ownerColumn+" = ?", ownerValue).
+			Where("building_ref = ? AND part = ? AND series NOT IN ?", at.building, at.part, names).
+			Where("profile_id IN (?)", buemProfiles).
+			Delete(&models.SeriesLink{}).Error
+		if err != nil {
+			return fmt.Errorf("drop BuEM links of building %s part %q for %s %v: %w", at.building, at.part, ownerColumn, ownerValue, err)
+		}
 	}
 	return nil
 }
