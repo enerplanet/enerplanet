@@ -36,7 +36,7 @@ export const WeatherSettings: FC<WeatherSettingsProps> = ({ isExpert, onModeChan
   const scenario = isScenario(weather);
 
   return (
-    <div className="space-y-3 rounded-lg border border-border p-3" data-tour="weather">
+    <div className="space-y-3 rounded-lg border border-foreground/20 p-3" data-tour="weather">
       <p className="text-sm font-medium text-foreground">{t("simulation.weather.title")}</p>
 
       <ChoiceToggle
