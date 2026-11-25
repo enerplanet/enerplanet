@@ -7,7 +7,7 @@ import { AreaSelectTour } from "@/features/guided-tour/AreaSelectTour";
 import { MapContainer } from "@/components/shared/MapContainer";
 import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useAreaSelect";
 import { PolygonDrawer } from "@/features/polygon-drawer";
-import { drawPolygon, moveAreaCorner, type PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
+import { drawPolygon, setAreaRing, type PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -701,7 +701,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
                 visible={isMapLibre3D}
                 onAreaDrawn={activeMode === null ? (ring) => drawPolygon(map, ring) : undefined}
-                onAreaCornerMoved={(polygon, corner, to) => moveAreaCorner(map, polygon, corner, to)}
+                onAreaRingChanged={(polygon, ring) => setAreaRing(map, polygon, ring)}
                 onSketchOpenChange={actions.setIsDrawing}
                 cancelSketchTrigger={cancelSketch}
                 onBuildingClick={ml3d.handleMl3dBuildingClick}

@@ -157,10 +157,11 @@ export function useMapLibreInteractions(
         const pixel: [number, number] = [evt.pixel[0], evt.pixel[1]];
         const f = queryFeatures(pixel);
 
-        if (sketchRef?.current?.move(pixel, onModelFeature(f))) {
+        const sketchCursor = sketchRef?.current?.move(pixel, onModelFeature(f));
+        if (sketchCursor) {
           setConnectedBuildingsFilter(null);
           setHovered(null);
-          olMap.getTargetElement().style.cursor = 'crosshair';
+          olMap.getTargetElement().style.cursor = sketchCursor;
           pointing = true;
           cbRefs.current.onBuildingHover?.(null, pixel);
           cbRefs.current.onTransformerHover?.(null, pixel);

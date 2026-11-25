@@ -28,7 +28,7 @@ const CORNER_TOLERANCE_PX = 10;
 const MIN_POLYGON_AREA_M2 = 1;
 // Marks the drawer's Draw interaction, so drawPolygon finds it among the map's interactions.
 const AREA_DRAW = "areaDraw";
-// Holds the drawer's polygon source on its Modify interaction, so moveAreaCorner can edit it.
+// Holds the drawer's polygon source on its Modify interaction, so setAreaRing can edit it.
 const AREA_SOURCE = "areaSource";
 
 /**
@@ -48,22 +48,21 @@ export function drawPolygon(map: Map, ring: [number, number][]): void {
 }
 
 /**
- * Moves one corner (lon/lat) of the drawer's polygons, as a corner drag on the 2D map would, so the
- * change is checked and saved the same way. Indexes follow the polygons the drawer reports.
+ * Replaces the corners (lon/lat, first not repeated) of one of the drawer's polygons, as a corner drag,
+ * insertion or deletion on the 2D map would, so the change is checked and saved the same way. Indexes
+ * follow the polygons the drawer reports.
  */
-export function moveAreaCorner(map: Map, polygon: number, corner: number, to: [number, number]): void {
+export function setAreaRing(map: Map, polygon: number, ring: [number, number][]): void {
   const modify = map.getInteractions().getArray().find((i): i is Modify => i instanceof Modify && !!i.get(AREA_SOURCE));
   const feature = (modify?.get(AREA_SOURCE) as VectorSource | undefined)?.getFeatures()[polygon];
   const geometry = feature?.getGeometry() as Polygon | undefined;
-  if (!modify || !feature || !geometry) throw new Error(`No area polygon ${polygon} to move corner ${corner} of`);
+  if (!modify || !feature || !geometry) throw new Error(`No area polygon ${polygon} to set ${ring.length} corners on`);
   // The listeners read only the source, not the event's map event.
   const fire = (type: "modifystart" | "modifyend") =>
     modify.dispatchEvent(new ModifyEvent(type, new Collection([feature]), undefined as unknown as MapBrowserEvent));
   fire("modifystart");
-  const [ring, ...holes] = geometry.getCoordinates();
-  ring[corner] = fromLonLat(to);
-  if (corner === 0) ring[ring.length - 1] = ring[0];
-  geometry.setCoordinates([ring, ...holes]);
+  const corners = ring.map((c) => fromLonLat(c));
+  geometry.setCoordinates([[...corners, corners[0]], ...geometry.getCoordinates().slice(1)]);
   fire("modifyend");
 }
 

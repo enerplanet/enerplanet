@@ -15,8 +15,8 @@ interface MapLibre3DOverlayProps extends LayerData, InteractionCallbacks {
   visible: boolean;
   /** Draws areas on the ground when given, and gets each closed one as lon/lat corners. */
   onAreaDrawn?: (ring: [number, number][]) => void;
-  /** Takes a corner of polygonCoordinates dragged to a new lon/lat; corners stay fixed without it. */
-  onAreaCornerMoved?: (polygon: number, corner: number, to: [number, number]) => void;
+  /** Takes a polygon of polygonCoordinates with its corners moved, added or deleted (lon/lat, first not repeated); areas stay fixed without it. */
+  onAreaRingChanged?: (polygon: number, ring: [number, number][]) => void;
   /** Called when the first corner of an area is placed (true) and when the area closes or is abandoned. */
   onSketchOpenChange?: (open: boolean) => void;
   /** Abandons the area being drawn whenever it changes. */
@@ -33,7 +33,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   olMap,
   visible,
   onAreaDrawn,
-  onAreaCornerMoved,
+  onAreaRingChanged,
   onSketchOpenChange,
   cancelSketchTrigger = 0,
   controlsPlacement,
@@ -71,7 +71,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
 
   // 3. Click/hover interactions (forwarded from OL events to MapLibre queryRenderedFeatures)
   const sketchRef = useAreaSketch3D(
-    mapRef, mapReady, olMap, onAreaDrawn, onSketchOpenChange, cancelSketchTrigger, polygonCoordinates, onAreaCornerMoved,
+    mapRef, mapReady, olMap, onAreaDrawn, onSketchOpenChange, cancelSketchTrigger, polygonCoordinates, onAreaRingChanged,
   );
   useMapLibreInteractions(mapRef, lod2LayerRef, olMap, visible, {
     onBuildingClick, onTransformerClick, onBuildingHover,
@@ -104,3 +104,4 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
     </>
   );
 };
+
