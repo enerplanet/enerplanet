@@ -17,7 +17,7 @@ ALTER TABLE IF EXISTS model_sessions DROP COLUMN IF EXISTS cursor;
 ALTER TABLE IF EXISTS model_sessions DROP COLUMN IF EXISTS discarded;
 ALTER TABLE IF EXISTS model_sessions ADD COLUMN IF NOT EXISTS flow JSONB NOT NULL DEFAULT '[]'::jsonb;
 
-COMMENT ON TABLE model_sessions IS 'The Model Builder session for a model: the T18 artefact (the placed flow, projection, log)';
+COMMENT ON TABLE model_sessions IS 'The Model Builder session for a model, the placed flow, projection, log';
 COMMENT ON COLUMN model_sessions.initial IS 'The projection the session started from — the base replay needs';
 COMMENT ON COLUMN model_sessions.projection IS 'The replay state of the session, adopted on load without replay';
 COMMENT ON COLUMN model_sessions.log IS 'The applied prefix of transactions';
