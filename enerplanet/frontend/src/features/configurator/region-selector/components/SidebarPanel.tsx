@@ -110,9 +110,12 @@ const PanelSection: FC<{ title?: string; children: ReactNode }> = ({ title, chil
   </section>
 );
 
-/** A framed group of related settings; matches the box WeatherSettings draws for itself. */
+/**
+ * A framed group of related settings; matches the box WeatherSettings draws for itself. Its frame is darker than
+ * the input fields' border, so the groups read apart from the fields inside them.
+ */
 const SettingsBox: FC<{ children: ReactNode }> = ({ children }) => (
-  <div className="space-y-3 rounded-lg border border-border p-3">{children}</div>
+  <div className="space-y-3 rounded-lg border border-foreground/20 p-3">{children}</div>
 );
 
 /** One setting on a single line: its name with the hint behind an info icon, and its control. */

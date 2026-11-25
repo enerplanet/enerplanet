@@ -10,6 +10,17 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 // bundling moves; the worker file is self-contained, so its own URL works in dev and build.
 maplibregl.setWorkerUrl(workerUrl);
 
+// The open 3D map, for tools outside the 3D view that act where the pointer is.
+let openMap: maplibregl.Map | null = null;
+
+/** The lon/lat on the ground under a screen point of the open 3D view, or null while 3D is closed. */
+export function lonLatAt3D(clientX: number, clientY: number): [number, number] | null {
+  if (!openMap) return null;
+  const box = openMap.getContainer().getBoundingClientRect();
+  const at = openMap.unproject([clientX - box.left, clientY - box.top]);
+  return [at.lng, at.lat];
+}
+
 /**
  * Hook: Initialize and manage the MapLibre map instance.
  *
@@ -132,6 +143,7 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean) {
       ];
 
       mapRef.current = map;
+      openMap = map;
       setMapReady(true);
 
       const createdMap = map;
@@ -316,6 +328,7 @@ export function useMapLibreMap(olMap: OlMap, visible: boolean) {
       resizeTimeoutIds.forEach((id) => clearTimeout(id));
       cleanupFns.forEach(fn => fn());
       if (mapRef.current) {
+        if (openMap === mapRef.current) openMap = null;
         mapRef.current.remove();
         mapRef.current = null;
       }

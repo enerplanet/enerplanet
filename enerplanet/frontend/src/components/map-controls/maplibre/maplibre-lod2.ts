@@ -13,6 +13,10 @@ const ROOF_COLOR = 0xb4664a;
 const WALL_COLOR = 0xe6e0d6;
 const EDGE_COLOR = 0x4b4b4b;
 const HOVER_COLOR = 0x3b82f6;
+// The outline colour of selected footprints (buildings-3d-assign-selected-outline).
+const SELECTED_COLOR = 0x2563eb;
+// Darker than the 2D map's disabled grey: that grey is too close to the light walls. Matches buildings-3d-extrusion.
+const DISABLED_COLOR = 0x4b5563;
 export const PV_COLOR = 0x1f3a5f;
 /** Metres above a building's highest point where its badges sit. */
 const MARKER_LIFT = 1;
@@ -94,12 +98,14 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
   private readonly camera = new THREE.Camera();
   private readonly buildings = new THREE.Group();
   private origin: maplibregl.MercatorCoordinate | null = null;
-  /** Each building's triangle positions, for its hover highlight. */
+  /** Each building's triangle positions, for its hover, selection and disabled tints. */
   private readonly triangles = new Map<string, number[]>();
   private readonly meshes: THREE.Mesh[] = [];
   private readonly raycaster = new THREE.Raycaster();
-  private highlight: THREE.Mesh | null = null;
+  private tints: THREE.Mesh[] = [];
   private hovered: string | null = null;
+  private selected = new Set<string>();
+  private disabled = new Set<string>();
   private panels: THREE.Mesh | null = null;
   private readonly badges: Badge[] = [];
   private badgeLayer: HTMLDivElement | null = null;
@@ -248,24 +254,44 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
     this.map?.triggerRepaint();
   }
 
+  /** Tints the buildings with these osm_ids as selected, until the next call. */
+  setSelected(osmIds: string[]): void {
+    this.selected = new Set(osmIds);
+    this.showHighlight();
+    this.map?.triggerRepaint();
+  }
+
+  /** Greys out the buildings with these osm_ids, left out of the model, until the next call. */
+  setDisabled(osmIds: string[]): void {
+    this.disabled = new Set(osmIds);
+    this.showHighlight();
+    this.map?.triggerRepaint();
+  }
+
   private showHighlight(): void {
-    if (this.highlight) {
-      this.buildings.remove(this.highlight);
-      this.highlight.geometry.dispose();
-      (this.highlight.material as THREE.Material).dispose();
-      this.highlight = null;
+    for (const tint of this.tints) {
+      this.buildings.remove(tint);
+      tint.geometry.dispose();
+      (tint.material as THREE.Material).dispose();
     }
-    const positions = this.hovered ? this.triangles.get(this.hovered) : undefined;
-    if (!positions?.length) return;
+    this.tints = [];
+    this.addTint([...this.disabled].flatMap((id) => this.triangles.get(id) ?? []), DISABLED_COLOR, 0.9);
+    this.addTint([...this.selected].flatMap((id) => this.triangles.get(id) ?? []), SELECTED_COLOR, 0.55);
+    if (this.hovered) this.addTint(this.triangles.get(this.hovered) ?? [], HOVER_COLOR, 0.45);
+  }
+
+  private addTint(positions: number[], color: number, opacity: number): void {
+    if (positions.length === 0) return;
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     // The polygon offset draws the tint over the building's own faces instead of fighting them for depth.
     const material = new THREE.MeshBasicMaterial({
-      color: HOVER_COLOR, transparent: true, opacity: 0.45, side: THREE.DoubleSide,
+      color, transparent: true, opacity, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
     });
-    this.highlight = new THREE.Mesh(geometry, material);
-    this.buildings.add(this.highlight);
+    const tint = new THREE.Mesh(geometry, material);
+    this.tints.push(tint);
+    this.buildings.add(tint);
   }
 
   private addMesh(buffer: MeshBuffer, color: number): THREE.Mesh | null {
@@ -294,7 +320,7 @@ export class Lod2Layer implements maplibregl.CustomLayerInterface {
   private clear(): void {
     this.triangles.clear();
     this.meshes.length = 0;
-    this.highlight = null;
+    this.tints = [];
     this.panels = null;
     for (const { el } of this.badges) el.remove();
     this.badges.length = 0;

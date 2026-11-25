@@ -48,8 +48,8 @@ const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStree
 const baseLayers: BaseLayerInfo[] = [
 	{
 		id: "osm_standard",
-		name: "Map",
-		description: "Standard OpenStreetMap layer",
+		name: "2D",
+		description: "2D map",
 		source: new OSM({
 			attributions: [OSM_ATTR],
 		}),

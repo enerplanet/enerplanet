@@ -13,6 +13,8 @@ export interface InteractionCallbacks {
   onTransformerHover?: (properties: Record<string, any> | null, pixel: [number, number]) => void;
   onMvLineHover?: (properties: Record<string, any> | null, pixel: [number, number]) => void;
   onMapClick?: (lngLat: [number, number]) => void;
+  /** A Ctrl+click ("select") or Alt+click ("disable") on a building, by osm_id. */
+  onBuildingPick?: (osmId: string, action: 'select' | 'disable') => void;
 }
 
 /**
@@ -124,6 +126,16 @@ export function useMapLibreInteractions(
 
     const handleClick = (evt: any) => {
       const pixel: [number, number] = [evt.pixel[0], evt.pixel[1]];
+      // As in 2D, modified clicks select or disable a building, or delete in the area sketch: they open and draw nothing.
+      const e = evt.originalEvent;
+      if (e?.shiftKey || e?.altKey || e?.ctrlKey || e?.metaKey) {
+        const alt = e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey;
+        const select = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey;
+        const f = alt || select ? queryFeatures(pixel) : null;
+        const osmId = f?.layer.id.startsWith('buildings-3d') ? f.properties?.osm_id : null;
+        if (osmId != null) cbRefs.current.onBuildingPick?.(String(osmId), select ? 'select' : 'disable');
+        return;
+      }
       const f = queryFeatures(pixel);
       if (sketchRef?.current?.click(pixel, onModelFeature(f))) return;
       if (f) {
@@ -157,10 +169,11 @@ export function useMapLibreInteractions(
         const pixel: [number, number] = [evt.pixel[0], evt.pixel[1]];
         const f = queryFeatures(pixel);
 
-        if (sketchRef?.current?.move(pixel, onModelFeature(f))) {
+        const sketchCursor = sketchRef?.current?.move(pixel, onModelFeature(f));
+        if (sketchCursor) {
           setConnectedBuildingsFilter(null);
           setHovered(null);
-          olMap.getTargetElement().style.cursor = 'crosshair';
+          olMap.getTargetElement().style.cursor = sketchCursor;
           pointing = true;
           cbRefs.current.onBuildingHover?.(null, pixel);
           cbRefs.current.onTransformerHover?.(null, pixel);

@@ -17,9 +17,7 @@ import {
   isOverloaded,
 } from '@/features/simulation-charts/pypsa';
 import { useTranslation } from '@spatialhub/i18n';
-import { CLUSTER_COLORS } from '@/components/map-controls/maplibre/maplibre-styles';
 import { DARK_CLUSTER_COLORS } from '@/features/interactive-map/utils/mapStyleUtils';
-import { useMapStore } from '@/features/interactive-map/store/map-store';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { formatNumber } from '@/utils/formatNumber';
 
@@ -218,8 +216,6 @@ const computeLoss = (p0Kw: number, p1Kw?: number): number => {
 
 const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selectedVoltage, selectedPower, onTransformerHover, lineConnections = [], highlightedBuildings }: GridPanelProps) => {
   const { t } = useTranslation();
-  const isMapLibre3D = useMapStore(s => s.selectedBaseLayerId === 'maplibre_3d');
-  const activeClusterPalette = isMapLibre3D ? CLUSTER_COLORS : DARK_CLUSTER_COLORS;
   const voltageArr = pypsaData?.voltage || pypsaData?.buses_t_v_mag_pu || [];
   const powerArr = pypsaData?.power || pypsaData?.buses_t_p || [];
   const lineLoadingArr = pypsaData?.line_loading || [];
@@ -279,9 +275,9 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
 
     const transformerLocs = pypsaData.locations.filter(isTrafo);
 
-    // Assign cluster colors to transformers by index (palette matches active map layer)
+    // Assign cluster colors to transformers by index, in the maps' palette
     transformerLocs.forEach((trafo, idx) => {
-      colors[trafo] = activeClusterPalette[idx % activeClusterPalette.length];
+      colors[trafo] = DARK_CLUSTER_COLORS[idx % DARK_CLUSTER_COLORS.length];
     });
 
     // Map buildings to their transformer's cluster color
@@ -297,7 +293,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
     });
 
     return colors;
-  }, [pypsaData?.locations, lineConnections, activeClusterPalette]);
+  }, [pypsaData?.locations, lineConnections]);
 
   const voltageViolationItems = useMemo(() => {
     const byLocation = new Map<string, { hoursOutside: number; maxDeviationPu: number }>();

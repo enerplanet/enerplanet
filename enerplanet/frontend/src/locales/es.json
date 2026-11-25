@@ -151,7 +151,9 @@
     "cancel": "Cancelar el dibujo",
     "legendPv": "FV",
     "legendStorage": "Almacenamiento",
-    "legendHeat": "Suministro de calor"
+    "legendHeat": "Suministro de calor",
+    "legendMvLine": "Línea de media tensión",
+    "legendLvLine": "Línea de baja tensión, color por transformador"
   },
   "gridNotifications": {
     "gridGenerated": "Red generada: {{count}} edificios encontrados",
@@ -1571,6 +1573,7 @@
     },
     "mapHeader": {
       "disableSelected": "Desactivar los edificios seleccionados",
+      "enableSelected": "Activar los edificios seleccionados",
       "importArea": "Importar área",
       "exportArea": "Exportar zona",
       "regenerateGrid": "Regenerar la red",

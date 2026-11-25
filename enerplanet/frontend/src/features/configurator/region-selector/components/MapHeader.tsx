@@ -47,7 +47,10 @@ interface MapHeaderProps {
   onRegenerateGrid?: () => void;
   isGeneratingGrid?: boolean;
   selectedBuildingCount?: number;
+  /** How many of the selected buildings are disabled already. */
+  selectedDisabledCount?: number;
   onDisableSelectedBuildings?: () => void;
+  onEnableSelectedBuildings?: () => void;
   isLoadingPreference: boolean;
   wsReloadKey?: number;
   currentWorkspace: Workspace | null;
@@ -73,7 +76,9 @@ export const MapHeader: FC<MapHeaderProps> = ({
   onRegenerateGrid,
   isGeneratingGrid = false,
   selectedBuildingCount = 0,
+  selectedDisabledCount = 0,
   onDisableSelectedBuildings,
+  onEnableSelectedBuildings,
   isLoadingPreference,
   wsReloadKey,
   currentWorkspace,
@@ -134,12 +139,22 @@ export const MapHeader: FC<MapHeaderProps> = ({
       <div className="flex flex-wrap items-center justify-end gap-2">
         {selectedBuildingCount > 0 && onDisableSelectedBuildings && (
           <div className="md-fade-in bg-muted border border-border rounded px-2 py-1 flex items-center gap-2">
-            <button
-              onClick={onDisableSelectedBuildings}
-              className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors"
-            >
-              {t("simulation.mapHeader.disableSelected")} ({selectedBuildingCount})
-            </button>
+            {selectedBuildingCount > selectedDisabledCount && (
+              <button
+                onClick={onDisableSelectedBuildings}
+                className="text-xs font-medium text-foreground hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              >
+                {t("simulation.mapHeader.disableSelected")} ({selectedBuildingCount - selectedDisabledCount})
+              </button>
+            )}
+            {selectedDisabledCount > 0 && onEnableSelectedBuildings && (
+              <button
+                onClick={onEnableSelectedBuildings}
+                className="text-xs font-medium text-foreground hover:text-green-600 dark:hover:text-green-400 transition-colors"
+              >
+                {t("simulation.mapHeader.enableSelected")} ({selectedDisabledCount})
+              </button>
+            )}
           </div>
         )}
         {onImportArea && (

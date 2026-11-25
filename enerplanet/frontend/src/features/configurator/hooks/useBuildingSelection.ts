@@ -6,6 +6,7 @@ import type VectorLayer from "ol/layer/Vector";
 import type VectorSource from "ol/source/Vector";
 
 import { useModelStore } from "@/features/configurator/store/modelStore";
+import { useMapStore } from "@/features/interactive-map/store/map-store";
 import { findBuildingLayer } from "@/features/configurator/hooks/useAreaSelect/helpers/layerConnections";
 import { createBuildingHighlightStyleFunction, createBuildingStyleFunction } from "@/features/interactive-map/utils/mapStyleUtils";
 
@@ -68,38 +69,49 @@ export const useBuildingSelection = ({ map, pylovoLayersRef, isDrawing, cornerUn
     highlighted.current = new Set(selected);
   }, [selected, pylovoLayersRef]);
 
-  const disableSelected = useCallback(() => {
+  const setSelectedDisabled = useCallback((disabled: boolean) => {
     const ids = useModelStore.getState().selectedBuildingIds;
     const features = buildingFeatures(pylovoLayersRef.current).filter((f) => ids.has(String(f.get("osm_id"))));
     if (features.length === 0) return;
-    features.forEach((f) => setDisabled(f, true));
+    features.forEach((f) => setDisabled(f, disabled));
     clearSelection();
     onBuildingsChanged();
   }, [pylovoLayersRef, clearSelection, onBuildingsChanged]);
+  const disableSelected = useCallback(() => setSelectedDisabled(true), [setSelectedDisabled]);
+  const enableSelected = useCallback(() => setSelectedDisabled(false), [setSelectedDisabled]);
+
+  /** A Ctrl+click ("select") or Alt+click ("disable") on the building with this osm_id. */
+  const pick = useCallback((osmId: string, action: "select" | "disable") => {
+    if (!enabled) return;
+    if (action === "select") {
+      toggleSelection(osmId);
+      return;
+    }
+    const building = buildingFeatures(pylovoLayersRef.current).find((f) => String(f.get("osm_id")) === osmId);
+    if (!building) return;
+    const disabled = !isBuildingDisabled(building);
+    setDisabled(building, disabled);
+    const { buildingTooltip, setBuildingTooltip } = useModelStore.getState();
+    if (buildingTooltip) setBuildingTooltip({ ...buildingTooltip, disabled });
+    onBuildingsChanged();
+  }, [enabled, toggleSelection, pylovoLayersRef, onBuildingsChanged]);
 
   useEffect(() => {
     if (!map || !enabled) return;
     const onClick = (evt: MapBrowserEvent) => {
+      // The flat 2D map does not line up with a tilted 3D view, so the 3D view finds the building and calls pick.
+      if (useMapStore.getState().selectedBaseLayerId === "maplibre_3d") return;
       const e = evt.originalEvent as MouseEvent;
       const alt = e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey;
-      const pick = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey;
-      if (!alt && !pick) return;
+      const select = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey;
+      if (!alt && !select) return;
       if (alt && cornerUnderPointerRef.current) return;
       const building = buildingAt(map, evt.pixel);
-      if (!building) return;
-      if (pick) {
-        toggleSelection(String(building.get("osm_id")));
-        return;
-      }
-      const disabled = !isBuildingDisabled(building);
-      setDisabled(building, disabled);
-      const { buildingTooltip, setBuildingTooltip } = useModelStore.getState();
-      if (buildingTooltip) setBuildingTooltip({ ...buildingTooltip, disabled });
-      onBuildingsChanged();
+      if (building) pick(String(building.get("osm_id")), select ? "select" : "disable");
     };
     map.on("singleclick", onClick);
     return () => map.un("singleclick", onClick);
-  }, [map, enabled, cornerUnderPointerRef, toggleSelection, onBuildingsChanged]);
+  }, [map, enabled, cornerUnderPointerRef, pick]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -116,5 +128,5 @@ export const useBuildingSelection = ({ map, pylovoLayersRef, isDrawing, cornerUn
     return () => document.removeEventListener("keydown", onKey);
   }, [enabled, disableSelected, clearSelection]);
 
-  return { selectedCount: selected.size, disableSelected, clearSelection };
+  return { selectedCount: selected.size, disableSelected, enableSelected, clearSelection, pick };
 };
