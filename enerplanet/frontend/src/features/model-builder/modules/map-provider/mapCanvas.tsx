@@ -57,6 +57,13 @@ const styleIdsOf = (id: string): readonly [string, string, string, string] => [
 const CAPTURE_SOURCE = "mb-capture-source";
 const CAPTURE_LAYER = "mb-capture-line";
 
+/**
+ * The closest a fit may come. A model area is a few hundred metres across, so fitting its bounds exactly
+ * lands around z19 and leaves no neighbourhood visible. This caps it; the area then fills part of the
+ * view rather than all of it. Raise it to zoom in more, lower it for more context.
+ */
+const MAX_FIT_ZOOM = 18;
+
 /** Where the start marker sits while capturing, in canvas pixels, and whether a click there would close. */
 interface StartMarker {
   x: number;
@@ -417,7 +424,10 @@ export const MapCanvas: React.FC<{ runtime: HostRuntime }> = ({ runtime }) => {
           [west, south],
           [east, north],
         ],
-        { padding: 40, duration: hasFitOnce ? 600 : 0 },
+        // `maxZoom` is the lever, not the padding: a model area is a few hundred metres across, so a bare
+        // fit lands around z19 and fills the screen with it. Capping the zoom keeps the surrounding
+        // neighbourhood in view. Padding is a margin only — at this scale it moves the zoom by ~0.1.
+        { padding: 40, maxZoom: MAX_FIT_ZOOM, duration: hasFitOnce ? 600 : 0 },
       );
       hasFitOnce = true;
     };
