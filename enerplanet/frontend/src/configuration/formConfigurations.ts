@@ -20,7 +20,7 @@ import { isValidEmail } from "@/utils/email-validation";
 
 type TranslateFunction = (key: string) => string;
 
-export const getUserFormSections = (isEdit: boolean = false, t?: TranslateFunction, currentUserAccessLevel?: string): FormSection[] => [
+export const getUserFormSections = (isEdit: boolean = false, t?: TranslateFunction, currentUserAccessLevel?: string, sendInvite: boolean = true): FormSection[] => [
 	{
 		title: t?.("forms.user.personalInfo.title") ?? "Personal Information",
 		description: t?.("forms.user.personalInfo.description") ?? "Basic user details and contact information",
@@ -93,6 +93,22 @@ export const getUserFormSections = (isEdit: boolean = false, t?: TranslateFuncti
 					: ([
 				{
 					title: t?.("forms.user.security.title") ?? "Security",
+					description: t?.("forms.user.security.inviteDescription") ?? "How the user gets their password",
+					columns: 1,
+					fields: [
+						{
+							key: "send_invite",
+							label: t?.("forms.user.fields.sendInvite") ?? "E-mail the user a link to set their password",
+							type: "checkbox",
+							value: true,
+							icon: Mail as any,
+							description: t?.("forms.user.descriptions.sendInvite") ?? "Recommended. The link works for 72 hours and opens the app afterwards.",
+						},
+					],
+				},
+				// typed password option
+				...(sendInvite ? [] : [{
+					title: t?.("forms.user.security.passwordTitle") ?? "Set a password now",
 					description: t?.("forms.user.security.description") ?? "Account security credentials",
 					columns: 2,
 					fields: [
@@ -124,7 +140,7 @@ export const getUserFormSections = (isEdit: boolean = false, t?: TranslateFuncti
 							showPasswordToggle: true,
 						},
 											] as FormSection["fields"],
-				},
+				}]),
 			] as FormSection[])),
 ];
 
@@ -263,7 +279,8 @@ export const validateUserForm = (values: Record<string, unknown>, isEdit: boolea
 
 	validateUserBasicFields(errors, values, t);
 	
-	if (!isEdit) {
+	// invite sets password
+	if (!isEdit && values.send_invite === false) {
 		validateUserPasswords(errors, values, t);
 	}
 

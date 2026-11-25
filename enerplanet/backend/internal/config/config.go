@@ -21,6 +21,7 @@ const (
 type Config struct {
 	Auth                 auth.Config
 	BearerAuth           bearerauth.Options
+	ToolboxOrigins       []string
 	RedisConfig          goredis.Options
 	AppPort              string
 	AppHost              string
@@ -94,6 +95,10 @@ func LoadFromEnv() (*Config, error) {
 		CallbackSecret:       os.Getenv("CALLBACK_SECRET"),
 	}
 	cfg.BearerAuth, err = loadBearerAuth(cfg.AppEnv)
+	if err != nil {
+		return nil, err
+	}
+	cfg.ToolboxOrigins, err = loadToolboxOrigins(cfg.AppEnv)
 	if err != nil {
 		return nil, err
 	}

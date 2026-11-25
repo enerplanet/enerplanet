@@ -227,6 +227,14 @@ func (s *Store) GetResultSource(modelID uint) (string, error) {
 	return source.String, nil
 }
 
+// GetUnmetDemandTotal sums unmet demand over all carriers, locations and steps.
+func (s *Store) GetUnmetDemandTotal(modelID uint) (float64, error) {
+	var total float64
+	err := s.db.Model(&backendModels.ResultsUnmetDemand{}).Where("model_id = ?", modelID).
+		Select("COALESCE(SUM(ABS(value)), 0)").Scan(&total).Error
+	return total, err
+}
+
 func (s *Store) GetResultsPyPSASettings(modelID uint) (*backendModels.ResultsPyPSASettings, error) {
 	var item backendModels.ResultsPyPSASettings
 	if err := s.db.Where("model_id = ?", modelID).First(&item).Error; err != nil {

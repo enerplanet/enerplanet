@@ -271,7 +271,9 @@
       },
       "security": {
         "title": "Security",
-        "description": "Account security credentials"
+        "description": "Account security credentials",
+        "inviteDescription": "How the user gets their password",
+        "passwordTitle": "Set a password now"
       },
       "fields": {
         "fullName": "Full Name",
@@ -280,7 +282,8 @@
         "emailVerified": "Email Verified",
         "password": "Password",
         "confirmPassword": "Confirm Password",
-        "modelLimit": "Model Limit"
+        "modelLimit": "Model Limit",
+        "sendInvite": "E-mail the user a link to set their password"
       },
       "placeholders": {
         "fullName": "Enter full name",
@@ -291,7 +294,8 @@
       },
       "descriptions": {
         "emailVerified": "Mark email as verified",
-        "modelLimit": "Custom model creation limit (0 = unlimited, empty = use default)"
+        "modelLimit": "Custom model creation limit (0 = unlimited, empty = use default)",
+        "sendInvite": "Recommended. The link works for 72 hours and opens the app afterwards."
       },
       "accessLevels": {
         "veryLow": "Very Low Access",
@@ -1235,7 +1239,8 @@
       "deselectAll": "Deselect all",
       "selected": "{{count}} selected",
       "bulkMoveToGroup": "Move to group",
-      "bulkDelete": "Delete selected"
+      "bulkDelete": "Delete selected",
+      "sendPasswordEmail": "E-mail a link to set a new password"
     },
     "groups": {
       "selectOrCreate": "Select or create a group",
@@ -1295,7 +1300,9 @@
       "bulkGroupChangeFailed": "Failed to move users to group",
       "bulkDeleted": "{{count}} users deleted successfully",
       "bulkDeletePartial": "{{succeeded}} of {{total}} users deleted. {{failed}} failed.",
-      "passwordMismatch": "Password and confirmation must match"
+      "passwordMismatch": "Password and confirmation must match",
+      "inviteSent": "User created. An e-mail to set the password was sent to {{email}}.",
+      "inviteFailed": "User created, but the invite e-mail could not be sent. Send it again from the user menu."
     },
     "confirmations": {
       "disableUserDescription": "This will prevent the user from logging in.",
@@ -1304,6 +1311,13 @@
       "enableGroupDescription": "Enabling a group will enable all its users.",
       "deleteGroupDescription": "This will delete the group and all its users. This action cannot be undone.",
       "bulkDeleteDescription": "This will permanently delete {{count}} selected users. This action cannot be undone."
+    },
+    "passwordEmail": {
+      "title": "Send password e-mail?",
+      "description": "{{email}} will get a link to set a new password. The link works for 72 hours.",
+      "confirm": "Send e-mail",
+      "sent": "Password e-mail sent to {{email}}.",
+      "failed": "The e-mail could not be sent. Check the mail settings and try again."
     }
   },
   "modelsManagement": {

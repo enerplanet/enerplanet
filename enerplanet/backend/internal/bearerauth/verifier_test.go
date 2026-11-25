@@ -13,64 +13,74 @@ import (
 )
 
 func testOptions(f *testutil.OIDCFixture) Options {
-	return Options{Issuer: f.Issuer, Audience: "enerplanet-api", ClientID: "renvolveit-toolbox", CacheTTL: time.Minute, AllowHTTP: true}
+	return Options{Issuer: f.Issuer, Audience: "enerplanet", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, AllowHTTP: true}
 }
 
 func TestVerifyAccessToken(t *testing.T) {
 	f := testutil.NewOIDCFixture(t)
 	v, err := New(testOptions(f))
 	require.NoError(t, err)
-	for _, level := range []string{"very_low", "intermediate", "expert", "manager"} {
-		t.Run(level, func(t *testing.T) {
-			claims := f.Claims("local-user")
-			claims["access_level"] = level
-			identity, err := v.Verify(context.Background(), f.Sign(t, claims))
-			require.NoError(t, err)
-			require.Equal(t, "local-user", identity.Subject)
-			require.Equal(t, f.Issuer, identity.Issuer)
-			if level == "expert" || level == "manager" {
-				level = "intermediate"
-			}
-			require.Equal(t, level, identity.AccessLevel)
-		})
+	for range 2 {
+		identity, err := v.Verify(context.Background(), f.Sign(t, f.Claims("partner-user")))
+		require.NoError(t, err)
+		require.Equal(t, "partner-user", identity.Subject)
+		require.Equal(t, f.Issuer, identity.Issuer)
+		require.Equal(t, "partner-user@example.com", identity.Email)
+		require.True(t, identity.EmailVerified)
 	}
 	require.Equal(t, 1, f.Requests(), "signing keys should be reused")
 }
 
-func TestMissingAccessLevelDefaultsToVeryLow(t *testing.T) {
+func TestProfileClaimsNotRequired(t *testing.T) {
 	f := testutil.NewOIDCFixture(t)
 	v, err := New(testOptions(f))
 	require.NoError(t, err)
-	claims := f.Claims("brokered-user")
-	delete(claims, "access_level")
-	identity, err := v.Verify(context.Background(), f.Sign(t, claims))
-	require.NoError(t, err)
-	require.Equal(t, "very_low", identity.AccessLevel)
+	claims := f.Claims("partner-user")
+	for _, claim := range []string{"email", "email_verified", "scope"} {
+		delete(claims, claim)
+	}
+	_, err = v.Verify(context.Background(), f.Sign(t, claims))
+	require.NoError(t, err, "the account comes from the identity provider link, not from token claims")
 }
 
-func TestNonStringClaimShapes(t *testing.T) {
+func TestAudienceOptional(t *testing.T) {
+	f := testutil.NewOIDCFixture(t)
+	opts := testOptions(f)
+	opts.Audience = ""
+	v, err := New(opts)
+	require.NoError(t, err)
+	for name, aud := range map[string]any{"other audience": []string{"account"}, "no audience": nil} {
+		t.Run(name, func(t *testing.T) {
+			claims := f.Claims("partner-user")
+			if aud == nil {
+				delete(claims, "aud")
+			} else {
+				claims["aud"] = aud
+			}
+			_, err := v.Verify(context.Background(), f.Sign(t, claims))
+			require.NoError(t, err)
+		})
+	}
+	claims := f.Claims("partner-user")
+	claims["azp"] = "other-client"
+	_, err = v.Verify(context.Background(), f.Sign(t, claims))
+	require.ErrorIs(t, err, ErrClaims, "the client check stays without an audience")
+}
+
+func TestRejectedClaimsReportClientAndLifetime(t *testing.T) {
 	f := testutil.NewOIDCFixture(t)
 	v, err := New(testOptions(f))
 	require.NoError(t, err)
-	for name, tc := range map[string]struct {
-		claim string
-		value any
-		level string
-	}{
-		"multivalued access level":   {"access_level", []string{"expert"}, "intermediate"},
-		"empty access level array":   {"access_level", []string{}, "very_low"},
-		"null access level":          {"access_level", nil, "very_low"},
-		"string email verified":      {"email_verified", "true", "intermediate"},
-		"multivalued email verified": {"email_verified", []string{"true"}, "intermediate"},
-	} {
-		t.Run(name, func(t *testing.T) {
-			claims := f.Claims("local-user")
-			claims[tc.claim] = tc.value
-			identity, err := v.Verify(context.Background(), f.Sign(t, claims))
-			require.NoError(t, err)
-			require.Equal(t, tc.level, identity.AccessLevel)
-		})
-	}
+	claims := f.Claims("partner-user")
+	claims["azp"] = "real-toolbox"
+	claims["exp"] = time.Now().Add(30 * time.Minute).Unix()
+	_, err = v.Verify(context.Background(), f.Sign(t, claims))
+	var rejected *RejectedClaims
+	require.ErrorAs(t, err, &rejected)
+	require.ErrorIs(t, err, ErrClaims)
+	require.Equal(t, "real-toolbox", rejected.ClientID)
+	require.Equal(t, []string{"enerplanet", "account"}, rejected.Audience)
+	require.InDelta(t, (30 * time.Minute).Seconds(), rejected.Lifetime.Seconds(), 2)
 }
 
 func TestRejectionCategories(t *testing.T) {
@@ -102,6 +112,7 @@ func TestRejectInvalidClaims(t *testing.T) {
 	}{
 		{"foreign issuer", "iss", "https://login.staging.renvolve.it/realms/RENvolveIT"},
 		{"wrong audience", "aud", []string{"account"}},
+		{"EnerPlanET realm token", "iss", "https://enerplanet.example/keycloak/realms/spatialhub"},
 		{"expired", "exp", time.Now().Add(-time.Minute).Unix()},
 		{"missing expiry", "exp", nil},
 		{"empty subject", "sub", ""},
@@ -109,16 +120,9 @@ func TestRejectInvalidClaims(t *testing.T) {
 		{"refresh token", "typ", "Refresh"},
 		{"wrong client", "azp", "other-client"},
 		{"missing client", "azp", nil},
-		{"unverified email", "email_verified", false},
-		{"missing email", "email", nil},
-		{"invalid access level", "access_level", "admin"},
 		{"not yet valid", "nbf", time.Now().Add(time.Minute).Unix()},
 		{"lifetime above ceiling", "exp", time.Now().Add(16 * time.Minute).Unix()},
 		{"missing issued at", "iat", nil},
-		{"access level array of two", "access_level", []string{"intermediate", "expert"}},
-		{"access level number", "access_level", 3},
-		{"email verified text", "email_verified", "yes"},
-		{"email verified false text", "email_verified", "false"},
 		{"future issued", "iat", time.Now().Add(time.Minute).Unix()},
 	}
 	for _, tt := range tests {
@@ -209,7 +213,7 @@ func TestJWKSCacheExpiryRemovesOldKeys(t *testing.T) {
 	noCooldown(t)
 	f := testutil.NewOIDCFixture(t)
 	keys := &expiringKeySet{url: f.Issuer + "/protocol/openid-connect/certs", ttl: time.Minute}
-	v := oidc.NewVerifier(f.Issuer, keys, &oidc.Config{ClientID: "enerplanet-api"})
+	v := oidc.NewVerifier(f.Issuer, keys, &oidc.Config{ClientID: "enerplanet"})
 	raw := f.Sign(t, f.Claims("user-a"))
 	_, err := v.Verify(context.Background(), raw)
 	require.NoError(t, err)
@@ -231,12 +235,14 @@ func TestOptionsFailClosed(t *testing.T) {
 	require.Error(t, err)
 	for _, opts := range []Options{
 		{Audience: "api"},
-		{Issuer: "http://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute},
-		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox"},
-		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute, JWKSURL: "http://keys/certs"},
-		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute, JWKSURL: "https://attacker.example/certs"},
-		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute, JWKSURL: "https://issuer:8443/certs"},
-		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute, MaxTokenLifetime: -time.Second},
+		{Issuer: "http://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute},
+		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit"},
+		{Issuer: "https://issuer/realms/partner", Audience: "api", ClientID: "toolbox", CacheTTL: time.Minute},
+		{Issuer: "https://issuer/realms/partner", IdentityProvider: "renvolveit", CacheTTL: time.Minute},
+		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, JWKSURL: "http://keys/certs"},
+		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, JWKSURL: "https://attacker.example/certs"},
+		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, JWKSURL: "https://issuer:8443/certs"},
+		{Issuer: "https://issuer/realms/spatialhub", Audience: "api", ClientID: "toolbox", IdentityProvider: "renvolveit", CacheTTL: time.Minute, MaxTokenLifetime: -time.Second},
 	} {
 		_, err := New(opts)
 		require.Error(t, err)

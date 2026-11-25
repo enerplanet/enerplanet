@@ -408,6 +408,7 @@ type createUserRequest struct {
 	Password     string `json:"password"`
 	AccessLevel  string `json:"access_level"`
 	GroupID      string `json:"group_id"`
+	SendInvite   bool   `json:"send_invite"`
 }
 
 // getManagerInfo extracts manager info from session data
@@ -503,6 +504,10 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	if req.AccessLevel == "" {
 		req.AccessLevel = "very_low"
 	}
+	if !req.SendInvite && req.Password == "" {
+		httputil.BadRequest(c, "password required unless an invite email is sent")
+		return
+	}
 
 	authToken := h.getAuthToken(sessionData)
 
@@ -529,7 +534,35 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	h.setUserPasswordIfProvided(authToken, userID, req.Email, req.Password)
 	h.assignUserToGroup(c.Request.Context(), userID, req.GroupID, sessionData)
 
-	httputil.Created(c, gin.H{"message": "user created"})
+	inviteSent := false
+	if req.SendInvite {
+		if err := h.userStore.SendSetPasswordEmail(authToken, userID); err != nil {
+			// user exists, resend later
+			applogger.ForComponent("users").Errorf("invite email failed user_id=%s err=%v", userID, err)
+		} else {
+			inviteSent = true
+		}
+	}
+	httputil.Created(c, gin.H{"message": "user created", "invite_sent": inviteSent})
+}
+
+// SendPasswordEmail emails the user a Keycloak link to set a new password.
+func (h *Handler) SendPasswordEmail(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		httputil.BadRequest(c, errIDRequired)
+		return
+	}
+	authToken, ok := h.validateManagerUserAccess(c, id, "send password email")
+	if !ok {
+		return
+	}
+	if err := h.userStore.SendSetPasswordEmail(authToken, id); err != nil {
+		applogger.ForComponent("users").Errorf("password email failed user_id=%s err=%v", id, err)
+		httputil.BadGateway(c, "failed to send password email")
+		return
+	}
+	httputil.SuccessResponse(c, gin.H{"message": "password email sent"})
 }
 
 type updateUserRequest struct {

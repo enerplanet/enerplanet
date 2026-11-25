@@ -327,12 +327,14 @@ jobs:
           set_env "$ENV_PROD" COOKIE_DOMAIN "${COOKIE_DOMAIN_PROD}"
           set_env "$ENV_PROD" KEYCLOAK_REALM "${KEYCLOAK_REALM}"
           set_env "$ENV_PROD" KEYCLOAK_CLIENT_ID "${KEYCLOAK_CLIENT_ID}"
-          # RENvolveIT toolbox bearer tokens; all three or none.
-          set_env "$ENV_PROD" KEYCLOAK_API_ISSUER "${SERVER_URL_PROD}/keycloak/realms/${KEYCLOAK_REALM}"
-          set_env "$ENV_PROD" KEYCLOAK_API_AUDIENCE enerplanet-api
-          set_env "$ENV_PROD" KEYCLOAK_API_CLIENT_ID renvolveit-toolbox
-          # Keep >= realm lifespan.
+          # RENvolveIT toolbox tokens: issuer, client id and alias, or none; audience optional.
+          set_env "$ENV_PROD" KEYCLOAK_API_ISSUER "${{ vars.RENVOLVEIT_ISSUER }}"
+          set_env "$ENV_PROD" KEYCLOAK_API_AUDIENCE "${{ vars.RENVOLVEIT_AUDIENCE }}"
+          set_env "$ENV_PROD" KEYCLOAK_API_CLIENT_ID "${{ vars.RENVOLVEIT_TOOLBOX_CLIENT_ID }}"
+          set_env "$ENV_PROD" KEYCLOAK_API_IDP_ALIAS "${{ vars.RENVOLVEIT_IDP_ALIAS }}"
+          # Keep >= RENvolveIT access token lifespan.
           set_env "$ENV_PROD" KEYCLOAK_API_MAX_TOKEN_LIFETIME_SECONDS 900
+          set_env "$ENV_PROD" TOOLBOX_CORS_ORIGINS "${{ vars.TOOLBOX_CORS_ORIGINS }}"
           # keycloak-init wrote the generated client secret into backend/.env.
           if grep -q '^KEYCLOAK_CLIENT_SECRET=' "$DEPLOY/enerplanet/backend/.env" 2>/dev/null; then
             KC_SECRET=$(grep '^KEYCLOAK_CLIENT_SECRET=' "$DEPLOY/enerplanet/backend/.env" | head -1)

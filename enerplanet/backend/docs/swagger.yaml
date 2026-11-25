@@ -25,9 +25,100 @@ definitions:
       email:
         type: string
       issuer:
+        description: partner tokens only
         type: string
       subject:
         type: string
+    type: object
+  internal_result_handler.categoryPercent:
+    properties:
+      category:
+        type: string
+      percent:
+        description: Output over installed capacity times hours, percent.
+        type: number
+    type: object
+  internal_result_handler.energyKPIs:
+    properties:
+      consumption:
+        type: number
+      grid_import:
+        type: number
+      production:
+        type: number
+      renewable_production:
+        type: number
+    type: object
+  internal_result_handler.gridCheck:
+    properties:
+      available:
+        type: boolean
+      converged:
+        type: boolean
+      converged_steps:
+        type: integer
+      total_steps:
+        type: integer
+    type: object
+  internal_result_handler.installedTech:
+    properties:
+      buildings:
+        type: integer
+      kw:
+        description: Power, kW (kWp for PV).
+        type: number
+      kwh:
+        description: Battery storage, kWh; 0 for other technologies.
+        type: number
+      technology:
+        type: string
+    type: object
+  internal_result_handler.modelKPIResponse:
+    properties:
+      from_date:
+        type: string
+      kpis:
+        $ref: '#/definitions/internal_result_handler.modelKPIs'
+      model_id:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+      to_date:
+        type: string
+    type: object
+  internal_result_handler.modelKPIs:
+    properties:
+      capacity_factor:
+        items:
+          $ref: '#/definitions/internal_result_handler.categoryPercent'
+        type: array
+      energy_kwh:
+        allOf:
+        - $ref: '#/definitions/internal_result_handler.energyKPIs'
+        description: Electricity over the modelled period, kWh.
+      grid_check:
+        $ref: '#/definitions/internal_result_handler.gridCheck'
+      installed_capacity:
+        items:
+          $ref: '#/definitions/internal_result_handler.installedTech'
+        type: array
+      investment_cost_eur:
+        description: Annualised investment scaled to the modelled period, EUR; 0 when
+          capacities were fixed.
+        type: number
+      lcoe_eur_per_kwh:
+        description: Levelised cost of electricity, EUR/kWh; null when the run stores
+          no single value.
+        type: number
+      total_cost_eur:
+        description: Signed sum of monetary costs over the modelled period, EUR; feed-in
+          income lowers it.
+        type: number
+      unmet_demand_kwh:
+        description: Demand not served, kWh, all carriers.
+        type: number
     type: object
   spatialhub_backend_internal_api_contracts.AreaBuilding:
     properties:
@@ -1038,7 +1129,7 @@ info:
 paths:
   /auth/whoami:
     get:
-      description: SpatialHub subject and effective API permissions; never returns
+      description: EnerPlanET user id and effective API permissions; never returns
         credentials.
       produces:
       - application/json
@@ -1442,6 +1533,41 @@ paths:
       summary: Get a model's per-building BuEM energy profiles
       tags:
       - EnerPlanET
+  /models/{id}/kpis:
+    get:
+      description: Title, status, modelled period and headline results. kpis is null
+        until the model has completed. Costs are in EUR for the modelled period; energy
+        in kWh on the electricity carrier.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_result_handler.modelKPIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - SpatialHubBearer: []
+      summary: Key results of a model
+      tags:
+      - results
   /models/{id}/results:
     get:
       parameters:
@@ -2266,9 +2392,8 @@ securityDefinitions:
     name: session_id
     type: apiKey
   SpatialHubBearer:
-    description: Bearer <SpatialHub access token>, obtained by the toolbox backend
-      through JWT Authorization Grant. Requires configured integration and enerplanet:read
-      scope. Direct RENvolveIT tokens are not accepted.
+    description: Bearer <RENvolveIT access token> issued to the toolbox client. Read-only;
+      acts as the EnerPlanET account linked to the RENvolveIT user.
     in: header
     name: Authorization
     type: apiKey
