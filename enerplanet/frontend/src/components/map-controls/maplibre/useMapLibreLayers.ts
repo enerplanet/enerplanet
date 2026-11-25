@@ -20,6 +20,9 @@ import { usePvSurfaceIds, type TechsFor } from './usePvSurfaceIds';
 import { techMarkersOf, type TechMarker } from './techMarkers';
 import { useTechMarksStore } from './techMarksStore';
 
+
+// A stable default, so the layers are not rebuilt on every render of a caller without a selection.
+const NO_IDS: string[] = [];
 export interface LayerData {
   buildingsGeoJSON?: any;
   linesGeoJSON?: any;
@@ -30,6 +33,8 @@ export interface LayerData {
   showBoundary?: boolean;
   polygonCoordinates?: [number, number][][];
   selectedBuildingOsmIds?: string[];
+  /** Buildings left out of the model, drawn grey. */
+  disabledBuildingOsmIds?: string[];
   isBuildingAssignMode?: boolean;
   onBoundaryRegionClick?: (regionName: string) => void;
   userModelGeoJSON?: any;
@@ -56,7 +61,8 @@ export function useMapLibreLayers(
     availableBoundaryGeoJSON,
     showBoundary = true,
     polygonCoordinates,
-    selectedBuildingOsmIds = [],
+    selectedBuildingOsmIds = NO_IDS,
+    disabledBuildingOsmIds = NO_IDS,
     isBuildingAssignMode = false,
     onBoundaryRegionClick,
     userModelGeoJSON,
@@ -86,6 +92,8 @@ export function useMapLibreLayers(
   const markerKey = JSON.stringify([...techMarkersOf(buildings, techsFor)]);
   const techMarkers = useMemo(() => new Map<string, TechMarker[]>(JSON.parse(markerKey)), [markerKey]);
   const lod2LayerRef = useRef<Lod2Layer | null>(null);
+  const marksRef = useRef({ selected: selectedBuildingOsmIds, disabled: disabledBuildingOsmIds });
+  marksRef.current = { selected: selectedBuildingOsmIds, disabled: disabledBuildingOsmIds };
 
   const loadAll = useCallback((map: maplibregl.Map) => {
     if (!map.isStyleLoaded()) return;
@@ -93,7 +101,7 @@ export function useMapLibreLayers(
     // Use pre-reprojected data
     const colorMap = buildClusterColorMap(buildings, lines);
 
-    addOrUpdateBuildings(map, buildings, colorMap, selectedBuildingOsmIds);
+    addOrUpdateBuildings(map, buildings, colorMap, selectedBuildingOsmIds, disabledBuildingOsmIds);
     addOrUpdateLvLines(map, lines, colorMap);
     addOrUpdateMvLines(map, mvLines);
     addOrUpdateTransformers(map, transformers, colorMap);
@@ -116,6 +124,7 @@ export function useMapLibreLayers(
     showBoundary,
     polygonCoordinates,
     selectedBuildingOsmIds,
+    disabledBuildingOsmIds,
   ]);
 
   // Combined effect for initial load and data updates
@@ -147,6 +156,8 @@ export function useMapLibreLayers(
         map.addLayer(lod2LayerRef.current, map.getLayer('user-polygon-corner') ? 'user-polygon-corner' : undefined);
       }
       lod2LayerRef.current.setShown(useTechMarksStore.getState().shown);
+      lod2LayerRef.current.setSelected(marksRef.current.selected);
+      lod2LayerRef.current.setDisabled(marksRef.current.disabled);
       lod2LayerRef.current.setBuildings(lod2, pvSurfaceIds, techMarkers);
     };
     if (map.isStyleLoaded()) apply();
@@ -155,6 +166,8 @@ export function useMapLibreLayers(
 
   const shownMarks = useTechMarksStore((s) => s.shown);
   useEffect(() => { lod2LayerRef.current?.setShown(shownMarks); }, [shownMarks]);
+  useEffect(() => { lod2LayerRef.current?.setSelected(selectedBuildingOsmIds); }, [selectedBuildingOsmIds]);
+  useEffect(() => { lod2LayerRef.current?.setDisabled(disabledBuildingOsmIds); }, [disabledBuildingOsmIds]);
 
   // Interactions setup
   useEffect(() => {

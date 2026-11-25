@@ -377,7 +377,16 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     setExclusionsChanged(changes.length > 0);
   }, [pylovoLayers.pylovoGridData, pylovoLayers.pylovoLayersRef, setExclusionsChanged]);
   useEffect(checkExclusions, [checkExclusions]);
-  const onBuildingsChanged = useCallback(() => { setIsModified(true); checkExclusions(); }, [setIsModified, checkExclusions]);
+  // The 2D map keeps the disabled flag on its building features; the 3D view gets their ids.
+  const [disabledOsmIds, setDisabledOsmIds] = useState<string[]>([]);
+  const readDisabled = useCallback(() => {
+    const ids = collectBuildingsFromLayers(pylovoLayers.pylovoLayersRef.current)
+      .filter((f) => f.get("activated") === false)
+      .map((f) => String(f.get("osm_id")));
+    setDisabledOsmIds((prev) => (prev.join() === ids.join() ? prev : ids));
+  }, [pylovoLayers.pylovoLayersRef]);
+  useEffect(readDisabled, [readDisabled, pylovoLayers.pylovoGridData]);
+  const onBuildingsChanged = useCallback(() => { setIsModified(true); checkExclusions(); readDisabled(); }, [setIsModified, checkExclusions, readDisabled]);
   const buildingSelection = useBuildingSelection({
     map,
     pylovoLayersRef: pylovoLayers.pylovoLayersRef,
@@ -386,6 +395,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     onBuildingsChanged,
   });
   const selectedBuildingIds = useModelStore((s) => s.selectedBuildingIds);
+  // The 3D view marks the buildings picked for assignment, or else the Ctrl+click selection.
+  const selectedOsmIds3D = useMemo(
+    () => (buildingAssign.isBuildingAssignMode ? buildingAssign.selectedBuildingsForAssign : [...selectedBuildingIds]),
+    [buildingAssign.isBuildingAssignMode, buildingAssign.selectedBuildingsForAssign, selectedBuildingIds],
+  );
 
   // ── Heat-add bootstrap (one-time "auto-assign vs manual" prompt) ──
   const heatBootstrapOpen = useModelStore((s) => s.heatBootstrapOpen);
@@ -696,7 +710,8 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 availableBoundaryGeoJSON={pylovoLayers.availableBoundaryGeoJSON}
                 showBoundary={pylovoLayers.showBoundary}
                 polygonCoordinates={state.allPolygons}
-                selectedBuildingOsmIds={buildingAssign.selectedBuildingsForAssign}
+                selectedBuildingOsmIds={selectedOsmIds3D}
+                disabledBuildingOsmIds={disabledOsmIds}
                 isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
                 visible={isMapLibre3D}
                 areaSketch={{
@@ -709,6 +724,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 }}
                 cancelSketchTrigger={cancelSketch}
                 onBuildingClick={ml3d.handleMl3dBuildingClick}
+                onBuildingPick={buildingSelection.pick}
                 onTransformerClick={ml3d.handleMl3dTransformerClick}
                 onBuildingHover={ml3d.handleMl3dBuildingHover}
                 onTransformerHover={ml3d.handleMl3dTransformerHover}
@@ -770,7 +786,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onRegenerateGrid={gridStale ? actions.handleRegenerateGrid : undefined}
             isGeneratingGrid={state.isGeneratingGrid}
             selectedBuildingCount={buildingSelection.selectedCount}
+            selectedDisabledCount={disabledOsmIds.filter((id) => selectedBuildingIds.has(id)).length}
             onDisableSelectedBuildings={buildingSelection.disableSelected}
+            onEnableSelectedBuildings={buildingSelection.enableSelected}
             isLoadingPreference={isLoadingPreference}
             currentWorkspace={currentWorkspace}
             preferredWorkspaceId={preferredWorkspaceId ?? undefined}

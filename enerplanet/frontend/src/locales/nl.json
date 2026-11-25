@@ -1307,6 +1307,7 @@
     },
     "mapHeader": {
       "disableSelected": "Geselecteerde gebouwen uitschakelen",
+      "enableSelected": "Geselecteerde gebouwen inschakelen",
       "importArea": "Gebied importeren",
       "exportArea": "Gebied exporteren",
       "regenerateGrid": "Net opnieuw genereren",

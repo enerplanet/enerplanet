@@ -40,6 +40,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   showBoundary,
   polygonCoordinates,
   selectedBuildingOsmIds,
+  disabledBuildingOsmIds,
   isBuildingAssignMode,
   onBoundaryRegionClick,
   userModelGeoJSON,
@@ -52,6 +53,7 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   onTransformerHover,
   onMvLineHover,
   onMapClick,
+  onBuildingPick,
 }) => {
   // 1. Map lifecycle & OL sync
   const { containerRef, mapRef, mapReady } = useMapLibreMap(olMap, visible);
@@ -60,14 +62,14 @@ export const MapLibre3DOverlay: React.FC<MapLibre3DOverlayProps> = ({
   const { footprintOnly, lod2LayerRef, credits } = useMapLibreLayers(mapRef, {
     buildingsGeoJSON, linesGeoJSON, mvLinesGeoJSON,
     transformersGeoJSON, availableBoundaryGeoJSON, showBoundary, polygonCoordinates,
-    selectedBuildingOsmIds, isBuildingAssignMode, onBoundaryRegionClick, userModelGeoJSON, onUserModelClick, techsFor,
+    selectedBuildingOsmIds, disabledBuildingOsmIds, isBuildingAssignMode, onBoundaryRegionClick, userModelGeoJSON, onUserModelClick, techsFor,
   }, mapReady);
 
   // 3. Click/hover interactions (forwarded from OL events to MapLibre queryRenderedFeatures)
   const sketchRef = useAreaSketch3D(mapRef, mapReady, olMap, cancelSketchTrigger, polygonCoordinates, areaSketch);
   useMapLibreInteractions(mapRef, lod2LayerRef, olMap, visible, {
     onBuildingClick, onTransformerClick, onBuildingHover,
-    onTransformerHover, onMvLineHover, onMapClick,
+    onTransformerHover, onMvLineHover, onMapClick, onBuildingPick,
   }, sketchRef);
 
   // 4. OL layer hiding & z-index management

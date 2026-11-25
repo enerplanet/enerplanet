@@ -1616,6 +1616,7 @@
       "resetAreaConfirmTitle": "Bereich zurücksetzen?",
       "resetAreaConfirmDescription": "Entfernt alle gezeichneten Polygone, gesetzte Transformatoren und Gebäudezuordnungen.",
       "disableSelected": "Ausgewählte Gebäude deaktivieren",
+      "enableSelected": "Ausgewählte Gebäude aktivieren",
       "importArea": "Gebiet importieren",
       "exportArea": "Gebiet exportieren",
       "regenerateGrid": "Netz neu erzeugen",

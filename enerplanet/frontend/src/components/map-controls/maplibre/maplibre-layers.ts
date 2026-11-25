@@ -102,6 +102,7 @@ export function addOrUpdateBuildings(
   geojson: any,
   colorMap: Map<string, string>,
   selectedBuildingOsmIds: string[] = [],
+  disabledBuildingOsmIds: string[] = [],
 ): void {
   if (!geojson?.features?.length) {
     clearSource(map, 'buildings-3d');
@@ -109,6 +110,7 @@ export function addOrUpdateBuildings(
   }
 
   const selectedSet = new Set(selectedBuildingOsmIds.map(id => String(id).trim()));
+  const disabledSet = new Set(disabledBuildingOsmIds);
 
   // Process features in a single pass
   const polygons = [];
@@ -123,6 +125,7 @@ export function addOrUpdateBuildings(
       const rawOsmId = f.properties.osm_id;
       const osmId = rawOsmId === undefined || rawOsmId === null ? '' : String(rawOsmId).trim();
       f.properties._assign_selected = selectedSet.has(osmId);
+      f.properties._disabled = disabledSet.has(osmId);
 
       polygons.push(f);
     }
@@ -163,7 +166,8 @@ export function addOrUpdateBuildings(
       type: 'fill-extrusion',
       source: 'buildings-3d',
       paint: {
-        'fill-extrusion-color': ['get', '_cluster_color'],
+        // A disabled building is grey, the colour of disabled LoD2 models (maplibre-lod2 DISABLED_COLOR).
+        'fill-extrusion-color': ['case', ['get', '_disabled'], '#4b5563', ['get', '_cluster_color']],
         'fill-extrusion-height': 0,
         'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 0.92,

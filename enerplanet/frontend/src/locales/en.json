@@ -1616,6 +1616,7 @@
       "resetAreaConfirmTitle": "Reset the area?",
       "resetAreaConfirmDescription": "This removes all drawn polygons, placed transformers and building assignments.",
       "disableSelected": "Disable selected buildings",
+      "enableSelected": "Enable selected buildings",
       "importArea": "Import area",
       "exportArea": "Export area",
       "regenerateGrid": "Regenerate grid",

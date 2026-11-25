@@ -1573,6 +1573,7 @@
     },
     "mapHeader": {
       "disableSelected": "Desactivar los edificios seleccionados",
+      "enableSelected": "Activar los edificios seleccionados",
       "importArea": "Importar área",
       "exportArea": "Exportar zona",
       "regenerateGrid": "Regenerar la red",
