@@ -175,6 +175,22 @@ func TestApplyCoverage_CutsBoundaryToThe3DFootprint(t *testing.T) {
 	assert.InDelta(t, 1.0, got[1].Area, 1e-9)
 }
 
+// PyLovo names Czechia "Czech Republic"; City2TABULA keys its footprints "czechia".
+func TestApplyCoverage_MatchesCountriesNamedDifferently(t *testing.T) {
+	db := scratchDB(t)
+	s := NewStore(db)
+	require.NoError(t, s.UpsertRegionsFromAPI(answer(t, [2]string{"CZ", "jihomoravsky"})))
+	square := `{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[0,0],[2,0],[2,2],[0,2],[0,0]]]}}`
+	require.NoError(t, db.Exec("UPDATE cached_regions SET boundary = ?::jsonb, country = 'Czech Republic'", square).Error)
+
+	footprint := json.RawMessage(`{"type":"Polygon","coordinates":[[[1,1],[3,1],[3,3],[1,3],[1,1]]]}`)
+	require.NoError(t, s.ApplyCoverage(map[string][]json.RawMessage{"czechia": {footprint}}))
+
+	var has3D bool
+	require.NoError(t, db.Raw("SELECT has3_d FROM cached_regions WHERE state_code = 'jihomoravsky'").Scan(&has3D).Error)
+	assert.True(t, has3D)
+}
+
 // A refresh whose 3D coverage cannot be applied leaves the cache as it was:
 // storing the regions alone would clear every 3D mark.
 func TestRefreshRegions_KeepsTheCacheWhenCoverageFails(t *testing.T) {
