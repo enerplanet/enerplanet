@@ -1,11 +1,4 @@
-/**
- * `model-variant`'s view — rendered to a string, because the app has no DOM test environment.
- *
- * The point is the two states the sidebar owes the user: the form before a variant exists (its forward action),
- * and what the switch did afterwards — this page is now on the copy (its title and id), and the root id the
- * comparison reads as its baseline. There is no link: the page is not left. The status strip is pinned for the
- * same two states. `t` echoes its key, so no i18n or DOM is involved.
- */
+/** `model-variant`'s view: the sidebar form and the state after the switch, rendered to a string. */
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ModelData } from "@model-builder/core";

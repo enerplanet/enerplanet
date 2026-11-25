@@ -1,25 +1,9 @@
 /**
  * `grid-generation` — the synthetic grid, from the drawn area.
  *
- * Requires the area (`area-draw`) and the region (`model-start`); produces the **whole** grid: buildings,
- * transformers, low-voltage cables, medium-voltage cables and the grid ids. Like `area-draw` it is a step with
- * a provider behind it: `engine.ts` declares the slot, `shell/gridEngine.ts` is the pylovo implementation the
- * frame installs, and this file never learns which one it has.
- *
- * Two things about it are worth reading before copying it:
- *
- * **Five ports, one transaction.** `seal` stays at its `at-completion` default, so the grid arrives whole or
- * not at all — nothing can observe buildings whose cables were never written. A module whose ports are
- * independent should say `per-commit` instead (see `modules/examples/interactive/index.tsx`).
- *
- * **The engine is injected, not imported.** A module may only depend on `@model-builder/core`, and the app's
- * CSRF-aware axios instance is the app's — so the frame hands the engine in at startup (`setGridEngine`). That
- * is also what makes this module testable without a backend: a test supplies its own engine.
- *
- * The regions are `map` (the grid on the map), `sidebar` (generate, and the data-loss warning it needs) and
- * `bottom` (the counts). The map work is guarded to the `map` region for the reason `modules/README.md` calls
- * *a module renders once per region* — the module renders once per declared region, and two instances writing
- * one layer would take turns clearing each other's work.
+ * Requires the area (`area-draw`) and the region (`model-start`); produces buildings, transformers, lines,
+ * mvLines and grids. The engine is injected at startup (`setGridEngine`), never imported. Regions: `map`,
+ * `sidebar`, `bottom`.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -43,12 +27,7 @@ export type { GridEngine, GridRequest, GridResult } from "./engine";
 const PRODUCED = ["buildings", "transformers", "lines", "mvLines", "grids"] as const;
 type ProducedPort = (typeof PRODUCED)[number];
 
-/** The layers the grid goes on. **Each is named after the port it holds** — the shared convention a module
- *  relies on when it needs a layer it does not own (the building configurator subscribes to clicks on
- *  `buildings`). The grid ids are a list, not geometry, so they have no layer at all.
- *
- *  Ordered **bottom to top as written** (`setLayerOrder` below uses this order): buildings, then the cables,
- *  then the transformers last so they read on top of the network they serve. */
+/** The layers the grid goes on, each named after the port it holds; ordered bottom to top as written. `grids` is a list, not geometry. */
 const LAYERS: Readonly<Record<ProducedPort, string | null>> = {
   buildings: "buildings",
   lines: "lines",
@@ -57,22 +36,10 @@ const LAYERS: Readonly<Record<ProducedPort, string | null>> = {
   grids: null,
 };
 
-/**
- * The buildings are the ones in hand: they are inside the drawn area, and the rest of the city is not. So they
- * stand up in the highlight blue while the basemap's own buildings stay a ghost beneath them.
- *
- * Every one gets the same height. The building levels come from a separate backend call and are not on these
- * features, and for saying "these are the buildings in play" a uniform volume does the job.
- */
+/** The buildings in play stand up in the highlight blue, all at a uniform height. */
 const BUILDINGS_EXTRUSION: LayerExtrusion = { fallback: 8, color: "#3b82f6" };
 
-/**
- * The engine the frame installs.
- *
- * Module-level rather than per-render, for the same reason `hold()` is: it belongs to the module, not to one
- * region's render. Until a host sets it, a run fails loudly rather than reaching for a backend on its own —
- * which is what lets this module be tested, and reused, without EnerPlanET's HTTP stack behind it.
- */
+/** The engine the frame installs. Module-level so a host sets it once; a run without one fails loudly. */
 let engine: GridEngine | null = null;
 
 /** Install the grid engine. The frame calls this once, at startup (`shell/gridEngine.ts`). */
@@ -91,12 +58,7 @@ function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
     issues.push({ port: "region", message: "Choose the region the model sits in." });
   }
 
-  // The result, not only the inputs — this is the half of the completeness rule the module owns. An
-  // area can legitimately yield no buildings, and an empty FeatureCollection is a fact the store is allowed
-  // to hold; what this module may not do is call that a *finished* grid, because everything downstream
-  // builds on buildings that are not there. Reported rather than thrown on purpose: the empty grid stays
-  // visible on the map, the reason is on screen, and the node never reads as done — so the flow rests here
-  // instead of walking on to demand and technologies.
+  // The result, not only the inputs: an empty grid is a fact the store may hold, but not a finished one.
   if (projection.buildings !== undefined && projection.buildings.features.length === 0) {
     issues.push({ port: "buildings", message: "The area yielded no buildings — nothing to model." });
   }
@@ -104,13 +66,7 @@ function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   return issues;
 }
 
-/**
- * Would generating throw away work?
- *
- * Two losses, and the second is the one a user cannot see from the button: replacing the grid itself, and
- * invalidating everything built on it — the demand parameters and technology assignments downstream. The
- * cascade is exactly this, so the warning names it.
- */
+/** Whether generating would throw away work: replacing the grid, and the demand/technology work built on it. */
 export function needsConfirmation(data: Readonly<ModelData>): boolean {
   const hasGrid = PRODUCED.some((port) => data[port] !== undefined);
   const hasDerivedWork = data.technologies !== undefined || data.buildingParams !== undefined;
@@ -118,14 +74,7 @@ export function needsConfirmation(data: Readonly<ModelData>): boolean {
   return hasGrid || hasDerivedWork;
 }
 
-/**
- * H — the whole layer order, with ours on top.
- *
- * Another module's layer can be on the map at the same time (area-draw's is, until it unmounts), and
- * `setLayerOrder` requires every layer named exactly once — so a list of *only* our own throws while any
- * other module is mounted and the draw never lands. Keeping what is already there is what the contract means
- * by handing back `getLayerOrder`, reordered.
- */
+/** The whole layer order with ours on top — a list of only our layers throws while another module's is mounted. */
 export function layerOrderFor(current: readonly string[]): string[] {
   const mine = Object.values(LAYERS).filter((layer): layer is string => layer !== null);
   return [...current.filter((layer) => !mine.includes(layer)), ...mine];
@@ -135,8 +84,7 @@ const module = defineModule({
   id: "grid-generation",
   name: "Grid generation",
 
-  // Exactly what `run()` writes, plus the two things it needs. Nothing declared "just in case": an undeclared
-  // write is rejected, and `required` is what the flow gate reasons about before the node may run at all.
+  // Exactly what `run()` writes, plus the two things it needs; `required` gates the node before it may run.
   params: [
     { port: "coordinates", required: true },
     { port: "region", required: true },
@@ -147,9 +95,7 @@ const module = defineModule({
     { port: "grids" },
   ],
 
-  // The broad invalidation, declared honestly: redrawing the area or moving the model to another region
-  // means the *entire* grid is gone, not part of it. A narrower claim here would let stale demand survive a
-  // redraw — and the influence prober (`core/influence.ts`) would fail this module for understating it anyway.
+  // The broad invalidation, declared honestly: redrawing the area or moving region loses the whole grid.
   affect: {
     coordinates: [...PRODUCED],
     region: [...PRODUCED],
@@ -176,9 +122,7 @@ const module = defineModule({
 
     const grid = await engine.generate({ coordinates, region });
 
-    // Read before write — the anti-clobber rule — so regenerating a grid the store already holds is a licence
-    // this module earns by looking, not a blind overwrite. The engine either returns a whole grid or throws, so
-    // there is no partial result to represent here.
+    // Read before write (anti-clobber); the engine returns a whole grid or throws, so there is no partial result.
     for (const port of PRODUCED) ctx.read(port);
 
     ctx.commit({
@@ -201,10 +145,7 @@ function featureCount(collection: GeoJSON.FeatureCollection | undefined): number
 /** The map control as a module sees it. */
 type MapControl = NonNullable<ModuleViewProps["map"]>;
 
-/**
- * The slice of the map the draw actually uses. Narrow on purpose: a `MapStack` satisfies it, so the draw can be
- * run against the real layer bookkeeping in a test instead of a mock of it.
- */
+/** The slice of the map the draw uses — narrow, so the draw can run against a real `MapStack` in a test. */
 type GridMap = Pick<
   MapControl,
   "createLayer" | "clearLayer" | "addFeatures" | "getLayerOrder" | "setLayerOrder"
@@ -213,20 +154,11 @@ type GridMap = Pick<
 /** The four collections that reach the map, gathered in one object so the draw names what it draws. */
 type Collections = Partial<Record<ProducedPort, GeoJSON.FeatureCollection | undefined>>;
 
-/**
- * Put the four collections on the map.
- *
- * Its own function, and taking the map control rather than reaching for one, so the draw can be run against a
- * real `MapStack` in a test — the map control is a pure interface, and this was otherwise the one piece of this
- * module that nothing could check. It is also what keeps the effect's dependencies honest: it names exactly what
- * it draws.
- */
+/** Put the four collections on the map. Its own function taking the map control, so a test can run it. */
 export function drawGrid(map: GridMap, collections: Collections): void {
   const mine = Object.values(LAYERS).filter((layer): layer is string => layer !== null);
 
-  // Every layer first, then the features. Creating one and filling it before the next exists leaves the map
-  // mid-draw: each `createLayer` and `addFeatures` redraws, and a redraw taken while the grid is only half
-  // declared draws the part of it that exists — which is why the buildings appeared and the cables did not.
+  // Every layer first, then the features: a redraw mid-draw would paint only the part of the grid declared so far.
   for (const layer of mine) {
     map.createLayer(layer, layer === LAYERS.buildings ? { extrusion: BUILDINGS_EXTRUSION } : undefined);
     map.clearLayer(layer);
@@ -240,8 +172,7 @@ export function drawGrid(map: GridMap, collections: Collections): void {
     }
   }
 
-  // Bottom-to-top: buildings under cables under transformers, so the network reads correctly. Ours go last,
-  // and whatever else is on the map keeps its place beneath them.
+  // Bottom-to-top: buildings under cables under transformers; ours go last, other layers keep their place beneath.
   map.setLayerOrder(layerOrderFor(map.getLayerOrder()));
 }
 
@@ -255,10 +186,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
   const missing = issuesFor(data);
   const hasGrid = PRODUCED.some((port) => data[port] !== undefined);
 
-  /**
-   * The four collections that actually get drawn, gathered here so the layer effect depends on *what it draws*
-   * rather than on the whole projection. `grids` is a list, not geometry, so it is not among them.
-   */
+  /** The four collections that actually get drawn, so the layer effect depends on what it draws. `grids` is not geometry. */
   const collections = useMemo(
     () =>
       ({
@@ -270,25 +198,15 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     [data.buildings, data.transformers, data.lines, data.mvLines],
   );
 
-  // A node change means whatever this module was about to say no longer applies here — including a warning
-  // the user has not answered yet.
+  // A node change means whatever this module was about to say no longer applies here.
   useEffect(() => {
     setConfirming(false);
     setError(null);
   }, [nodeId]);
 
   /**
-   * The grid on the map. **Only the `map` region does this**: the module renders once per declared region, and
-   * two instances writing one layer would take turns clearing each other's work.
-   *
-   * Nothing takes these layers off again. This module used to remove them on unmount, which erased the grid the
-   * moment the session left the node — and the session leaves the instant a run lands, because the position is
-   * the first node that is not done. The only way to see a freshly generated grid was to come back to an
-   * already-done node, where nothing advances and nothing unmounts; that confirm-then-replace worked while
-   * Generate alone did not was the tell, since it re-runs a node that is already done.
-   *
-   * The stack is the host's, and a module draws what it owns onto it. Leaving it standing is also what lets the
-   * nodes after this one — the building configurator's clicks especially — see the grid they are about.
+   * The grid on the map. Only the `map` region does this (the module renders once per declared region).
+   * Nothing removes these layers: the stack is the host's, and the nodes after this one need to see the grid.
    */
   useEffect(() => {
     if (region !== "map" || map === undefined) return;
@@ -297,8 +215,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
 
   const generate = (): void => {
     if (missing.length > 0 || generating) return;
-    // The data-loss step: a store that would lose work needs the question asked first, and the button says
-    // what it will do rather than repeating itself.
+    // The data-loss step: ask first, and the button says what it will do rather than repeating itself.
     if (needsConfirmation(data) && !confirming) {
       setConfirming(true);
       return;
@@ -345,8 +262,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     );
   }
 
-  // ── map: a legend, over the grid it describes. The map work is the effect above; this is the only thing the
-  //    region has to *render*, and it opts back into pointer events so the legend stays readable.
+  // ── map: a legend over the grid; the map work is the effect above, and the legend opts back into pointer events.
   if (region === "map") {
     return (
       <div className="pointer-events-auto flex max-h-full max-w-xs flex-col gap-2 overflow-auto rounded-lg border border-border bg-card/95 p-4 shadow-sm">
@@ -378,8 +294,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
     );
   }
 
-  // ── sidebar: generate, and the data-loss warning. The area must already exist — this module has nothing to
-  //    offer without it, so it says so instead of offering a button that cannot work.
+  // ── sidebar: generate, and the data-loss warning. The area must already exist.
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto">
       <div className="shrink-0">
@@ -435,8 +350,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map }
 const builderModule: BuilderModule = {
   module,
   Component,
-  // What the module needs to do its work in isolation — the seed of a host's scratch store. Both are required
-  // ports, so the contract check insists on them being here.
+  // What the module needs in isolation — the seed of a host's scratch store; both are required ports.
   mock: {
     region: { country: "DE", state: "BW" } satisfies RegionRef,
     coordinates: [

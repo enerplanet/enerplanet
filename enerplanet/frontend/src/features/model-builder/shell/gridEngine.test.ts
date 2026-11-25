@@ -1,11 +1,5 @@
 /**
  * The grid engine's one piece of real judgement: pylovo answers in two different projections.
- *
- * Written failing first.
- *
- * The legacy sniffs the same tell — a coordinate too large to be a longitude means Web Mercator — and converts
- * before drawing. Getting this wrong does not look like an error: the grid keeps its shape and lands on the
- * wrong ground, which is a bug that reads as "pylovo generated nonsense" rather than "we drew it wrong".
  */
 
 import { describe, expect, it } from "vitest";
@@ -28,8 +22,7 @@ describe("toLonLat", () => {
   it("converts a Web Mercator collection to lon/lat", () => {
     const [lon, lat] = pointOf(toLonLat(at(MERCATOR)));
 
-    // Ranges, not a hand-written pair: the assertion is that these are degrees near the drawn area, which is
-    // what Web Mercator's numbers can never be. 960000 easting really is ~8.62°.
+    // Ranges, not a hand-written pair: the assertion is that these are degrees near the drawn area.
     expect(lon).toBeGreaterThan(8);
     expect(lon).toBeLessThan(9);
     expect(lat).toBeGreaterThan(46);

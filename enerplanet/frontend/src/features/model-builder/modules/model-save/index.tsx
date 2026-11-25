@@ -1,27 +1,10 @@
 /**
- * The `model-save` module — the terminal node, and the only module with a UI that earns its keep by
- * *reporting* rather than by collecting.
+ * The `model-save` module — the terminal node, the only one that earns its keep by reporting rather than
+ * collecting.
  *
- * **What it shows** (and deliberately nothing more): whether the model is ready to save, the exact
- * `model.json` the store would produce, and the button that saves it. There is no form here: every port
- * this node persists is produced upstream, so a field to type into would be a second way to say what
- * another node already said.
- *
- * **The conversion output is the point.** `model.json` is built by the feature's save path
- * (`buildModelPayload`), and showing it is what makes the conversion checkable — a wrong payload shape is
- * otherwise only visible after a round trip through the backend. The preview is the *proposal*: what would
- * go on the wire right now, status included.
- *
- * **Where the code comes from.** The node is `../../save/saveNode.ts`, and the preview reads
- * `../../save/saveModel.ts`. A module is meant to depend only on `@model-builder/core`, and the terminal
- * node is the one case where the module's whole job *is* the feature's save path: it is where `model.json`
- * is defined, so duplicating the builder here would be the copy most likely to drift from parity. It is a
- * documented seam — when modules are packaged separately this becomes a provider the host installs, the
- * same shape as `MAP_PROVIDER` and the grid engine.
- *
- * **The session is bound late**, like every other host-installed dependency: the frame builds a workflow
- * *around* this node, so it cannot receive the flow and registry as values. It reads them through a getter
- * the frame fills in — `bindModelSaveSession` — and until then the node is declared but refuses to run.
+ * It shows whether the model is ready to save, the `model.json` the store would produce (`buildModelPayload`),
+ * and the save button. The node comes from `../../save/saveNode.ts`. The session is bound at startup via
+ * `bindModelSaveSession`. Regions: `sidebar`, `bottom`.
  */
 
 import { useState } from "react";
@@ -37,13 +20,7 @@ import { createSaveNode, missingPorts, type SaveSession } from "../../save/saveN
 import { buildModelPayload } from "../../save/saveModel";
 import type { LegacyModelPayload, SaveStatus } from "../../save/gateway";
 
-/**
- * The live session, filled in by the host once the workflow exists.
- *
- * Module-scope rather than React state for the same reason the draft store in `area-draw` is: the module's
- * `Component` renders once *per declared region*, so anything shared cannot live in a component. Here it is
- * not even per-render — the *node* needs it, and the node outlives every render.
- */
+/** The live session, filled in by the host once the workflow exists. Module-scope: the node outlives every render. */
 let session: SaveSession | null = null;
 
 /** Give this node its session. The frame calls this when it builds (or rebuilds) a session. */
@@ -61,11 +38,7 @@ const REQUIRED = new Set(
   module.params.filter((param) => param.required === true).map((param) => param.port),
 );
 
-/**
- * The status the preview shows — the same rule the node applies when it actually saves, minus the
- * node-identity subtlety (the node counts every *other* node; a preview has no "self" to exclude until it
- * runs). An unfinished model previews as `incomplete`, which is what it would be saved as.
- */
+/** The status the preview shows — the same rule the node applies when it saves, minus the node-identity subtlety. */
 function previewStatus(data: Readonly<ModelData>): SaveStatus {
   if (missingPorts(data).length > 0) return "incomplete";
   return data.modelId === undefined ? "draft" : "modified";
@@ -196,9 +169,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
 const builderModule: BuilderModule = {
   module,
   Component,
-  // The test data: the inputs the node needs to be developed in isolation. `coordinates` is the port the
-  // contract check insists on, and the rest is what makes the preview show a *finished* model rather than
-  // an empty one — the only way to see the conversion output at all in test mode.
+  // The test data: what makes the preview show a finished model rather than an empty one.
   mock: {
     modelName: "Example model",
     fromDate: "2025-01-01",

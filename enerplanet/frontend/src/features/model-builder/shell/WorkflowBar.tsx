@@ -1,41 +1,17 @@
 /**
- * The workflow bar — the frame's top band.
+ * The workflow bar — the frame's top band. Dense by rule: it is chrome.
  *
- * Dense by rule: it is chrome, and vertical space belongs to the content.
- *
- * **The bar moves; it does not undo** (superseding the earlier "module movement is undo/redo" framing).
- * Movement is a **pure position move**: a prior click seals a `jump` with an empty cascade, so it rests the
- * session on the node it lands on — leaving that node `done`, not stale — and discards nothing. There is no
- * `undo`/`redo` here — undo would leave a redo tail, and a move must leave none, so the bar offers no history
- * navigation at all. What goes stale is decided by *influence* when a node actually runs, never by how far the
- * bar moved.
- *
- * So the **prior step is the one backward control**, and it is a control only when there is a node behind the
- * session to return to. The **next step is plain greyed text**: it names what comes next rather than moving
- * there. There is **no forward control at all** — an interactive module advances by running itself (its own
- * Apply), and an auto node runs on arrival with no button anywhere (`autoRun.ts`), so a bar button whose
- * enabled-ness depended on node state would be the frame pretending to know something only the session knows.
- *
- * Jumping to *any* step was deferred while movement meant a discard. It does not any more: a move is a pure
- * position move that discards nothing, so there is no preview to owe, and the steps panel offers the jump
- * The rule that remains is direction — `moveToNode` refuses a forward target, because forward is
- * `Continue` running the node.
- *
- * In **test mode** there is no position to show, so it says so rather than rendering a bar of dashes — a bar
- * naming steps while no workflow drives the session would be lying about where it is. The movement and save
- * controls are hidden for the same reason: there is no position to move and no session to save.
- *
- * Everything it renders in workflow mode comes from `barState`, so the bar holds no knowledge of history that
- * could fall out of date. Movement is not reimplemented here either — the prior control calls `actions.ts`
- * directly, which is exactly the thinness the bar wants.
+ * The bar moves (a view that writes nothing) and saves; there is no forward control — an interactive
+ * module advances by running itself and an auto node runs on arrival. Everything it renders in workflow
+ * mode comes from `barState`.
  */
 
 import { Save } from "lucide-react";
 import { useTranslation } from "@spatialhub/i18n";
 import { barState, type BarStep } from "./barState";
-import { moveToNode } from "./actions";
 import type { FrameMode } from "./frameMode";
 import type { Workflow } from "./workflow";
+import type { Flow } from "../core/flow";
 import type { Store } from "../core/store";
 
 /** Semantic theme pairs rather than raw hues, so the states read correctly in dark mode too. */
@@ -45,13 +21,7 @@ const STATE_CLASS: Record<BarStep["state"], string> = {
   pending: "text-muted-foreground",
 };
 
-/**
- * One framed step: the role, and the node filling it.
- *
- * A step renders as a *control* only when clicking it can move the session; without an action it is plain
- * greyed text, which is the honest rendering — a disabled button still looks like something you are being kept
- * from, and the next step usually is not that.
- */
+/** One framed step: the role, and the node filling it. */
 const Step: React.FC<{
   label: string;
   step: BarStep | undefined;
@@ -85,6 +55,8 @@ const Step: React.FC<{
 
 interface Props {
   workflow: Workflow;
+  /** The effective flow the bar walks — the session's transcript. */
+  flow: Flow;
   store: Store;
   mode: FrameMode;
   /** The module ids a developer can point the frame at in test mode. */
@@ -96,15 +68,15 @@ interface Props {
   saving?: boolean;
   /** What the last save did, shown beside the button. A failed save goes to the frame's error strip. */
   saveNotice?: string;
-  /**
-   * The node a run is holding the frame on. The bar derives its position from the store, so without this it would
-   * name the node the session has *reached* while the frame still shows the one it is leaving.
-   */
+  /** The placement the session is looking at; during a run the shell holds it on the node leaving the screen. */
   hold?: string;
+  /** Move the view to a placement behind it. The prior control is offered only when this is given. */
+  onMove?: (nodeId: string) => void;
 }
 
 export const WorkflowBar: React.FC<Props> = ({
   workflow,
+  flow,
   store,
   mode,
   moduleIds,
@@ -114,12 +86,12 @@ export const WorkflowBar: React.FC<Props> = ({
   saving,
   saveNotice,
   hold,
+  onMove,
 }) => {
   const { t } = useTranslation();
-  const bar = barState(workflow.flow, workflow.registry, store, hold);
+  const bar = barState(flow, workflow.registry, store, hold);
 
-  // Read the discriminant once, as a value: the chip, the select's value and its options all need it, and a
-  // boolean alias would have to re-narrow the union at every use.
+  // Read the discriminant once, as a value: the chip, the select's value and its options all need it.
   const testModuleId = mode.kind === "test" ? mode.moduleId : undefined;
   const drives = testModuleId === undefined;
 
@@ -135,12 +107,9 @@ export const WorkflowBar: React.FC<Props> = ({
               <Step
                 label={t("modelBuilder.bar.prior")}
                 step={bar.prior}
-                {...(bar.prior === undefined
+                {...(bar.prior === undefined || onMove === undefined
                   ? {}
-                  : {
-                      onClick: () =>
-                        moveToNode(workflow.flow, workflow.registry, store, bar.prior!.id),
-                    })}
+                  : { onClick: () => onMove(bar.prior!.id) })}
               />
               <Step label={t("modelBuilder.bar.current")} step={bar.current} />
               {/* Next: always plain text — there is no forward control; a module advances by running itself. */}

@@ -4,8 +4,6 @@
  * A module is placeable iff
  * every one of its `required` ports already exists, so a build can only ever produce a workflow
  * that runs, and the builder and the validator are the same predicate.
- *
- * Written failing first.
  */
 import { describe, it, expect } from "vitest";
 import {

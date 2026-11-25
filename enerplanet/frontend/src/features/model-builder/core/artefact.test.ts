@@ -1,20 +1,12 @@
 /**
- * The artefact — persisting a session.
- *
- * On load the stored projection is used directly
- * (**no replay**) so a session opens instantly, undo/redo work at once from `cursor`, and the flow
- * is reattached by *reference* — it is immutable, so it is never copied. The fingerprint guards the
- * cache: when it disagrees with the stored projection, the loader replays the log instead and says
- * so. Replay stays the recovery path, never the load path.
- *
- * Written failing first.
+ * The artefact — persisting a session: the projection, the placed flow and the log, with the
+ * fingerprint guarding the cache and replay kept as the recovery path.
  */
 import { describe, it, expect } from "vitest";
 import { fromArtefact, replayArtefact, toArtefact, type Artefact } from "./artefact";
-import { jumpTo } from "./rerun";
 import { nodeStates, position } from "./position";
+import { transcript, type Flow, type ModuleRegistry } from "./flow";
 import { fingerprint } from "./fingerprint";
-import type { ModuleRegistry } from "./flow";
 import { createEngine } from "./engine";
 import { createStore } from "./store";
 import { defineModule } from "./module";
@@ -74,48 +66,51 @@ const registry: ModuleRegistry = Object.fromEntries(
   [start, draw, grid, save].map((module) => [module.id, module]),
 );
 
-const FLOW = [start, draw, grid, save].map((module) => ({ id: module.id, moduleId: module.id }));
+const FLOW: Flow = [start, draw, grid, save].map((module) => ({ id: module.id, moduleId: module.id }));
 const WORKFLOW = { id: "wf-core", version: 3 };
 
 async function runAll(store: ReturnType<typeof createStore>): Promise<void> {
   const engine = createEngine(store);
   for (const module of [start, draw, grid, save]) {
-    await engine.runModule(module, { id: module.id });
+    await engine.runModule(module, { id: module.id, moduleId: module.id });
   }
 }
 
 
-describe("the artefact carries the state, and the log can rebuild it", () => {
-  it("round-trips a session, and undo/redo work immediately from the cursor", async () => {
+describe("the artefact carries the state, the flow and the log", () => {
+  it("round-trips a session, and undo/redo work again on the load", async () => {
     const store = createStore(seed());
     await runAll(store);
-    store.undo(); // leaves a discard stack, so the round-trip has a tail to carry
+    store.undo(); // append a rollback, so the round-trip has history to carry
 
-    const artefact = toArtefact({ store, workflow: WORKFLOW, modelId: 42 });
+    const artefact = toArtefact({ store, workflow: WORKFLOW, flow: FLOW, modelId: 42 });
     const { store: loaded, divergence } = fromArtefact(artefact);
 
     expect(divergence).toBeUndefined();
-    expect(artefact.log).toHaveLength(store.cursor); // the applied prefix…
-    expect(artefact.discarded).toHaveLength(1); // …and the redo tail beside it
-    expect(artefact).toMatchObject({ version: 1, modelId: 42, cursor: store.cursor });
+    expect(artefact.log).toHaveLength(store.log.length); // the append-only log, whole
+    expect(artefact.flow).toEqual(FLOW); // the placed flow rides along
+    expect(artefact).toMatchObject({ version: 1, modelId: 42 });
     expect(artefact.workflow).toEqual(WORKFLOW);
+    expect("cursor" in artefact).toBe(false);
+    expect("discarded" in artefact).toBe(false);
 
     expect(loaded.data).toEqual(store.data);
     expect(loaded.initial).toEqual(store.initial);
-    expect(loaded.cursor).toBe(store.cursor);
-    expect(loaded.canRedo).toBe(true);
+    expect(loaded.canUndo).toBe(store.canUndo);
 
-    loaded.undo();
-    expect(loaded.cursor).toBe(store.cursor - 1);
-    loaded.redo();
-    expect(loaded.cursor).toBe(store.cursor);
+    // The carried rollback is redoable: redo re-applies what the undo resolved away…
+    const redone = loaded.redo();
+    expect(redone).toBeDefined();
+    expect(loaded.data.saveResult).toEqual({ modelId: 1, created: true });
+    // …and undo takes it back to the carried state.
+    expect(loaded.undo()).toBeDefined();
     expect(loaded.data).toEqual(store.data);
   });
 
   it("trusts the stored projection on load — no replay", async () => {
     const store = createStore(seed());
     await runAll(store);
-    const artefact = toArtefact({ store, workflow: WORKFLOW });
+    const artefact = toArtefact({ store, workflow: WORKFLOW, flow: FLOW });
 
     // Corrupt the log, leaving the projection and its fingerprint alone: replaying would now
     // disagree with what was stored, and the loader must not notice — that is the trade the
@@ -135,7 +130,7 @@ describe("the artefact carries the state, and the log can rebuild it", () => {
   it("replays the log when the fingerprint disagrees, and reports the divergence", async () => {
     const store = createStore(seed());
     await runAll(store);
-    const artefact = toArtefact({ store, workflow: WORKFLOW });
+    const artefact = toArtefact({ store, workflow: WORKFLOW, flow: FLOW });
     const honest = replayArtefact(artefact);
 
     artefact.projection = { ...artefact.projection, modelName: "tampered" };
@@ -155,43 +150,40 @@ describe("the artefact carries the state, and the log can rebuild it", () => {
     const store = createStore(seed());
     await runAll(store);
 
-    const artefact = toArtefact({ store, workflow: WORKFLOW });
-    const { store: loaded } = fromArtefact(artefact);
+    const artefact = toArtefact({ store, workflow: WORKFLOW, flow: FLOW });
+    const { store: loaded, flow } = fromArtefact(artefact);
 
-    // No flow copy: just the reference. Reattaching it is the caller's lookup.
     expect(Object.keys(artefact.workflow).sort()).toEqual(["id", "version"]);
-    expect(position(FLOW, registry, loaded)).toEqual(position(FLOW, registry, store));
-    expect(nodeStates(FLOW, registry, loaded)).toEqual(nodeStates(FLOW, registry, store));
+    expect(position(flow, registry, loaded)).toEqual(position(FLOW, registry, store));
+    expect(nodeStates(flow, registry, loaded)).toEqual(nodeStates(FLOW, registry, store));
   });
 
-  it("needs no separate list for jumps — they are transactions like any other", async () => {
+  it("needs no separate list for undos — a rollback is a commit like any other", async () => {
     const store = createStore(seed());
     await runAll(store);
-    jumpTo(FLOW, registry, store, "draw");
+    store.undo(); // appends rollback{of:4}
 
-    const artefact = toArtefact({ store, workflow: WORKFLOW });
-    const jumps = artefact.log.filter((transaction) => transaction.kind === "jump");
+    const artefact = toArtefact({ store, workflow: WORKFLOW, flow: FLOW });
+    const rollbacks = artefact.log.filter((commit) => commit.rollback !== undefined);
 
-    expect(jumps).toHaveLength(1);
-    expect(jumps[0].jump).toEqual({ from: "save", to: "draw" });
+    expect(rollbacks).toHaveLength(1);
+    expect(rollbacks[0].rollback).toEqual({ of: 4 });
 
     const { store: loaded } = fromArtefact(artefact);
-    expect(position(FLOW, registry, loaded)).toMatchObject({ index: 1, nodeId: "draw" });
+    expect(loaded.canRedo).toBe(true);
+    expect(transcript(FLOW, loaded.log).map((node) => node.id)).toEqual([
+      "start",
+      "draw",
+      "grid",
+      "save",
+    ]);
   });
 
   it("refuses an artefact whose shape it does not know", async () => {
     const store = createStore(seed());
     await runAll(store);
-    const artefact = toArtefact({ store, workflow: WORKFLOW });
+    const artefact = toArtefact({ store, workflow: WORKFLOW, flow: FLOW });
 
     expect(() => fromArtefact({ ...artefact, version: 99 } as Artefact)).toThrow(/version/);
-  });
-
-  it("refuses a cursor outside the log it came with", async () => {
-    const store = createStore(seed());
-    await runAll(store);
-    const artefact = toArtefact({ store, workflow: WORKFLOW });
-
-    expect(() => fromArtefact({ ...artefact, cursor: 99 })).toThrow(/cursor/);
   });
 });

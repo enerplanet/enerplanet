@@ -1,9 +1,4 @@
-/**
- * A capture's rules, held to account without a browser.
- *
- * Written failing first. These are small on purpose: they are the two decisions a capture gets wrong, and the
- * values are the legacy drawer's, so the tests double as the record of what "mimic the legacy" meant.
- */
+/** A capture's rules: closing, trimming, cursor and marker, without a browser. */
 import { describe, expect, it } from "vitest";
 import {
   DUPLICATE_PX,
@@ -28,8 +23,7 @@ describe("closing on the first vertex", () => {
   });
 
   it("does not close a line, however close the click is", () => {
-    // Two corners is not an area. This is the guard that keeps a stray click on the start point from
-    // producing a degenerate polygon.
+    // Two corners is not an area, so a stray click on the start point cannot close a degenerate polygon.
     expect(shouldClose(0, 2)).toBe(false);
     expect(shouldClose(0, 1)).toBe(false);
     expect(shouldClose(0, 0)).toBe(false);

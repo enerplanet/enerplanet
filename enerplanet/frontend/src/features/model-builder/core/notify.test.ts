@@ -1,12 +1,5 @@
 /**
- * Store notification — the frame's prerequisite.
- *
- * The frame reads the store in four places and history moves from three controls, so every *applied*
- * change must announce itself. The point of these cases is the one a seal-only hook gets wrong: `undo`
- * and `redo` change the projection **without sealing a transaction** (`core/store.ts`), so a listener
- * wired to the transaction path would stay silent exactly while the user navigates history.
- *
- * Written failing first.
+ * Store notification — every applied change, undo and redo included, announces itself to listeners.
  */
 import { describe, it, expect } from "vitest";
 import { createStore } from "./store";
@@ -17,7 +10,7 @@ import { seed } from "./fixtures";
 /** The name `seed()` starts with. */
 const INITIAL_NAME = "Contract fixture";
 
-/** The node a zero-diff jump lands on — a bare re-save. */
+/** A node id used by the "projection unchanged" case. */
 const NODE_SAVE = "model-save";
 
 function rename(from: string, to: string): DiffOp {
@@ -81,10 +74,11 @@ describe("notification fires after every applied change", () => {
     expect(notified).toBe(0);
   });
 
-  it("notifies even when the projection is identical, because the position moved", () => {
-    // The zero-diff jump: a bare re-save discards nothing, so `data` comes out
-    // referentially equal — yet the session *is* back at that node and the frame must redraw. This is
-    // why a host subscribes to a change token rather than to the projection's identity.
+  it("notifies even when the projection is identical", () => {
+    // A commit that changes no value — an empty diff with an empty cascade (the shape a saved
+    // record takes when nothing the store holds moved). `data` comes out referentially equal, yet
+    // the session *did* change and the frame must redraw. This is why a host subscribes to a change
+    // token rather than to the projection's identity.
     const store = createStore(seed());
     let notified = 0;
     const before = store.version;
@@ -93,11 +87,7 @@ describe("notification fires after every applied change", () => {
       notified += 1;
     });
 
-    store.applyTransaction([], [], {
-      node: { id: NODE_SAVE },
-      kind: "jump",
-      jump: { from: NODE_SAVE, to: NODE_SAVE },
-    });
+    store.applyTransaction([], [], { node: { id: NODE_SAVE, moduleId: NODE_SAVE } });
 
     expect(store.data.modelName).toBe(INITIAL_NAME); // the projection really is unchanged
     expect(notified).toBe(1);

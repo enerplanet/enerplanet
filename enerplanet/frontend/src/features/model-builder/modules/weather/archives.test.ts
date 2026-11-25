@@ -1,10 +1,4 @@
-/**
- * `weather`'s archive slot.
- *
- * The slot is what keeps this module free of the app's HTTP client, so these cases install a fake source the
- * way a host installs the real one — and never touch the network. Two things are worth pinning: that the list
- * comes *from* the source, and that a failed load is reported as a failure rather than an empty list.
- */
+/** `weather`'s archive slot: the list comes from the source, and a failure is reported as one. */
 import { describe, expect, it } from "vitest";
 import { archivesState, loadArchives, setWeatherSource, type WeatherArchives } from "./archives";
 
@@ -33,9 +27,7 @@ describe("weather's archive slot", () => {
   });
 
   it("asks as soon as a source is installed, rather than waiting for the panel to mount", async () => {
-    // The shell installs its source from an effect, and React runs a child's effects before its parent's — so
-    // the panel's mount-time load runs first, finds no source, and bails. If the install did not ask, nothing
-    // ever would, and the picker would sit on "loading" forever with no request in flight.
+    // Child effects run before the parent's, so the mount-time load must ask the shell to install the source.
     let asked = 0;
     setWeatherSource({
       listArchives: () => {

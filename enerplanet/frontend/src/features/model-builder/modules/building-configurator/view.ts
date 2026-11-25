@@ -1,19 +1,9 @@
 /**
  * The building configurator's host seam — the slot the shell fills.
  *
- * The package (`@thd-spatial-ai/building-configurator`) is a **view, not a store client**: it takes a building,
- * its geometry and a set of services, and hands back an edited state. Everything it needs to be *fed* —
- * geometry from the 3D dataset, the demand profile, the PV machinery, the catalogue-backed products — lives in
- * the app's configurator, which is **not** the module's to import: a module may only depend on
- * `@model-builder/core`.
- *
- * So the module owns the part that is *its* job — the opening, the picking, and the committing — and asks the
- * shell for the view itself. The shell installs a component that wraps `Building3DView` with whatever glue it
- * has; the module renders that component and never learns what is inside it. This is the same shape as
- * `setGridEngine` and `setWeatherSource`, and it is what keeps the package swappable.
- *
- * The typed-in `ComponentType` is deliberate: the module hands over exactly what any building view would need,
- * so a different one — or a stub in a test — can stand in without the module changing.
+ * The package is a view, not a store client: it takes a building, its geometry and a set of services, and
+ * hands back an edited state. The module owns the opening, picking and committing, and asks the shell for the
+ * view itself (which the shell wraps around `Building3DView`). Same shape as `setGridEngine`.
  */
 
 import type { ComponentType } from "react";
@@ -26,13 +16,7 @@ export interface BuildingEdit {
   params?: BuildingParams;
   /** The building's technologies, if the user touched them. */
   technologies?: TechAssignment[];
-  /**
-   * The legacy configurator's envelope/thermal block, kept on the feature as `properties.buem`.
-   *
-   * It is deliberately **not a port**: it describes the building's shape and fabric, not the model's energy
-   * data, and the save's fold already leaves a feature's other properties untouched. Typed as `unknown` at this
-   * boundary because only the host that produced it knows its shape — the module only carries it.
-   */
+  /** The legacy configurator's envelope/thermal block, kept on the feature as `properties.buem`; not a port. */
   buem?: unknown;
 }
 
@@ -45,23 +29,9 @@ export interface BuildingViewProps {
   /** What the store already holds for this building — where the view starts. */
   params?: BuildingParams;
   technologies?: TechAssignment[];
-  /**
-   * The session's draft id, read from the store.
-   *
-   * The legacy's host refuses to render without an owner path (it scopes draft-scoped transformer results), so
-   * the module passes what it has rather than the host reaching for it.
-   */
+  /** The session's draft id, read from the store. */
   draftId?: string;
-  /**
-   * The grid this building lives in.
-   *
-   * The installed view resolves a building by looking it up in the legacy's own grid state, not by the feature it
-   * is handed — so a view that reads from there sees an empty map and reports the building as missing. The module
-   * hands the grid down rather than the shell reaching into a store the module knows nothing about; the shell
-   * translates it into whatever that store's spelling is.
-   *
-   * Absent in a test, where there is no grid state to seed.
-   */
+  /** The grid this building lives in; absent in a test. */
   grid?: {
     buildings?: GeoJSON.FeatureCollection;
     lines?: GeoJSON.FeatureCollection;
@@ -69,10 +39,7 @@ export interface BuildingViewProps {
     transformers?: GeoJSON.FeatureCollection;
     grids?: unknown;
   };
-  /**
-   * The view closed with a change. **The module commits it**, on its own transaction — the host must not write
-   * the store, and nothing is written while the view is open, so an abandoned overlay changes nothing.
-   */
+  /** The view closed with a change. The module commits it, on its own transaction; nothing is written while the view is open. */
   onCommit: (edit: BuildingEdit) => void;
   /** The view closed without a change. */
   onClose: () => void;

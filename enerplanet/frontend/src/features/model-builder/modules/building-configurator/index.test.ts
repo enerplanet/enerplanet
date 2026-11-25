@@ -1,17 +1,4 @@
-/**
- * `building-configurator` in isolation.
- *
- * **Nothing here touches the legacy, the npm package, or a DOM.** That is the point of the slot in `view.ts`:
- * the module hands a view a typed set of props and takes back an edit, so a test can stand in a stub that does
- * nothing and exercise everything the module actually owns — the merge onto the two ports, the gate, and the
- * rule that only a close commits.
- *
- * The view's *content* (a 3D envelope, a technologies tab, geometry fetched from a dataset) is not this
- * module's behaviour and is not tested here. The real `Building3DView` is installed by the shell, and what it
- * renders is the package's business.
- *
- * The edits are driven through `holdEdit`, the same door the module's own overlay uses.
- */
+/** `building-configurator` in isolation: the merge onto two ports, the gate, and that only a close commits. */
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -142,8 +129,7 @@ describe("building-configurator's run", () => {
   });
 
   it("clears a building's technologies when the view returned an empty list", async () => {
-    // Removing the last technology is a real answer, not the absence of one: the entry goes, so the save's
-    // fold writes an empty array rather than the old one.
+    // Removing the last technology is a real answer: the entry goes, so the fold writes an empty array.
     holdEdit("b1", { technologies: [] });
     const withTechs = { ...ready(), technologies: { b1: BOILER } };
 
@@ -153,8 +139,7 @@ describe("building-configurator's run", () => {
   });
 
   it("puts the envelope block on the building's feature, not in a port", async () => {
-    // The legacy keeps its envelope/thermal block at `properties.buem`, and the save's fold already leaves a
-    // feature's other properties alone — so carrying it there is what makes the edit survive to the payload.
+    // The envelope lives at `properties.buem`, which the save's fold preserves.
     holdEdit("b1", { buem: { building: { n_storeys: 3 } } });
 
     const { store } = await runInScratch({ module: buildingConfiguratorModule.module, mock: ready() });
@@ -169,8 +154,7 @@ describe("building-configurator's run", () => {
   });
 
   it("does nothing when the view was closed without a change", async () => {
-    // The module is reachable through the forward action, and pressing it without opening a building must not
-    // fail — nor invent a transaction.
+    // Pressing the forward action without opening a building must not fail or invent a transaction.
     const { store, error } = await runInScratch({ module: buildingConfiguratorModule.module, mock: ready() });
 
     expect(error).toBeUndefined();
@@ -183,26 +167,24 @@ describe("building-configurator's run", () => {
     const engine = createEngine(store);
 
     holdEdit("b1", { params: { yearlyKwh: 15_000 } });
-    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id });
+    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id, moduleId: buildingConfiguratorModule.module.id });
     expect(store.data.buildingParams?.[ELECTRICITY]?.b1?.yearlyKwh).toBe(15_000);
 
-    // Nothing is held now. A run that committed anyway would produce a new projection; identity is the proof
-    // that it did nothing at all.
+    // Nothing held: a second run commits nothing, proven by the projection's identity.
     const before = store.data.buildingParams;
-    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id });
+    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id, moduleId: buildingConfiguratorModule.module.id });
     expect(store.data.buildingParams).toBe(before);
   });
 
   it("commits several held buildings as one transaction", async () => {
-    // What continuing deliberately is for: work through the grid, commit once. Before this, the first edit
-    // committed and ended the node's turn, so every other building's edit was unreachable.
+    // Several held buildings commit as one transaction.
     const store = createStore({ ...ready() });
     const engine = createEngine(store);
     const before = store.log.length;
 
     holdEdit("b1", { params: { yearlyKwh: 15_000 } });
     holdEdit("b2", { params: { yearlyKwh: 9_000 } });
-    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id });
+    await engine.runModule(buildingConfiguratorModule.module, { id: buildingConfiguratorModule.module.id, moduleId: buildingConfiguratorModule.module.id });
 
     expect(store.data.buildingParams?.[ELECTRICITY]?.b1?.yearlyKwh).toBe(15_000);
     expect(store.data.buildingParams?.[ELECTRICITY]?.b2?.yearlyKwh).toBe(9_000);
@@ -212,9 +194,7 @@ describe("building-configurator's run", () => {
 });
 
 describe("building-configurator's gate", () => {
-  // This node is optional editing, so it cannot be incomplete. It used to demand demand *or* a technology for
-  // every building — a rule that is simply wrong (a building without solar does not need a technology) and one
-  // that made Continue look broken, because a node that refuses to be done can never advance.
+  // Optional editing: a building with no demand and no technology is still complete.
   it("says nothing about a building with no demand and no technology", () => {
     const bare = { ...ready(), buildingParams: undefined, technologies: undefined };
 

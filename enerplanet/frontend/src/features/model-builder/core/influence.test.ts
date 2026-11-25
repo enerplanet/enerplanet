@@ -3,8 +3,6 @@
  *
  * A module declares which outputs each input
  * can invalidate (`affect`); this prober *verifies* that declaration instead of trusting it.
- *
- * Written failing first.
  */
 import { describe, it, expect } from "vitest";
 import { assertInfluenceHonest, deriveInfluence, perturb } from "./influence";

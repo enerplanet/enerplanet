@@ -1,12 +1,6 @@
-/**
- * The node union's discriminant. `moduleId` xor `workflows` is the
- * structural rule every consumer branches on, so the two failures — a node with neither field, and one with
- * both — are pinned here rather than left to whatever a reader infers.
- *
- * Written failing first.
- */
+/** The node union's discriminant: `moduleId` xor `workflows`. */
 import { describe, expect, it } from "vitest";
-import { isSubflowNode, nodeProblem, type WorkflowNodeDocument } from "./types";
+import { documentProblem, isSubflowNode, nodeProblem, type RecommendedSection, type WorkflowDocument, type WorkflowNodeDocument } from "./types";
 
 const MODULE: WorkflowNodeDocument = { id: "m", moduleId: "m", label: "M" };
 const SUBFLOW: WorkflowNodeDocument = { id: "s", workflows: ["a", "b"], label: "S" };
@@ -32,5 +26,52 @@ describe("isSubflowNode", () => {
   it("recognises the subflow kind structurally, so a stored module node is never mistaken for one", () => {
     expect(isSubflowNode(SUBFLOW)).toBe(true);
     expect(isSubflowNode(MODULE)).toBe(false);
+  });
+});
+
+const OK_SECTION: RecommendedSection = {
+  key: "insulate",
+  label: "Insulate",
+  description: "Add insulation.",
+  nodes: [MODULE],
+};
+
+const docWith = (recommended: WorkflowDocument["recommended"]): WorkflowDocument => ({
+  id: "x",
+  version: 1,
+  label: "X",
+  nodes: [MODULE],
+  recommended,
+});
+
+describe("documentProblem — a recommended list is untrusted input", () => {
+  it("accepts a document with no list, an empty list, and a well-formed one", () => {
+    expect(documentProblem(docWith(undefined))).toBeUndefined();
+    expect(documentProblem(docWith([]))).toBeUndefined();
+    expect(documentProblem(docWith([OK_SECTION, { ...OK_SECTION, key: "other" }]))).toBeUndefined();
+  });
+
+  it("names a suggestion with a blank key", () => {
+    expect(documentProblem(docWith([{ ...OK_SECTION, key: "  " }]))).toMatch(/blank key/);
+  });
+
+  it("names two suggestions that share a title within the workflow", () => {
+    expect(documentProblem(docWith([OK_SECTION, { ...OK_SECTION }]))).toMatch(/share the title "Insulate"/);
+  });
+
+  it("falls back to the key when the second suggestion's title is blank", () => {
+    expect(documentProblem(docWith([OK_SECTION, { ...OK_SECTION, key: "insulate", label: "" }]))).toMatch(
+      /share the title "insulate"/,
+    );
+  });
+
+  it("names a section whose node fails the discriminant", () => {
+    const bad = { id: "x" } as unknown as WorkflowNodeDocument;
+    expect(documentProblem(docWith([{ ...OK_SECTION, nodes: [bad] }]))).toMatch(/malformed node/);
+  });
+
+  it("names a recommended value that is not a list", () => {
+    const notList = { insulate: [OK_SECTION] } as unknown as RecommendedSection[];
+    expect(documentProblem(docWith(notList))).toMatch(/not a list/);
   });
 });

@@ -1,17 +1,6 @@
 /**
- * The steps panel's state — the whole workflow in order.
- *
- * The panel answers a different question from the bar: not "where am I" but "what is the state of every step",
- * which is why it is a derivation of its own rather than a wider reading of `barState`. Everything comes from
- * `positionReport` — done / stale / pending per node, plus what a node wrote that is gone and which required
- * ports are missing *right now* — with one addition: which node the session sits on, because the panel marks it
- * and `positionReport` has no reason to.
- *
- * `blocked` and `pruned` are carried through on purpose: they are the *reason* behind a step that is not done,
- * and a panel that showed the colour without the reason would be telling the user something is wrong without
- * saying what.
- *
- * Written failing first.
+ * The steps panel's state — every step's state from `positionReport`, plus which node the session is
+ * looking at.
  */
 import { describe, it, expect } from "vitest";
 import { defineModule } from "@model-builder/core";
@@ -62,6 +51,9 @@ function replace(port: "modelName", prev: unknown, next: unknown): DiffOp {
   return { op: "replace", path: portPath(port), prev, next };
 }
 
+/** The node ref a seal carries: the placement id and the module that produced it. */
+const ref = (id: string) => ({ id, moduleId: example.module.id });
+
 describe("the steps panel reads the whole workflow", () => {
   it("before anything runs: every step pending, the first one current", () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
@@ -76,11 +68,10 @@ describe("the steps panel reads the whole workflow", () => {
   it("after the first step runs: it is done, and the second takes over as current", async () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
     const store = createStore(workflow.initial);
-    // The fixture takes the values its regions collect through `hold()` (see the note on it), so a test that
-    // wants a real transaction fills them the way a region does — a bare run commits nothing by design.
+    // The fixture takes its values through `hold()`, so a test that wants a real transaction fills them.
     hold("first", { modelName: "  Steps fixture  " });
     const { createEngine } = await import("../core/engine");
-    await createEngine(store).runModule(example.module, { id: "first" });
+    await createEngine(store).runModule(example.module, { id: "first", moduleId: example.module.id });
 
     const steps = stepsState(workflow.flow, workflow.registry, store);
 
@@ -91,36 +82,24 @@ describe("the steps panel reads the whole workflow", () => {
   it("with the flow complete: everything done, and nothing is current", () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
     const store = createStore(workflow.initial);
-    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], {
-      node: { id: "first" },
-    });
-    store.applyTransaction([replace("modelName", "One", "Two")], [], { node: { id: "second" } });
+    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: ref("first") });
+    store.applyTransaction([replace("modelName", "One", "Two")], [], { node: ref("second") });
 
     const steps = stepsState(workflow.flow, workflow.registry, store);
 
     expect(steps.map((step) => step.state)).toEqual(["done", "done"]);
-    // There is no "first node that is not done", so no step is the current one — unlike the bar, which names
-    // the last step so it has something to show. Be precise about the mechanism: what guarantees this is
-    // `position()` reporting `index = flow.length` for a complete flow, not the guard in `stepsState`.
+    // No "first node that is not done", so no step is current — `position()` reports `index = flow.length`.
     expect(steps.some((step) => step.current)).toBe(false);
   });
 
-  it("a step the session moved back to stays done, and is current", () => {
+  it("a step the session looks back at stays done, and is current", () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
     const store = createStore(workflow.initial);
-    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], {
-      node: { id: "first" },
-    });
-    store.applyTransaction([], [], {
-      node: { id: "first" },
-      kind: "jump",
-      jump: { from: "second", to: "first" },
-    });
+    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: ref("first") });
 
-    const steps = stepsState(workflow.flow, workflow.registry, store);
+    // A view is read-only: looking back at "first" writes nothing, so it stays done.
+    const steps = stepsState(workflow.flow, workflow.registry, store, "first");
 
-    // A move is a pure position move: "first" is where the session rests (the jump's target), so it is current,
-    // but its work is untouched so it stays `done`. Marking it stale would be the lie this rule removes.
     expect(steps[0].state).toBe("done");
     expect(steps[0].current).toBe(true);
   });
@@ -128,32 +107,26 @@ describe("the steps panel reads the whole workflow", () => {
   it("marks exactly the steps a click can move to — the reachable set, frontier included", () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
 
-    // Nothing has run: the session rests on the first step and the frontier is there too, so there is nowhere
-    // to move — the resting step is not a control, because clicking it would move nothing.
+    // Nothing has run: the session looks at the first step, so there is nowhere to move.
     const atStart = stepsState(workflow.flow, workflow.registry, createStore(workflow.initial));
     expect(atStart.map((step) => step.movable)).toEqual([false, false]);
 
     const store = createStore(workflow.initial);
-    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: { id: "first" } });
+    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: ref("first") });
 
-    // The first has run, so the session rests on the second and the frontier is there as well: the first is
-    // reachable and the second is not, since it is where the session already is.
+    // The first has run, so the session looks at the second (the frontier): the first is reachable, the second is not.
     const atSecond = stepsState(workflow.flow, workflow.registry, store);
     expect(atSecond.map((step) => step.movable)).toEqual([true, false]);
     expect(atSecond.map((step) => step.current)).toEqual([false, true]);
 
-    // Now move back to the first. The frontier stays ahead at the second — it is `pending`, and a move writes
-    // nothing, so it stays that way — and the second is therefore **reachable from here**. This is the case the
-    // inclusive frontier exists for: movement may go as far as the first node that is not done, because past it
-    // the values would be read across a broken link.
-    store.applyTransaction([], [], { node: { id: "first" }, kind: "jump", jump: { from: "second", to: "first" } });
-    const movedBack = stepsState(workflow.flow, workflow.registry, store);
+    // Look back at the first: the frontier stays at the second, so the second is reachable from here.
+    const movedBack = stepsState(workflow.flow, workflow.registry, store, "first");
     expect(movedBack.map((step) => step.current)).toEqual([true, false]);
     expect(movedBack.map((step) => step.movable)).toEqual([false, true]);
 
-    store.applyTransaction([replace("modelName", "One", "Two")], [], { node: { id: "second" } });
+    store.applyTransaction([replace("modelName", "One", "Two")], [], { node: ref("second") });
 
-    // Complete: the frontier is `flow.length`, so every step is reachable and none is current.
+    // Complete: the frontier is `flow.length`, so every step is reachable and none is current (no view set).
     const done = stepsState(workflow.flow, workflow.registry, store);
     expect(done.map((step) => step.movable)).toEqual([true, true]);
     expect(done.some((step) => step.current)).toBe(false);
@@ -162,14 +135,10 @@ describe("the steps panel reads the whole workflow", () => {
   it("carries the reason: the ports a stale step wrote that are gone", () => {
     const workflow = workflowOf(TWO_STEPS.nodes);
     const store = createStore(workflow.initial);
-    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], {
-      node: { id: "first" },
-    });
-    // A jump whose cascade removes what the first step wrote: its work is gone, so it is stale because of it.
+    store.applyTransaction([replace("modelName", SEED_NAME, "One")], [], { node: ref("first") });
+    // A change whose cascade removes what the first step wrote: its work is gone, so it is stale because of it.
     store.applyTransaction([], [{ op: "remove", path: portPath("modelName"), prev: "One" }], {
-      node: { id: "first" },
-      kind: "jump",
-      jump: { from: "first", to: "first" },
+      node: ref("first"),
     });
 
     const steps = stepsState(workflow.flow, workflow.registry, store);

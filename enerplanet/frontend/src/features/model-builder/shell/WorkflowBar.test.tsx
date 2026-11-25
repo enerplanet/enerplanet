@@ -1,12 +1,5 @@
 /**
  * The workflow bar — the fact this file exists to pin: there is **no forward control**.
- *
- * An auto node runs on arrival and an interactive module advances by running itself, so a Continue button
- * would be the frame owning a control whose enabled-ness depends on node state the frame cannot see. The bar
- * moves (prior) and saves; it does not move forward.
- *
- * `@spatialhub/i18n` is stubbed to echo the key, so the assertions are about *which* control is rendered rather
- * than about copy. There is no DOM, so the bar is rendered to a string.
  */
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -42,6 +35,7 @@ function render(): string {
   return renderToStaticMarkup(
     <WorkflowBar
       workflow={workflow}
+      flow={workflow.flow}
       store={createStore(workflow.initial)}
       mode={{ kind: "workflow" }}
       moduleIds={[example.module.id]}

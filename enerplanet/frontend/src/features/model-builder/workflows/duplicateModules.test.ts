@@ -1,27 +1,4 @@
-/**
- * The same **module** at two positions, one of them inside a subflow.
- *
- * The shape: `A → B → C → D → E → F`, where F is a subflow whose own workflow is `B → C → D → G`. So B, C and
- * D each appear twice, and D is run-like — it writes the one `memeRun` port and its `validate()` judges that
- * port, exactly as `run-meme-calliope` does.
- *
- * Two answers, and they are the two halves of the question:
- *
- * 1. **The copies are distinct nodes.** The expansion namespaces a node's id by its container
- *    (`expand.ts` states why that is correctness rather than tidiness: the flat transaction log keys by node
- *    id), so `f/b`, `f/c`, `f/d` are their own slots and nothing collides.
- * 2. **The port is not duplicated — it cannot be.** One store holds one value, so both copies read and write
- *    the same `memeRun`; when the later copy's run is in flight the earlier copy's `validate()` reads that
- *    same state and reports it, so both read `stale` and — because the frontier is *the first node not done*
- *    (`position.ts`) — the session rests on the **earlier** copy, not the later one.
- *
- * That last point is the one worth remembering: invalidation prunes *downstream* ports, but the frontier can
- * still move *up*. What keeps it harmless here is the module's own guard: a run node does not re-submit while
- * a run is live. Once the later copy's run lands, that same shared value is terminal for both, both are
- * `done`, and the session settles — the "accepted state".
- *
- * Written failing first.
- */
+/** The same module at two positions, one of them inside a subflow. */
 import { describe, expect, it } from "vitest";
 
 import { createEngine } from "../core/engine";
@@ -163,15 +140,12 @@ describe("the same module at two positions", () => {
     const engine = createEngine(store);
     // Awaited in order: a fire-and-forget loop interleaves the runs and the store mutates out of order.
     for (const node of flow) {
-      await engine.runModule(registry[node.moduleId], { id: node.id });
+      await engine.runModule(registry[node.moduleId], { id: node.id, moduleId: registry[node.moduleId].id });
     }
 
     const states = nodeStates(flow, registry, store);
     const at = position(flow, registry, store);
 
-    // The shared port is not duplicated — one store, one value — and it is a defined value, so the route
-    // through it is the "accepted state"; both copies being stale is their `validate()` reading that one
-    // value, not either of them having lost an output.
     expect(store.data.memeRun).toBeDefined();
     expect(states.d).toBe("stale");
     expect(states["f/d"]).toBe("stale");

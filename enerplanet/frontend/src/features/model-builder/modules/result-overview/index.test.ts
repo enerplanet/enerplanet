@@ -1,17 +1,4 @@
-/**
- * `result-overview`'s tests.
- *
- * Two things are asserted, the same two worth asserting about any module: that its **declaration** is
- * consistent (`contractIssues`) and honest (`deriveInfluence`), and that its **behaviour** is what it claims —
- * through the real engine, and through the source slot's own state machine.
- *
- * The node is a **view**: it commits nothing. That is asserted directly — a run leaves its zero-diff trace and
- * changes no port — rather than left implied, because "declares ports but writes none" is the whole design.
- *
- * The summary arrives through the slot, so the source cases install a fake gateway and assert what the view
- * knows at each point: nothing before a request, loaded once a gateway arrives after the request (the
- * child-before-parent order a host hits), a failure reported, and one request per model.
- */
+/** `result-overview`'s tests: its declaration, its behaviour, and the summary slot's state machine. */
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   assertInfluenceHonest,
@@ -124,9 +111,9 @@ describe("result-overview's run", () => {
 
   it("is left behind after its run even on a store it does not touch", async () => {
     const store = createStore({ ...resultOverview.mock });
-    const sealed = await createEngine(store).runModule(resultOverview.module, { id: NODE });
+    const sealed = await createEngine(store).runModule(resultOverview.module, { id: NODE, moduleId: resultOverview.module.id });
 
-    // The trace exists (so a jump's re-arm clears), and it carries no ops.
+    // The trace exists (so the placement reads `done`), and it carries no ops.
     expect(sealed?.primary).toHaveLength(0);
   });
 });

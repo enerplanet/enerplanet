@@ -1,33 +1,8 @@
 /**
  * The variant gateway the frame installs — the backend's own model endpoints, through the app's HTTP client.
  *
- * The module declares the slot (`modules/model-variant/source.ts`) and never learns which gateway it has; this is
- * the implementation a host provides, beside the MEME-run gateways and for the same reason — a module may only
- * depend on `@model-builder/core`, while the app's CSRF-aware axios instance is the app's. The module is told
- * about this one at startup (`setModelVariantGateway`, via `installModelVariantGateway`).
- *
- * **The copy rule is the model dashboard's, copied not imported.** A feature may not import another feature, so
- * the rule below is copied by value from `duplicateModel`
- * (`features/model-dashboard/services/modelService.ts`) — the same way `memeRunGateway` copies the dashboard's
- * status sets. Keep it in step with the original deliberately. The rule, verbatim from that method:
- *
- *   - `parent_model_id` is the original's own `parent_model_id` when it has one (so a copy *of a variant*
- *     parents to the same root), and the original's `id` otherwise (a copy *of a root* parents to the root):
- *     `if (original.parent_model_id) { parentModelId = original.parent_model_id } else { parentModelId = original.id }`.
- *   - `group_id` keeps the original's own `group_id` if it has one, else falls back to that same parent id:
- *     `groupId = groupId || original.parent_model_id` / `groupId = groupId || original.id`. So the copy joins
- *     the family it was made from.
- *   - the title is versioned within the family: `extractBaseTitle(original.title)` strips a trailing ` v<n>`,
- *     siblings are the models whose `parent_model_id` is this parent and whose title is that base plus ` v<n>`,
- *     and the copy is `maxVersion + 1` — `${baseTitle} v${nextVersion}`.
- *
- * That `parentModelId` is the family's own original, so it is what the port's `rootModelId` carries
- * (`core/ports.ts`). The backend is the authority on families (`backend/internal/model/handler/model_family.go`):
- * copies record the root original in `parent_model_id`, copies of copies too, and a family is named by its
- * original if present, else by its oldest member — which is exactly the id this rule computes.
- *
- * **The list read is unbounded**, as in `duplicateModel`: the version number is the maximum over the family, and
- * the versioning siblings are found client-side. The endpoint is the app's own `GET /models`.
+ * The module declares the slot (`modules/model-variant/source.ts`) and never learns which gateway it has.
+ * The copy rule (parent, family, versioned title) is the model dashboard's, copied by value.
  */
 
 import axios from "@/lib/axios";
@@ -63,12 +38,7 @@ interface ModelListEnvelope {
   data?: ModelPayload[];
 }
 
-/**
- * `extractBaseTitle` — copied verbatim in behaviour from `modelService.ts`.
- *
- * The comment there says it avoids ReDoS; the simple string operations are kept for the same reason, and the
- * 500-character cap is kept too, since a title longer than that is not one this app ever produced.
- */
+/** `extractBaseTitle` — copied from `modelService.ts`, string operations kept to avoid ReDoS. */
 export function extractBaseTitle(title: string): string {
   if (!title) return title;
 
@@ -108,9 +78,9 @@ export interface FamilyCopy {
 const VERSION_SUFFIX = /^ v(\d{1,5})$/;
 
 /**
- * The copy rule, as a pure function — the whole of `duplicateModel`'s derivation, tested directly.
+ * The copy rule, as a pure function.
  *
- * @throws when the original carries no `id` (it cannot be copied), which no real payload does.
+ * @throws when the original carries no `id` (it cannot be copied).
  */
 export function familyCopyOf(
   original: ModelPayload,
@@ -121,8 +91,7 @@ export function familyCopyOf(
     throw new Error("the original model has no id, so it cannot be copied");
   }
 
-  // Family and parent — verbatim from `duplicateModel` (the truthiness test included: a `0` parent is treated as
-  // absent, as the original method treats it).
+  // Family and parent — verbatim from `duplicateModel`, the truthiness test included.
   let groupId = original.group_id;
   let parentModelId: number;
   if (original.parent_model_id) {
@@ -190,8 +159,7 @@ export const backendModelVariantGateway: ModelVariantGateway = {
       throw new Error(`model ${modelId} could not be read, so no variant of it can be made`);
     }
 
-    // The version is the maximum over the family, so the siblings must be read — the same list `duplicateModel`
-    // fetches.
+    // The version is the maximum over the family, so the siblings must be read.
     const listResponse = await axios.get<ModelListEnvelope>(`/models`);
     const copy = familyCopyOf(original, listResponse.data?.data ?? []);
 

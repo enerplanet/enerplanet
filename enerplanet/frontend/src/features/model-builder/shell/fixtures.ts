@@ -1,32 +1,14 @@
 /**
  * A test-only stand-in for the interactive example module, for the shell's own suites.
- *
- * The two example modules moved to `modules/examples/` and are no longer registered, so a shell suite that
- * wants *a* module — to place as a node, to run for real, or to read a node id off — needs one from here
- * rather than from the templates. It mirrors the interactive example's shape: a couple of declared ports, the
- * module-scope `hold` seam a region hands values through, and a `run()` that reads before it writes and
- * commits only what differs (trimming the name, so the padded seeds those suites use produce a real diff).
- *
- * Its id stays `"example"`: the suites assert it as a node's module id and as the registry key, and it is the
- * one module they place twice. Not a live module — never imported by a non-test file.
- *
- * Kept here, not in `core/fixtures.ts`: that file holds data factories and is deliberately free of shared
- * mutable state, while this fixture carries the `hold` seam and its consumers are shell tests.
  */
 
 import { defineModule, type ModelData } from "@model-builder/core";
 import type { BuilderModule } from "./contract";
 
-/**
- * The module's own collected values, keyed to the node they were collected for — the example's pattern: a
- * value collected on one node must never be committed against another.
- */
+/** The module's own collected values, keyed to the node they were collected for. */
 const held: { nodeId: string | null; values: Partial<ModelData> } = { nodeId: null, values: {} };
 
-/**
- * Hold these values for `nodeId`, dropping anything held for a different node. The only way a suite hands a
- * run its values, exactly as a region does.
- */
+/** Hold these values for `nodeId`, dropping anything held for a different node. */
 export function hold(nodeId: string, values: Partial<ModelData> = {}): void {
   if (held.nodeId !== nodeId) {
     held.values = {};
@@ -57,8 +39,7 @@ const module = defineModule({
     const collected = takeHeld();
     const proposed: Partial<ModelData> = {};
 
-    // Read before write, and commit only a real change. A padded name trims to a value the store does not
-    // hold yet, which is the diff the suites rely on.
+    // Read before write, and commit only a real change — a padded name trims to a new value.
     if (collected.modelName !== undefined) {
       const current = ctx.read("modelName");
       const trimmed = collected.modelName.trim();

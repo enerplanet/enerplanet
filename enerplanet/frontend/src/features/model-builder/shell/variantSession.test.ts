@@ -1,17 +1,6 @@
 /**
- * The shell's half of `model-variant`'s switch (`shell/variantSession.ts`) — the fork's own session row, and the
- * guard that keeps it to one write.
- *
- * Two things are pinned, and they are the two the change rests on:
- *
- * - **the row is self-consistent** — keyed by the variant's model id, its log including the switch transaction,
- *   its projection the store after the switch, its fingerprint recomputed over that projection, so
- *   `fromArtefact` trusts it rather than replaying the switch away (`core/artefact.ts:125-136`);
- * - **it is written once per fork** — a session that arrived with a variant already recorded (a load, a reset)
- *   owes nothing, and a fork is claimed exactly once, so a re-render or a later store change is not a second
- *   write.
- *
- * Written failing first.
+ * The fork's own session row (`shell/variantSession.ts`): the row is self-consistent, and it is
+ * written once per fork.
  */
 import { describe, expect, it } from "vitest";
 import { fromArtefact, type Artefact, type WorkflowRef } from "../core/artefact";
@@ -27,6 +16,9 @@ const WORKFLOW: WorkflowRef = { id: "dev-flow", version: 1 };
 
 /** The node the switch is sealed on — `model-variant`, the module under test's id. */
 const NODE = "model-variant";
+
+/** The session's placed flow — what the artefact carries. */
+const FLOW = [{ id: NODE, moduleId: NODE }];
 
 /** The record `model-variant` commits for the copy — the variant in every case here. */
 const VARIANT = { variantModelId: 11, rootModelId: 1, title: "Base v1" };
@@ -75,7 +67,7 @@ function switchedStore(): Store {
     fromDate: "2024-01-01",
     toDate: "2024-12-31",
   });
-  store.applyTransaction(switchTransaction(), [], { node: { id: NODE } });
+  store.applyTransaction(switchTransaction(), [], { node: { id: NODE, moduleId: NODE } });
   return store;
 }
 
@@ -83,7 +75,7 @@ describe("persistVariantSession", () => {
   it("writes the row under the variant's model id, through the session PUT", async () => {
     const { gateway, saved } = recorder();
 
-    await persistVariantSession({ gateway, store: switchedStore(), workflow: WORKFLOW, variantModelId: 11 });
+    await persistVariantSession({ gateway, store: switchedStore(), workflow: WORKFLOW, flow: FLOW, variantModelId: 11 });
 
     expect(saved).toHaveLength(1);
     expect(saved[0]?.modelId).toBe(11);
@@ -93,29 +85,28 @@ describe("persistVariantSession", () => {
   it("builds the row from the state after the switch — the log carries it, the projection is the store", async () => {
     const { gateway, saved } = recorder();
 
-    await persistVariantSession({ gateway, store: switchedStore(), workflow: WORKFLOW, variantModelId: 11 });
+    await persistVariantSession({ gateway, store: switchedStore(), workflow: WORKFLOW, flow: FLOW, variantModelId: 11 });
     const artefact = saved[0]!.artefact;
 
     // The projection is the live store: the switch moved `modelId` onto the copy and recorded the variant.
     expect(artefact.projection.modelId).toBe(11);
     expect(artefact.projection.modelVariant).toEqual(VARIANT);
-    // The switch is in the applied log — one transaction, on this node — replaying onto the root's own start.
+    // The switch is in the applied log — one transaction, on this node.
     expect(artefact.initial.modelId).toBe(1);
     expect(artefact.log).toHaveLength(1);
-    expect(artefact.log[0]?.nodeId).toBe(NODE);
-    expect(artefact.cursor).toBe(1);
+    expect(artefact.log[0]?.node?.id).toBe(NODE);
+    expect(artefact.flow).toEqual(FLOW);
   });
 
   it("recomputes the fingerprint, so a load trusts the projection instead of replaying the switch away", async () => {
     const { gateway, saved } = recorder();
 
-    await persistVariantSession({ gateway, store: switchedStore(), workflow: WORKFLOW, variantModelId: 11 });
+    await persistVariantSession({ gateway, store: switchedStore(), workflow: WORKFLOW, flow: FLOW, variantModelId: 11 });
     const artefact = saved[0]!.artefact;
 
     const { store, divergence } = fromArtefact(artefact);
 
-    // No divergence: `fingerprint(projection)` matched what was stored, so the reload adopts it as-is. A stale
-    // fingerprint over a patched projection is exactly the trap — it would be discarded and the log replayed.
+    // No divergence: `fingerprint(projection)` matched what was stored, so the reload adopts it as-is.
     expect(divergence).toBeUndefined();
     expect(store.data.modelId).toBe(11);
     expect(store.data.modelVariant).toEqual(VARIANT);
@@ -130,13 +121,13 @@ describe("createVariantSessionGuard", () => {
     // First sight of the store: adopted, nothing owed yet.
     expect(guard.claim(store)).toBeUndefined();
 
-    store.applyTransaction(switchTransaction(), [], { node: { id: NODE } });
+    store.applyTransaction(switchTransaction(), [], { node: { id: NODE, moduleId: NODE } });
     expect(guard.claim(store)).toEqual({ variantModelId: 11 }); // the fork — claimed
 
     // A re-render, and a later store change, are not a second fork.
     expect(guard.claim(store)).toBeUndefined();
     store.applyTransaction([{ op: "replace", path: portPath("modelName"), prev: "Base", next: "Base v1" }], [], {
-      node: { id: "model-save" },
+      node: { id: "model-save", moduleId: "model-save" },
     });
     expect(guard.claim(store)).toBeUndefined();
   });

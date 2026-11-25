@@ -1,12 +1,4 @@
-/**
- * The editor's palette, rendered. The pure gate is proven in `gate.test.ts`; these pin that the
- * *rendered* palette reflects it — an unavailable module is greyed and names the port it waits for, and it
- * becomes addable once the chain produces that port. A host module is not offered at all, and a stored node
- * naming one — or naming an unknown module — is reported rather than fatal.
- *
- * `@spatialhub/i18n` is stubbed to echo a fallback with its variables filled, so the assertions are about
- * which controls are rendered rather than about copy. There is no DOM, so the editor is rendered to a string.
- */
+/** The editor's palette, rendered: an unavailable module is greyed and names the port it waits for, and a host module is not offered. `@spatialhub/i18n` is stubbed; there is no DOM, so the editor renders to a string. */
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Module, Param } from "../core/module";
@@ -87,8 +79,6 @@ describe("the palette reflects the gate", () => {
 });
 
 describe("a fragment", () => {
-  // A fragment is authored to be spliced into another flow, so the editor must not gate it on its own
-  // prefix. `render` passes no workflows, so the only signal read here is `isSubflow` on the document.
   const label = "Fragment flow";
   const fragment: WorkflowDocument = { id: "frag", version: 1, label, isSubflow: true, nodes: [] };
 
@@ -108,8 +98,6 @@ describe("a fragment", () => {
   it("offers every module without gating", () => {
     const html = render(fragment);
 
-    // The same Consumer the flow test greys and marks `needs` is addable here — the palette's refusal marker
-    // (`>needs<`) is absent, and nothing is greyed.
     expect(html).toContain("Consumer");
     expect(html).not.toContain(">needs<");
   });
@@ -162,8 +150,6 @@ describe("a stored node naming an unknown module", () => {
 
 describe("a stored node naming a host module", () => {
   it("is reported as not a node rather than shown as a step", () => {
-    // The catalogue holds the module, so this is not the unknown-module case: the node is naming something
-    // real that simply was never a step, which is the mistake the palette's exclusion exists to prevent.
     const withHost: WorkflowDocument = {
       id: "x",
       version: 1,
@@ -214,8 +200,6 @@ describe("a subflow node", () => {
   it("renders the referenced workflow's expansion inside it, ids namespaced and labels prefixed", () => {
     const html = render(withSubflow, false, [GRID]);
 
-    // The child node as `expand` composes it inside this document: id namespaced by the subflow node,
-    // label prefixed with the container's — and marked as belonging to the other workflow, not editable here.
     expect(html).toContain("Grid / Producer");
     expect(html).toContain("s/gen");
     expect(html).toContain("Steps from");
@@ -259,8 +243,6 @@ describe("reordering a chain", () => {
   });
 
   it("disables only the boundary controls when every move is safe", () => {
-    // The first row cannot move up and the last cannot move down; the four interior directions are all safe,
-    // so exactly two controls are disabled and no refusal is shown.
     const html = render(valid);
 
     expect(disabledCount(html)).toBe(2);
@@ -286,8 +268,6 @@ describe("reordering a chain", () => {
   });
 
   it("allows every move in a fragment, showing no refusal", () => {
-    // The same breaking order, but a fragment is judged where it is inserted, so the data-flow check is off:
-    // only the two boundaries are disabled, and no refusal appears.
     const fragment: WorkflowDocument = {
       id: "x",
       version: 1,
@@ -303,5 +283,101 @@ describe("reordering a chain", () => {
     expect(html).toContain("Move up");
     expect(html).not.toContain("unmet");
     expect(disabledCount(html)).toBe(2);
+  });
+});
+
+describe("authoring suggested next steps", () => {
+  const SECTION = {
+    key: "insulate",
+    label: "Insulate",
+    description: "Add insulation and re-run.",
+    nodes: [{ id: "buildings", moduleId: "producer", label: "Producer" }],
+  };
+  const withRecommended: WorkflowDocument = {
+    id: "x",
+    version: 1,
+    label: "X",
+    nodes: [{ id: "pv-step", moduleId: "producer", label: "Solar PV" }],
+    recommended: [SECTION],
+  };
+  const GRID: WorkflowDocument = { id: "grid", version: 1, label: "Grid build", nodes: [] };
+
+  it("renders the panel under its own wording and the suggestion's fields", () => {
+    const html = render(withRecommended);
+
+    expect(html).toContain("Suggested next steps"); // the panel heading
+    expect(html).toContain("Insulate"); // the suggestion's title
+    expect(html).toContain("Add insulation and re-run."); // its why (the goal)
+    expect(html).toContain("Add a suggestion"); // a control to author more
+    expect(html).toContain("Title"); // the title field's label
+    expect(html).toContain("Why (the goal)"); // the why field's label
+  });
+
+  it("has no step picker — a suggestion always belongs to the chain's tail", () => {
+    const html = render(withRecommended);
+
+    expect(html).not.toContain("After which step");
+    expect(html).not.toContain("Add suggestions for a step…");
+  });
+
+  it("renders no Key field — a suggestion's key is derived, never shown", () => {
+    const html = render(withRecommended);
+
+    expect(html).not.toContain(">Key</span>");
+  });
+
+  it("names a suggestion's nodes, so the author sees what it appends", () => {
+    const html = render(withRecommended);
+
+    // The node reads as its label and its module — the same pair the chain rows show.
+    expect(html).toContain("Producer</span>");
+  });
+
+  it("offers modules and workflows in a suggestion's step picker", () => {
+    const html = render(withRecommended, false, [GRID]);
+
+    expect(html).toContain("Modules");
+    expect(html).toContain("Workflows");
+    expect(html).toContain("Grid build");
+    expect(html).toContain('value="module:producer"');
+    expect(html).toContain('value="workflow:grid"');
+  });
+
+  it("renders a suggestion whose step is a workflow", () => {
+    const subflow: WorkflowDocument = {
+      ...withRecommended,
+      recommended: [{ ...SECTION, nodes: [{ id: "adjust", workflows: ["grid"], label: "Grid" }] }],
+    };
+    const html = render(subflow, false, [GRID]);
+
+    expect(html).toContain("Grid");
+  });
+
+  it("surfaces a malformed list before a save is attempted, naming the defect", () => {
+    const malformed: WorkflowDocument = {
+      ...withRecommended,
+      recommended: [{ ...SECTION, key: "" }],
+    };
+    const html = render(malformed);
+
+    expect(html).toContain("malformed");
+    expect(html).toContain("blank key");
+  });
+
+  it("prompts to author a suggestion when the workflow declares none", () => {
+    const html = render(empty);
+
+    expect(html).toContain("Suggested next steps");
+    expect(html).toContain("No suggestions yet");
+  });
+
+  it("starts folded: the heading is all it shows until it is opened", () => {
+    const html = render(withRecommended);
+
+    // Folded by default, so the panel is out of the way — but the heading stays and announces the
+    // state, so the follow-ups a workflow offers are still discoverable.
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("Suggested next steps</span>");
+    expect(html).toContain("hidden px-3 pb-3");
   });
 });

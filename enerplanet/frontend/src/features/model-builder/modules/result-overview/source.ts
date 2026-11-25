@@ -1,35 +1,14 @@
 /**
  * The results-overview source slot — what `result-overview` needs from a host, and nothing more.
  *
- * The module declares that it *can* read a model run's result summary and never learns how: the fetch goes
- * over the app's HTTP client to the backend's own results endpoint, and a module may not import that client.
- * A host installs the implementation at startup — the same slot shape `building-demand` uses for its demand
- * source and `run-meme-calliope` uses for its gateway: an interface, a module-scope value, an installer and
- * a getter.
- *
- * **There is no default.** Unlike the `auto` template's area-summary slot, this fetch genuinely leaves the
- * process, so there is nothing local to fall back to and a fabricated summary would be a lie about the
- * backend. A missing gateway is therefore an error the UI reports, naming the installer — exactly as
- * `run-meme-calliope` throws when no gateway is installed.
- *
- * **The load lives here, outside React, and installing is what asks for it.** A module's regions mount
- * *before* the shell's install effect runs — React runs child effects before parent ones — so a mount-time
- * `useEffect` that read the gateway would find it `null`, bail, and never be retried
- * (`modules/README.md`, "A source slot is installed *after* your effects run"). So the UI asks through
- * `requestResultOverview`, which records the model even when no gateway is installed yet, and
- * `setResultOverviewGateway` starts the load the moment one arrives. The same shape as `model-start/regions.ts`.
+ * The module reads a model run's result summary through an injected gateway; the fetch goes over the app's
+ * HTTP client, which a module may not import. There is no default. The load lives here, outside React;
+ * installing the gateway is what starts it.
  */
 
 import { useEffect, useSyncExternalStore } from "react";
 
-/**
- * A model run's result summary — only what the module shows, and only fields the structured endpoint serves.
- *
- * The shape is deliberately small: it is what one glance at the results page's numbers can honestly be built
- * from, not a copy of the results feature's payload. Units follow the results feature's own reading of the
- * same endpoint (`features/model-results`: totals are `totalKwh`, so the sums are kWh; `peak_demand` is a
- * power maximum, so kW).
- */
+/** A model run's result summary — the fields the module shows. Units: kWh for the sums, kW for peak demand. */
 export interface ResultOverviewSummary {
   /** Carriers the run produced, from `carrier_summaries` — the raw labels, opaque. */
   carriers: string[];
@@ -74,14 +53,7 @@ function publish(next: ResultOverviewState): void {
   for (const listener of [...listeners]) listener();
 }
 
-/**
- * Install the gateway. The frame calls this at startup, the way it installs the demand source.
- *
- * Installing is what asks for the summary: a model already requested is loaded here, which is what makes the
- * child-before-parent effect order harmless. Passing `null` **forgets everything** — the pending request and
- * the old gateway's answer — because with no gateway there is nothing to serve and a new one may report
- * differently.
- */
+/** Install the gateway. Installing is what asks for a recorded model; passing `null` forgets everything. */
 export function setResultOverviewGateway(next: ResultOverviewGateway | null): void {
   gateway = next;
   inFlight = null;
@@ -100,12 +72,7 @@ export function resultOverviewGateway(): ResultOverviewGateway | null {
   return gateway;
 }
 
-/**
- * Ask for a model's summary. Called by the view on mount and by the installer when a gateway arrives late.
- *
- * Deduplicated: a second ask for the model already on screen changes nothing, so a re-render is not a second
- * request. A *different* model — the frame moved to another node, or another session — starts a fresh load.
- */
+/** Ask for a model's summary, on mount and from the installer when a gateway arrives late. Deduplicated per model. */
 export function requestResultOverview(modelId: number): void {
   if (requested === modelId && (state.loading || state.summary !== null || state.failed)) return;
   requested = modelId;
@@ -150,10 +117,7 @@ export function overviewState(): ResultOverviewState {
   return state;
 }
 
-/**
- * The view's state for `modelId`, asking for it on mount. The third `useSyncExternalStore` argument is the
- * SSR snapshot — the view is also rendered to a string in tests, which needs one.
- */
+/** The view's state for `modelId`, asking for it on mount. */
 export function useResultOverview(modelId: number | undefined): ResultOverviewState {
   const snapshot = useSyncExternalStore(subscribe, overviewState, overviewState);
   useEffect(() => {

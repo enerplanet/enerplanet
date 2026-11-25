@@ -1,29 +1,16 @@
 /**
  * Flow gating — the palette and the validator.
  *
- * A **flow** is an immutable, ordered list of nodes; a **node** is one module placed at a
- * position. Gating is one predicate applied twice:
- *
- *   a module is placeable **iff every one of its `required` ports already exists**
- *
- * The palette asks that question of every registered module to decide what to offer; the
- * validator asks it of every placed node to decide whether the flow runs. Because it is the
- * *same* predicate against the same accumulated available-set, a flow built through the palette
- * cannot be invalid — validity is enforced by construction, not checked afterwards.
- *
- * The available-set grows as the flow is walked: each placed node contributes its whole store
- * surface (a module may write any param it declares). A node never satisfies
- * its own requirement, which is why the walk checks *before* contributing.
- *
- * Not modelled here yet: **one writer per port** — the contract has no
- * readable/writable distinction on `Param`, so two modules that merely read the same port are
- * indistinguishable from two that write it. That needs `Param` to say which.
+ * A flow is an immutable, ordered list of nodes; a node is one module placed at a position.
+ * Gating is one predicate applied twice: a module is placeable iff every one of its `required`
+ * ports already exists.
  */
 
 import { requiredPorts, type Module } from "./module";
 import type { PortKey } from "./ports";
+import type { Transaction } from "./diff";
 
-/** One module placed at a position. `skippable` is a node property; `auto` is not — it belongs to the module (`Module.auto`). */
+/** One module placed at a position. `skippable` is a node property; `auto` belongs to the module. */
 export interface FlowNode {
   id: string;
   moduleId: string;
@@ -31,8 +18,36 @@ export interface FlowNode {
   skippable?: boolean;
 }
 
-/** Immutable: a re-run moves the session's *position*, it never changes the flow. */
+/** Immutable: the transcript grows by appending re-runs, never by editing a placement in place. */
 export type Flow = readonly FlowNode[];
+
+/** A placement's own name: the seed `id`, or the `moduleId` recovered from an appended `"<n>-<name>"` id. */
+export function nodeName(node: FlowNode): string {
+  const match = /^\d+-(.+)$/.exec(node.id);
+  if (match !== null) return match[1];
+  return node.id.length > 0 ? node.id : node.moduleId;
+}
+
+/** Mint a placement id — `"<n>-<name>"`, with `n` counting up over every placement ever added. */
+export function placementId(index: number, name: string): string {
+  return `${index}-${name}`;
+}
+
+/** The transcript: the stored placed flow plus every commit's placement, in log order, deduped by id. */
+export function transcript(placed: Flow, log: readonly Transaction[]): Flow {
+  const seen = new Set(placed.map((node) => node.id));
+  const appended: FlowNode[] = [];
+
+  for (const commit of log) {
+    const node = commit.node;
+    if (node === undefined) continue;
+    if (seen.has(node.id)) continue;
+    seen.add(node.id);
+    appended.push({ id: node.id, moduleId: node.moduleId });
+  }
+
+  return [...placed, ...appended];
+}
 
 /** Module id → module. The register is this map. */
 export type ModuleRegistry = Readonly<Record<string, Module>>;
@@ -58,10 +73,7 @@ export function isPlaceable(module: Module, available: ReadonlySet<PortKey>): bo
   return missingPorts(module, available).length === 0;
 }
 
-/**
- * What a placed node contributes to the available-set — its whole declared surface, since any
- * declared param is potentially writable.
- */
+/** What a placed node contributes to the available-set — its whole declared surface. */
 export function contributedPorts(module: Module): PortKey[] {
   return module.params.map((param) => param.port);
 }
@@ -83,10 +95,7 @@ export function availablePorts(
   return available;
 }
 
-/**
- * Per-node gating report — this **is** the validator. A flow is valid when every entry is
- * placeable, and the palette could not have produced anything else.
- */
+/** Per-node gating report — this is the validator. */
 export function placementReport(
   flow: Flow,
   registry: ModuleRegistry,
@@ -134,10 +143,7 @@ export function palette(available: ReadonlySet<PortKey>, registry: ModuleRegistr
     .filter((module) => module !== undefined && isPlaceable(module, available));
 }
 
-/**
- * The other half of the palette: modules that cannot be placed, each with the reason — so the
- * UI can show "needs buildings — no producer upstream yet" instead of hiding them silently.
- */
+/** Modules that cannot be placed, each with the reason. */
 export function lockedModules(
   available: ReadonlySet<PortKey>,
   registry: ModuleRegistry,

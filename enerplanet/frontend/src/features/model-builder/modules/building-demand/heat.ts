@@ -1,18 +1,4 @@
-/**
- * The heat-demand mirror — a faithful port of the legacy's `utils/heatDemand.ts`.
- *
- * **This is a deliberate duplicate of backend defaults, and the only one in the codebase.** The backend
- * generates these same figures at payload-build time (`specificHeatDemandByFClass`) but does **not** persist
- * them, so the frontend recomputes them to have something to show. The backend is authoritative at run time
- * and overrides whatever is here — `BuEM > ignis/TABULA > this estimate` — which is the only reason a mirror
- * is defensible at all.
- *
- * Ported verbatim, table included, because a *close* copy of a lookup table is worse than none: it would
- * disagree with the backend on exactly the classes nobody checks. When real heat data flows, delete this and
- * read the persisted value instead.
- *
- * Exported for its own tests — the table is the part worth pinning.
- */
+/** The heat-demand mirror, a port of the legacy's `utils/heatDemand.ts`; a deliberate duplicate of backend defaults. */
 
 /** Building classes treated as zero-demand (mirrors the backend's list). */
 const ZERO_DEMAND_CLASSES = [
@@ -138,12 +124,7 @@ export function specificHeatDemand(fClass: string): number {
   return CATEGORY_FALLBACK[inferCategory(fClass)] ?? SPECIFIC_HEAT_DEMAND.default;
 }
 
-/**
- * Yearly heat demand in kWh, and whether it was estimated.
- *
- * An explicit (user-entered) value wins and is *not* flagged as estimated — that is the legacy's
- * `heat_demand_estimated` distinction, and the reason this returns two things rather than a number.
- */
+/** Yearly heat demand in kWh and whether it was estimated; an explicit value wins and is not flagged estimated. */
 export function estimateYearlyHeatDemand(
   fClass: string | undefined,
   areaSqm: number | undefined,
@@ -152,9 +133,7 @@ export function estimateYearlyHeatDemand(
   if (explicitHeatKwh !== undefined && explicitHeatKwh > 0) {
     return { kwh: explicitHeatKwh, estimated: false };
   }
-  // A building of unknown use (OSM `building=yes`) is still heated — like the backend's
-  // `heatdemand.SpecificDemandKwhM2a` it takes the fallback rate, not zero. Only a class that *means* no
-  // demand, or a building with no floor area, gets zero.
+  // An unknown-use building is still heated and takes the fallback rate; only a no-demand class or zero area gives zero.
   if ((fClass && isZeroHeatDemandClass(fClass)) || !areaSqm || areaSqm <= 0) {
     return { kwh: 0, estimated: false };
   }

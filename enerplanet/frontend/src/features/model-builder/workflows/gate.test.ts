@@ -1,11 +1,4 @@
-/**
- * The gate rule. These are the cases the editor's whole promise rests on: a module becomes
- * addable exactly when its `required` ports are produced by the chain, and stays unavailable otherwise —
- * with the port it is waiting for named, never hidden. The one thing not offered at all is a host module,
- * which cannot be a step: it declares no region to render.
- *
- * Written failing first.
- */
+/** The gate rule: a module is addable exactly when its `required` ports are produced by the chain, with the port it waits for named; a host module is not offered at all. */
 import { describe, expect, it } from "vitest";
 import type { FlowNode, ModuleRegistry } from "../core/flow";
 import type { Module, Param } from "../core/module";
@@ -22,12 +15,7 @@ import {
 } from "./gate";
 import type { WorkflowDocument, WorkflowNodeDocument } from "./types";
 
-/**
- * A catalogue entry with just the surface the gate reads.
- *
- * A region by default, because a module that declares one is what the palette is for; `HOST` below passes
- * none, which is the whole difference the last test is about.
- */
+/** A catalogue entry with just the surface the gate reads (a region by default, so it can be a step). */
 function entry(id: string, params: Param[], layout: Module["layout"] = ["sidebar"]): BuilderModule {
   const module: Module = { id, name: id, params, affect: {}, layout };
   return { module, Component: () => null };
@@ -88,8 +76,6 @@ describe("a module is addable only when the chain produces its required ports", 
   });
 
   it("reads production from the whole chain, not only its last module", () => {
-    // `second` produces `buildings`; `third` (later) does not. A module needing only `buildings` is still
-    // satisfied, because production accumulates across the chain.
     const chain = [node("base", "base"), node("second", "second"), node("third", "third")];
     const produced = producedPorts(chain, CATALOGUE, noLookup);
     expect(produced.has("buildings")).toBe(true);
@@ -162,8 +148,6 @@ describe("a subflow node contributes its expansion's ports", () => {
   });
 
   it("stops at a cyclic composition rather than looping, contributing what it reaches first", () => {
-    // `self` references itself, then places `base`. The gate is editor guidance, not a core invariant, so a
-    // cycle must not throw here; it contributes the modules down the non-recursive branch.
     const self = doc("self", [{ id: "loop", workflows: ["self"] }, node("p", "base")]);
     const chain: WorkflowNodeDocument[] = [{ id: "s", workflows: ["self"] }];
 
@@ -196,9 +180,6 @@ describe("the candidate verdict a subflow picker renders", () => {
   });
 
   it("does not count a port the expansion produces only after the module that needs it", () => {
-    // `third` needs `coordinates`; `second` (which produces it) sits *after* third, so at the point third runs
-    // the port is not there yet — unmet, because the flattening is a walk in execution order. `buildings` is
-    // supplied by the chain so `second`'s own requirement is met and the case isolates the ordering.
     const candidate = doc("cand", [node("t", "third"), node("s", "second")]);
     expect(subflowVerdict(candidate, new Set(["buildings"]), REGISTRY, lookupFrom(candidate), "editing")).toEqual({
       ok: false,
@@ -208,8 +189,6 @@ describe("the candidate verdict a subflow picker renders", () => {
   });
 
   it("counts a port the expansion itself produces before the module that needs it", () => {
-    // `second` (produces `coordinates`) sits before `third` (needs it), so that requirement is met internally;
-    // only `second`'s own `buildings` requirement must come from the chain.
     const candidate = doc("cand", [node("s", "second"), node("t", "third")]);
     expect(subflowVerdict(candidate, new Set(["buildings"]), REGISTRY, lookupFrom(candidate), "editing")).toEqual({
       ok: true,
@@ -306,8 +285,6 @@ describe("the positional unmet-required walk, on its own", () => {
   });
 
   it("does not let a later module satisfy an earlier reader", () => {
-    // `third` needs `coordinates`; `second` (which produces it) sits *after* third, so it is unmet — the walk
-    // is in execution order. `buildings` is supplied so `second`'s own requirement does not muddy the case.
     const flow = [flowNode("t", "third"), flowNode("s", "second")];
     expect(unmetRequiredPorts(flow, new Set(["buildings"]), REGISTRY)).toEqual(["coordinates"]);
   });
@@ -335,9 +312,6 @@ describe("a fragment's own unmet inputs — what the flow that inserts it must h
   });
 
   it("reads a later module in the same fragment as unable to satisfy an earlier reader", () => {
-    // `third` needs `coordinates`; `second` (which produces it) sits *after* third in the fragment. With an
-    // empty prefix nothing before produces it, so `coordinates` stays unmet — the walk is in execution order.
-    // `second`'s own `buildings` requirement is unmet too, for the same reason (nothing precedes it either).
     const fragment = doc("frag", [node("t", "third"), node("s", "second")]);
     expect(fragmentRequiredPorts(fragment, lookupFrom(fragment), REGISTRY)).toEqual([
       "coordinates",
@@ -358,8 +332,6 @@ describe("whether an order is self-satisfying", () => {
   });
 
   it("refuses an order that leaves a requirement unmet, naming the port", () => {
-    // `consumer` needs `buildings`; `producer` (which produces it) sits after it, so in execution order the
-    // port is not there yet.
     const flow = doc("flow", [node("c", "consumer"), node("p", "producer")]);
     expect(orderIsValid(flow, noLookup, REGISTRY)).toEqual({
       ok: false,
@@ -378,8 +350,6 @@ describe("the rule a move is offered under — it must not add an unmet requirem
   const REGISTRY = registryFrom(...CATALOGUE, PRODUCER);
 
   it("refuses a move that would add an unmet requirement, naming the port", () => {
-    // `[producer, consumer]` is valid; moving `producer` down yields `[consumer, producer]`, where `buildings`
-    // is read before it is produced — a new unmet port, so the move is refused.
     const flow = doc("flow", [node("p", "producer"), node("c", "consumer")]);
     expect(moveIsAllowed(flow, 0, "down", noLookup, REGISTRY)).toEqual({
       ok: false,
@@ -389,8 +359,6 @@ describe("the rule a move is offered under — it must not add an unmet requirem
   });
 
   it("allows a move that introduces no new unmet requirement", () => {
-    // The same two nodes on the other side of the swap: moving `producer` up from the broken order reaches the
-    // valid one, so the unmet set shrinks to nothing — allowed.
     const flow = doc("flow", [node("c", "consumer"), node("p", "producer")]);
     expect(moveIsAllowed(flow, 1, "up", noLookup, REGISTRY)).toEqual({ ok: true });
   });
@@ -401,9 +369,6 @@ describe("the rule a move is offered under — it must not add an unmet requirem
   });
 
   it("allows a move that leaves an already-unmet requirement unchanged — the editor is not frozen", () => {
-    // Two consumers of `buildings` and nothing producing it: the order is unsatisfiable either way, and the
-    // move does not enlarge the unmet set. Refusing it would freeze an editor whose flow is already broken and
-    // leave no way to reorder toward a fix.
     const flow = doc("flow", [node("c1", "consumer"), node("c2", "consumer")]);
     expect(moveIsAllowed(flow, 1, "up", noLookup, REGISTRY)).toEqual({ ok: true });
   });

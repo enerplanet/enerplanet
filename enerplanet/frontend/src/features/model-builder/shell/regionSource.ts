@@ -1,17 +1,9 @@
 /**
  * The region source the frame installs: the legacy's own pylovo service.
  *
- * The module declares the slot (`modules/model-start/regions.ts`) and never learns which source it has; this is
- * the implementation a host provides, beside the weather source and for the same reason — a module may only
- * depend on `@model-builder/core`, while the app's service layer is the app's.
- *
- * It goes through `pylovoService.getAvailableRegions()` rather than calling the endpoint itself. That service
- * already owns the request's timeout, its one-minute cache and its in-flight reuse, and it is the same call the
- * legacy's own "Go to Region" picker makes — so the two lists cannot drift apart, and there is one cache rather
- * than two disagreeing about the same data.
- *
- * That the two lists differed at all is what produced this file: ours showed four hand-typed regions while the
- * legacy showed the real five.
+ * The module declares the slot (`modules/model-start/regions.ts`) and never learns which source it has. It
+ * goes through `pylovoService.getAvailableRegions()`, so the two lists cannot drift apart and there is one
+ * cache rather than two.
  */
 
 import { pylovoService } from "@/features/configurator/services/pylovoService";
@@ -47,8 +39,7 @@ export const backendRegionSource: RegionSource = {
   async listRegions(): Promise<readonly RegionOption[]> {
     const response = await pylovoService.getAvailableRegions();
 
-    // The legacy's own hook treats anything but `success` as a failure so its query layer can retry; a picker
-    // that quietly showed nothing would be worse than one that says it could not ask.
+    // The legacy's own hook treats anything but `success` as a failure so its query layer can retry.
     if (response.status !== "success") {
       throw new Error(`the region list answered status '${response.status}'`);
     }

@@ -1,16 +1,4 @@
-/**
- * `area-draw`'s tests.
- *
- * Written failing first.
- *
- * The declaration cases pin what this module *is*: it requires the region (an area is drawn inside one) and
- * produces `coordinates`, and nothing feeds it — so `affect` is empty and the cascade
- * belongs to the modules that *consume* `coordinates`, not to this one.
- *
- * The behaviour cases pin the two decisions worth arguing about: a gesture **replaces** the area (the module's
- * UI owns the draft, so what it hands over is the whole area, not an increment), and the two pure helpers the
- * sidebar and the data-loss confirmation are built on.
- */
+/** `area-draw`'s tests: its declaration, its behaviour, the area size, and the data-loss confirmation. */
 import { describe, it, expect } from "vitest";
 import {
   contractIssues,
@@ -89,10 +77,7 @@ describe("area-draw's declaration", () => {
   });
 
   it("declares no influence, because nothing feeds it", () => {
-    // `affect` maps a module's *inputs* to the outputs they change. The region constrains what may be drawn,
-    // it does not change what this module writes — the user redraws. The invalidation
-    // (`coordinates` → the whole grid) is declared by the modules that consume `coordinates`, through the
-    // cascade, not here.
+    // `affect` is empty: the region constrains what may be drawn, and the cascade belongs to the consumers of `coordinates`.
     expect(areaDraw.module.affect).toEqual({});
   });
 
@@ -112,7 +97,7 @@ describe("area-draw's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: TWO_RINGS });
-    await engine.runModule(areaDraw.module, { id: NODE });
+    await engine.runModule(areaDraw.module, { id: NODE, moduleId: areaDraw.module.id });
 
     expect(store.data.coordinates).toEqual(TWO_RINGS);
     expect(store.log).toHaveLength(1);
@@ -120,13 +105,12 @@ describe("area-draw's behaviour", () => {
   });
 
   it("replaces the area rather than appending to it", async () => {
-    // The module's UI owns the draft, so what it hands over is the *whole* area. An append here would make a
-    // UI that hands the full list (the only sensible one) silently double every ring.
+    // A gesture replaces the whole area, not increments it.
     const store = createStore({ region: REGION, coordinates: TWO_RINGS });
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: ONE_RING });
-    await engine.runModule(areaDraw.module, { id: NODE });
+    await engine.runModule(areaDraw.module, { id: NODE, moduleId: areaDraw.module.id });
 
     expect(store.data.coordinates).toEqual(ONE_RING);
   });
@@ -136,20 +120,19 @@ describe("area-draw's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: [] });
-    await engine.runModule(areaDraw.module, { id: NODE });
+    await engine.runModule(areaDraw.module, { id: NODE, moduleId: areaDraw.module.id });
 
     expect(store.data.coordinates).toEqual([]);
     expect(store.log).toHaveLength(1);
   });
 
   it("records the re-apply without changing anything", async () => {
-    // The area is already there, so the run proposes nothing — but it still seals its zero-diff trace, which is
-    // what lets a user jump back to this node and leave again without inventing an edit.
+    // Already applied: the run proposes nothing but still seals a zero-diff trace.
     const store = createStore({ region: REGION, coordinates: ONE_RING });
     const engine = createEngine(store);
 
     hold(NODE, { coordinates: ONE_RING });
-    const sealed = await engine.runModule(areaDraw.module, { id: NODE });
+    const sealed = await engine.runModule(areaDraw.module, { id: NODE, moduleId: areaDraw.module.id });
 
     // Sealed, but carrying no ops: the trace is the point, not a diff.
     expect(sealed?.primary).toHaveLength(0);
@@ -184,12 +167,7 @@ describe("area-draw's behaviour", () => {
 
 describe("the area's size", () => {
   it("measures a one-degree cell at the equator the way the sphere does", () => {
-    // Derived, not remembered: for a lat/lon rectangle A = R²·Δλ·(sin φ₂ − sin φ₁). With R = 6371.0088 km and
-    // Δλ = 1° = 0.0174533 rad: 6371.0088² × 0.0174533 × sin(1°) = 12,363.718 km².
-    //
-    // The tolerance is deliberately tight. A planar shoelace over degrees gives 12,366.6 (wrong by ~3 km²), but
-    // *replacing only the sine with radians* — the subtler mutation — moves this answer by 0.6 km², and a window
-    // of ±1 km² would let it through without ever noticing. The case is worth exactly as much as its precision.
+    // Spherical-area check (A = R²·Δλ·(sin φ₂ − sin φ₁)); the tolerance is tight enough to catch the sine/radian mutation.
     const cell: Coordinates = [
       [
         [0, 0],

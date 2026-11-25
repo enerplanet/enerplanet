@@ -1,11 +1,6 @@
 /**
- * History — undo/redo over the append-only log.
- *
- * These lock: undo restores
- * a sealed transaction's pre-values *exactly*, a new edit truncates the redo tail, and redo
- * re-derives the cascade instead of replaying the stored prunes.
- *
- * Written failing first.
+ * History — undo/redo as commits over the append-only log: undo restores a commit's pre-values
+ * exactly, a new edit appends rather than truncating, and undo lands on auto work too.
  */
 import { describe, it, expect } from "vitest";
 import { createStore } from "./store";
@@ -13,6 +8,8 @@ import { createEngine } from "./engine";
 import { defineModule } from "./module";
 import type { DiffOp } from "./diff";
 import { building, fc, seed } from "./fixtures";
+import { nodeStates } from "./position";
+import type { ModuleRegistry } from "./flow";
 
 /** The primary diff used throughout: a drawn area replacing the empty coordinates. */
 const COORDINATES_EDIT: DiffOp = {
@@ -29,15 +26,12 @@ function rename(from: string, to: string): DiffOp {
 /** The name `seed()` starts with. */
 const INITIAL_NAME = "Contract fixture";
 
-// Constants for the values this file keeps quoting: jump node ids and two port paths.
 const BUILDINGS_PATH = "/buildings";
 const TRANSFORMERS_PATH = "/transformers";
-const NODE_GRID = "grid-generation";
-const NODE_SAVE = "model-save";
 
 
-describe("undo restores pruned downstream edits exactly", () => {
-  it("brings back a user-edited downstream port and the primary pre-value", () => {
+describe("undo restores pruned downstream edits exactly, by appending a rollback", () => {
+  it("brings back a user-edited downstream port and the primary pre-value; the target stays", () => {
     const userEdited = fc([building("user-edit")]);
     const priorTransformers = fc([building("t1")]);
     const store = createStore(seed({ buildings: userEdited, transformers: priorTransformers }));
@@ -51,174 +45,121 @@ describe("undo restores pruned downstream edits exactly", () => {
     expect(store.data.coordinates).toEqual([[[8.6, 49.4]]]);
     expect(store.data.buildings).toBeUndefined();
 
-    expect(store.undo()).toBeDefined();
+    const rollback = store.undo();
+
+    expect(rollback).toBeDefined();
+    expect(rollback?.revision).toBe(2);
+    expect(rollback?.rollback).toEqual({ of: 1 });
+    expect(rollback?.node).toBeUndefined(); // a rollback resolves the model, it is no placement's work
 
     // exactly what was there before — including the user's own edit
     expect(store.data.buildings).toEqual(userEdited);
     expect(store.data.transformers).toEqual(priorTransformers);
     expect(store.data.coordinates).toEqual([]);
-    expect(store.cursor).toBe(0);
-    expect(store.log).toHaveLength(1); // undo never rewrites the log
+
+    // append-only: the log gained the rollback, it did not lose or rewrite the target
+    expect(store.log).toHaveLength(2);
     expect(store.log[0]).toBe(transaction);
+    expect(store.log[1]).toBe(rollback);
   });
 });
 
 
-describe("a new edit after undo truncates the redo tail", () => {
-  it("drops the abandoned tail, leaves its entries untouched, keeps undo working", () => {
+describe("a new edit after undo appends — nothing is truncated", () => {
+  it("keeps both superseded commits and appends the new one", () => {
     const store = createStore(seed());
     const first = store.applyTransaction([rename(INITIAL_NAME, "one")]);
     const second = store.applyTransaction([rename("one", "two")]);
 
     expect(store.undo()).toBeDefined();
-    expect(store.undo()).toBeDefined();
-    expect(store.cursor).toBe(0);
-    expect(store.log).toHaveLength(2);
+    expect(store.data.modelName).toBe("one"); // the rollback resolves rev2 (one → two)
+    expect(store.log).toHaveLength(3); // two commits + the rollback
     expect(store.canRedo).toBe(true);
 
     const third = store.applyTransaction([rename(INITIAL_NAME, "three")]);
 
-    expect(store.log).toHaveLength(1);
-    expect(store.log[0]).toBe(third);
-    expect(store.cursor).toBe(1);
-    expect(store.canRedo).toBe(false);
+    // append-only: the rollback and both superseded commits are still present
+    expect(store.log).toHaveLength(4);
+    expect(store.log[0]).toBe(first);
+    expect(store.log[1]).toBe(second);
+    expect(store.log[3]).toBe(third);
     expect(store.data.modelName).toBe("three");
 
-    // the abandoned entries were dropped, not mutated
+    // the abandoned entries were never mutated
     expect(first.primary[0]).toMatchObject({ prev: INITIAL_NAME, next: "one" });
     expect(second.primary[0]).toMatchObject({ prev: "one", next: "two" });
+  });
+});
 
-    // and undo still walks what survived
+
+describe("redo re-applies by appending the inverse of the rollback", () => {
+  it("resolves the model forward again", () => {
+    const store = createStore(seed());
+    store.applyTransaction([rename(INITIAL_NAME, "one")]);
+
     expect(store.undo()).toBeDefined();
     expect(store.data.modelName).toBe(INITIAL_NAME);
-    expect(store.cursor).toBe(0);
-    expect(store.undo()).toBeUndefined();
+
+    const redone = store.redo();
+
+    expect(redone).toBeDefined();
+    expect(redone?.rollback).toEqual({ of: 2 });
+    expect(store.data.modelName).toBe("one");
+    expect(store.log).toHaveLength(3);
+  });
+
+  it("alternates undo and redo without oscillating", () => {
+    const store = createStore(seed());
+    store.applyTransaction([rename(INITIAL_NAME, "one")]);
+
+    expect(store.canUndo).toBe(true);
+    expect(store.canRedo).toBe(false);
+
+    store.undo();
+    expect(store.data.modelName).toBe(INITIAL_NAME);
+    expect(store.canUndo).toBe(false);
+    expect(store.canRedo).toBe(true);
+
+    store.redo();
+    expect(store.data.modelName).toBe("one");
+    expect(store.canUndo).toBe(true);
+    expect(store.canRedo).toBe(false);
+
+    store.undo();
+    expect(store.data.modelName).toBe(INITIAL_NAME);
+    store.redo();
+    expect(store.data.modelName).toBe("one");
   });
 });
 
 
-describe("redo recomputes the cascade instead of replaying it", () => {
-  it("re-derives the cascade from the current projection", () => {
-    const staleBuildings = seed().buildings;
-    const seen: Array<{ primary: readonly DiffOp[]; data: unknown }> = [];
-
-    const store = createStore(seed(), {
-      // The invalidation seam. A state-dependent invalidator may answer
-      // differently than it did at seal time — redone work must never resurrect stale
-      // prunes, so redo asks instead of replaying what the transaction stored.
-      deriveCascade: (primary, data) => {
-        seen.push({ primary, data: data.buildings });
-        return []; // "nothing downstream is stale any more"
-      },
-    });
-
-    store.applyTransaction([COORDINATES_EDIT], [
-      { op: "remove", path: BUILDINGS_PATH, prev: staleBuildings },
-    ]);
-    expect(store.data.buildings).toBeUndefined();
+describe("repeated undo walks back through history", () => {
+  it("resolves one commit at a time, then runs out", () => {
+    const store = createStore(seed());
+    store.applyTransaction([rename(INITIAL_NAME, "a")]);
+    store.applyTransaction([rename("a", "b")]);
+    store.applyTransaction([rename("b", "c")]);
 
     expect(store.undo()).toBeDefined();
-    expect(store.data.buildings).toEqual(staleBuildings);
+    expect(store.data.modelName).toBe("b");
+    expect(store.undo()).toBeDefined();
+    expect(store.data.modelName).toBe("a");
+    expect(store.undo()).toBeDefined();
+    expect(store.data.modelName).toBe(INITIAL_NAME);
+    expect(store.undo()).toBeUndefined();
 
-    expect(store.redo()).toBeDefined();
-
-    expect(seen).toHaveLength(1); // redo consulted the invalidator…
-    expect(seen[0].primary).toEqual([COORDINATES_EDIT]);
-    expect(store.data.coordinates).toEqual([[[8.6, 49.4]]]); // …re-applied the primary…
-    expect(store.data.buildings).toEqual(staleBuildings); // …and did NOT replay the stored prune
-    expect(store.cursor).toBe(1);
-    expect(store.log).toHaveLength(1);
-    expect(store.redo()).toBeUndefined();
+    expect(store.log).toHaveLength(6); // three commits + three rollbacks
   });
 });
 
 
-describe("undo skips auto work and lands on the interactive boundary", () => {
-  /** node1 → node2 → autonode3 → node4, each writing a distinct port. */
-  async function chain(): Promise<{ store: ReturnType<typeof createStore>; engine: ReturnType<typeof createEngine> }> {
-    const store = createStore(seed());
-    const engine = createEngine(store);
-
-    const node1 = defineModule({
-      id: "node1",
-      params: [{ port: "coordinates" }],
-      affect: {},
-      layout: [],
-      run: (ctx) => {
-        ctx.read("coordinates");
-        ctx.commit({ coordinates: [[[8.6, 49.4]]] });
-      },
-      validate: () => [],
-    });
-    const node2 = defineModule({
-      id: "node2",
-      params: [{ port: "buildings" }],
-      affect: {},
-      layout: [],
-      run: (ctx) => {
-        ctx.read("buildings");
-        ctx.commit({ buildings: fc([building("b1")]) });
-      },
-      validate: () => [],
-    });
-    const autonode3 = defineModule({
-      id: "autonode3",
-      params: [{ port: "buildings" }, { port: "grids" }],
-      affect: {},
-      layout: [],
-      run: (ctx) => {
-        ctx.read("buildings");
-        ctx.commit({ grids: { buildings: 1 } });
-      },
-      validate: () => [],
-    });
-    const node4 = defineModule({
-      id: "node4",
-      params: [{ port: "transformers" }],
-      affect: {},
-      layout: [],
-      run: (ctx) => ctx.commit({ transformers: fc([building("t1")]) }),
-      validate: () => [],
-    });
-
-    await engine.runModule(node1, { id: "node1" });
-    await engine.runModule(node2, { id: "node2" });
-    await engine.runModule(autonode3, { id: "autonode3", auto: true });
-    await engine.runModule(node4, { id: "node4" });
-    return { store, engine };
-  }
-
-  it("unwinds the trailing interactive step *and* the auto node before it", async () => {
-    const { store } = await chain();
-    expect(store.cursor).toBe(4);
-
-    const report = store.undo();
-
-    expect(report?.transactions).toBe(2);
-    expect(report?.nodeIds).toEqual(["node4", "autonode3"]);
-    expect(store.cursor).toBe(2); // end of node2's group — not the auto node
-    expect(store.data.transformers).toBeUndefined();
-    expect(store.data.grids).toBeUndefined(); // the auto node's output is gone
-    expect(store.data.buildings).toEqual(fc([building("b1")]));
-  });
-
-  it("redo is the inverse: it walks back over the auto node to the interactive tip", async () => {
-    const { store } = await chain();
-    store.undo();
-
-    const report = store.redo();
-
-    expect(report?.transactions).toBe(2);
-    expect(report?.nodeIds).toEqual(["autonode3", "node4"]);
-    expect(store.cursor).toBe(4);
-    expect(store.data.grids).toEqual({ buildings: 1 });
-    expect(store.data.transformers).toEqual(fc([building("t1")]));
-  });
-});
-
-
-describe("undo alone never produces writes", () => {
-  it("does not re-run the auto node it unwound", async () => {
+describe("undo lands on auto work too — auto is a normal target", () => {
+  /** `loader` (interactive) writes `region`; `autonode` (auto) reads `buildings`, writes `grids`. */
+  async function chain(): Promise<{
+    store: ReturnType<typeof createStore>;
+    registry: ModuleRegistry;
+    runs: () => number;
+  }> {
     const store = createStore(seed());
     const engine = createEngine(store);
     let autoRuns = 0;
@@ -243,99 +184,68 @@ describe("undo alone never produces writes", () => {
       },
       validate: () => [],
     });
-    const editor = defineModule({
-      id: "editor",
-      params: [{ port: "transformers" }],
-      affect: {},
-      layout: [],
-      run: (ctx) => ctx.commit({ transformers: fc() }),
-      validate: () => [],
-    });
 
-    await engine.runModule(loader, { id: "loader" });
-    await engine.runModule(auto, { id: "autonode", auto: true });
-    await engine.runModule(editor, { id: "editor" });
-    expect(autoRuns).toBe(1);
-    const logLength = store.log.length;
+    await engine.runModule(loader, { id: "loader", moduleId: "loader" });
+    await engine.runModule(auto, { id: "autonode", moduleId: "autonode", auto: true });
+    return { store, registry: { loader, autonode: auto }, runs: () => autoRuns };
+  }
 
-    const report = store.undo();
+  it("an undo reverses the auto step first, the next the interactive step below it", async () => {
+    const { store, runs } = await chain();
+    expect(runs()).toBe(1);
+    // The commit is marked automatic, so the run can be read back from history later.
+    expect(store.log[1].auto).toBe(true);
 
-    expect(report?.nodeIds).toEqual(["editor", "autonode"]);
-    expect(store.cursor).toBe(1);
-    expect(store.log).toHaveLength(logLength); // undo wrote nothing…
-    expect(autoRuns).toBe(1); // …and the auto module was never re-run
+    const first = store.undo();
+
+    expect(first?.rollback).toEqual({ of: 2 }); // the auto commit is the newest forward one
+    expect(store.data.grids).toBeUndefined(); // so its work is reversed…
+    expect(store.data.region).toEqual({ country: "DE", state: "BW" }); // …and the step below stands
+
+    const second = store.undo();
+    expect(second?.rollback).toEqual({ of: 1 });
+    expect(store.data.region).toBeUndefined();
+
+    expect(runs()).toBe(1); // an undo never re-runs anything
+  });
+
+  it("a redo repopulates the auto step's data, so it reads done again", async () => {
+    const { store, registry } = await chain();
+    const flow = [
+      { id: "loader", moduleId: "loader" },
+      { id: "autonode", moduleId: "autonode" },
+    ];
+
+    store.undo();
+
     expect(store.data.grids).toBeUndefined();
+    expect(nodeStates(flow, registry, store).autonode).toBe("stale"); // its work was reversed
+
+    store.redo();
+
+    // The data is back, so the placement reads its own commit as done — nothing has to re-run.
+    expect(store.data.grids).toEqual({ run: 1 });
+    expect(nodeStates(flow, registry, store).autonode).toBe("done");
+    expect(store.undo()).toBeDefined(); // and a redo is itself revertible
   });
 });
 
 
-describe("T20a — a jump is a transaction, and it records what it discarded", () => {
-  const DISCARDED = fc([building("b1")]);
-  const discardsBuildings: DiffOp[] = [{ op: "remove", path: BUILDINGS_PATH, prev: DISCARDED }];
-
-  it("seals where it went and what it pruned into one entry", () => {
-    const store = createStore(seed({ buildings: DISCARDED, transformers: fc() }));
-
-    const jump = store.applyTransaction(
-      [],
-      [...discardsBuildings, { op: "remove", path: TRANSFORMERS_PATH, prev: fc() }],
-      { node: { id: "area-edit" }, kind: "jump", jump: { from: NODE_SAVE, to: "area-edit" } },
-    );
-
-    expect(jump.kind).toBe("jump");
-    expect(jump.jump).toEqual({ from: NODE_SAVE, to: "area-edit" });
-    expect(jump.nodeId).toBe("area-edit");
-    expect(jump.primary).toEqual([]); // a move changes no value of its own…
-    expect(jump.cascade).toHaveLength(2); // …but it does discard
-    expect(store.data.buildings).toBeUndefined();
-    expect(store.log).toHaveLength(1);
-  });
-
-  it("allows a jump that discards nothing — the one documented zero-diff transaction", () => {
+describe("an edit after an undo takes redo away", () => {
+  it("a new commit is the tip, so the undone run can no longer be re-applied", () => {
     const store = createStore(seed());
+    store.applyTransaction([rename(INITIAL_NAME, "one")]);
 
-    const jump = store.applyTransaction([], [], {
-      kind: "jump",
-      jump: { from: NODE_GRID, to: "model-start" },
+    store.undo();
+    expect(store.canRedo).toBe(true);
+
+    store.applyTransaction([rename(INITIAL_NAME, "two")], undefined, {
+      // An edit is a placement's work, so it carries a node — that is what moves the tip.
+      node: { id: "edit-name", moduleId: "editor" },
     });
 
-    expect(store.log).toHaveLength(1);
-    expect(jump.kind).toBe("jump");
-    expect(jump.jump).toEqual({ from: NODE_GRID, to: "model-start" });
-    expect(jump.primary).toEqual([]);
-    expect(jump.cascade).toEqual([]);
-  });
-
-  it("undoes like any other transaction — the discarded values come back", () => {
-    const store = createStore(seed({ buildings: DISCARDED }));
-    store.applyTransaction([], discardsBuildings, {
-      kind: "jump",
-      jump: { from: NODE_SAVE, to: NODE_GRID },
-    });
-    expect(store.data.buildings).toBeUndefined();
-
-    const report = store.undo();
-
-    expect(report?.transactions).toBe(1);
-    expect(store.data.buildings).toEqual(DISCARDED);
-    expect(store.cursor).toBe(0);
-  });
-
-  it("leaves an ordinary action unmarked", async () => {
-    const store = createStore(seed());
-    const engine = createEngine(store);
-    const module = defineModule({
-      id: "plain-producer",
-      params: [{ port: "transformers" }],
-      affect: {},
-      layout: [],
-      run: (ctx) => ctx.commit({ transformers: fc() }),
-      validate: () => [],
-    });
-
-    await engine.runModule(module, { id: "plain-producer" });
-
-    expect(store.log[0].kind).toBeUndefined();
-    expect(store.log[0].jump).toBeUndefined();
+    expect(store.canRedo).toBe(false);
+    expect(store.redo()).toBeUndefined();
+    expect(store.data.modelName).toBe("two");
   });
 });

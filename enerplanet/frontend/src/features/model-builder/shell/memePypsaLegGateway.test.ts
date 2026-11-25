@@ -1,13 +1,6 @@
 /**
- * `memePypsaLegGateway`'s mapping — the one part of the gateway worth pinning, and the part it does **not**
- * share with the model dashboard's lifecycle reading.
- *
- * The gateway's submit/status calls are a thin axios wrapper and are left to the module's own tests (which
- * drive them through a fake); what can break silently is the *mapping*. Unlike the Calliope run's gateway, this
- * leg's status is exposed directly (`pypsa_leg_status`), so the mapping is a passthrough of the backend's own
- * vocabulary — and it is a pure function, tested directly, without stubbing axios.
- *
- * Written failing first.
+ * `memePypsaLegGateway`'s mapping: the leg's status is exposed directly, so the mapping is a passthrough
+ * of the backend's own vocabulary. A pure function, tested directly.
  */
 import { describe, expect, it } from "vitest";
 import { memePypsaLegOf, memePypsaLegStatusOf } from "./memePypsaLegGateway";
@@ -21,8 +14,7 @@ describe("memePypsaLegStatusOf — the backend's leg vocabulary, read directly",
   );
 
   it("reports an unrecognised or absent status as terminal, never as pending", () => {
-    // The field only ever holds the four values; anything else means there is no live leg to poll, and a
-    // `pending` default would keep asking forever.
+    // The field only ever holds the four values; anything else means there is no live leg to poll.
     expect(memePypsaLegStatusOf("")).toBe("failed");
     expect(memePypsaLegStatusOf("queued")).toBe("failed");
   });

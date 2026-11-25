@@ -18,7 +18,7 @@ import (
 // Captured from the generated SQL rather than guessed: GORM puts the primary key LAST in the INSERT
 // column list and, because ModelID is not auto-increment, uses RETURNING — so this is a Query, not
 // an Exec.
-const saveSQL = `INSERT INTO "model_sessions" \("workflow_id","workflow_version","initial","projection","log","discarded","cursor","fingerprint","created_at","updated_at","model_id"\) VALUES \(\$1,\$2,\$3,\$4,\$5,\$6,\$7,\$8,\$9,\$10,\$11\) ON CONFLICT \("model_id"\) DO UPDATE SET "workflow_id"="excluded"\."workflow_id","workflow_version"="excluded"\."workflow_version","initial"="excluded"\."initial","projection"="excluded"\."projection","log"="excluded"\."log","discarded"="excluded"\."discarded","cursor"="excluded"\."cursor","fingerprint"="excluded"\."fingerprint","updated_at"="excluded"\."updated_at" RETURNING "model_id"`
+const saveSQL = `INSERT INTO "model_sessions" \("workflow_id","workflow_version","initial","projection","log","flow","fingerprint","created_at","updated_at","model_id"\) VALUES \(\$1,\$2,\$3,\$4,\$5,\$6,\$7,\$8,\$9,\$10\) ON CONFLICT \("model_id"\) DO UPDATE SET "workflow_id"="excluded"\."workflow_id","workflow_version"="excluded"\."workflow_version","initial"="excluded"\."initial","projection"="excluded"\."projection","log"="excluded"\."log","flow"="excluded"\."flow","fingerprint"="excluded"\."fingerprint","updated_at"="excluded"\."updated_at" RETURNING "model_id"`
 
 func sampleSession() *models.ModelSession {
 	now := time.Now()
@@ -29,8 +29,7 @@ func sampleSession() *models.ModelSession {
 		Initial:         datatypes.JSON([]byte(`{}`)),
 		Projection:      datatypes.JSON([]byte(`{"modelName":"demo"}`)),
 		Log:             datatypes.JSON([]byte(`[{"revision":1,"primary":[],"cascade":[]}]`)),
-		Discarded:       datatypes.JSON([]byte(`[]`)),
-		Cursor:          1,
+		Flow:            datatypes.JSON([]byte(`[]`)),
 		Fingerprint:     "fp-abc",
 		CreatedAt:       now,
 		UpdatedAt:       now,
@@ -49,7 +48,7 @@ func TestSaveUpsertsTheWholeArtefact(t *testing.T) {
 			// the column list is the decision worth asserting); their values are covered verbatim by
 			// the handler test, which is where the request shape is checked.
 			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			row.Cursor, row.Fingerprint,
+			row.Fingerprint,
 			sqlmock.AnyArg(), sqlmock.AnyArg(), row.ModelID,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"model_id"}).AddRow(row.ModelID))
@@ -91,10 +90,10 @@ func TestGetReadsTheStoredArtefact(t *testing.T) {
 		WithArgs(uint(7), 1).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"model_id", "workflow_id", "workflow_version", "initial", "projection", "log",
-			"discarded", "cursor", "fingerprint", "created_at", "updated_at",
+			"flow", "fingerprint", "created_at", "updated_at",
 		}).AddRow(
 			stored.ModelID, stored.WorkflowID, stored.WorkflowVersion, stored.Initial,
-			stored.Projection, stored.Log, stored.Discarded, stored.Cursor, stored.Fingerprint,
+			stored.Projection, stored.Log, stored.Flow, stored.Fingerprint,
 			stored.CreatedAt, stored.UpdatedAt,
 		))
 
@@ -105,7 +104,7 @@ func TestGetReadsTheStoredArtefact(t *testing.T) {
 	if row == nil {
 		t.Fatal("want the stored session, got nil")
 	}
-	if row.Cursor != 1 || row.WorkflowID != "wf-core" || string(row.Projection) != `{"modelName":"demo"}` {
+	if string(row.Flow) != `[]` || row.WorkflowID != "wf-core" || string(row.Projection) != `{"modelName":"demo"}` {
 		t.Errorf("unexpected round-trip: %+v", row)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {

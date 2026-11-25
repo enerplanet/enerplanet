@@ -1,13 +1,4 @@
-/**
- * The host runtime, held to account without a browser.
- *
- * What is worth pinning here is the part a module's experience depends on and the canvas cannot be trusted to
- * provide on its own: that the service works *before* the map exists, that a fit asked for too early is
- * remembered rather than lost, that clicks reach every listener and stop reaching them when they unsubscribe,
- * and that a detached canvas stops being redrawn.
- *
- * The canvas itself — MapLibre, WebGL, tiles — is deliberately not tested here; it needs a browser.
- */
+/** The host runtime's service, pinned without a browser. */
 
 import { describe, expect, it, vi } from "vitest";
 import { createHostRuntime, type MapRenderer } from "./mapHost";

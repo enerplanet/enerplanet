@@ -1,8 +1,6 @@
 /**
  * The HTTP adapter — endpoint paths and payload keys are the kind of thing that breaks silently, so
  * they are pinned here against a recording client.
- *
- * Written failing first.
  */
 import { describe, it, expect } from "vitest";
 import { createHttpGateway, type HttpClient } from "./httpGateway";
@@ -52,9 +50,8 @@ function artefact(): Artefact {
     modelId: 7,
     initial: {},
     projection: { modelName: "Demo" },
+    flow: [{ id: "start", moduleId: "start" }],
     log: [{ revision: 1, primary: [], cascade: [] }],
-    discarded: [],
-    cursor: 1,
     fingerprint: "fp-abc",
   };
 }
@@ -132,9 +129,8 @@ describe("httpGateway — Call B", () => {
       workflow_version: 3,
       initial: {},
       projection: { modelName: "Demo" },
+      flow: [{ id: "start", moduleId: "start" }],
       log: [{ revision: 1, primary: [], cascade: [] }],
-      discarded: [],
-      cursor: 1,
       fingerprint: "fp-abc",
     });
   });
@@ -147,9 +143,8 @@ describe("httpGateway — Call B", () => {
         workflow_version: 3,
         initial: {},
         projection: { modelName: "Demo" },
+        flow: [{ id: "start", moduleId: "start" }],
         log: [{ revision: 1, primary: [], cascade: [] }],
-        discarded: [],
-        cursor: 1,
         fingerprint: "fp-abc",
       },
     }));

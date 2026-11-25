@@ -1,15 +1,4 @@
-/**
- * `run-meme-calliope`'s full-screen auto state — in progress, done, or failed with a manual re-run.
- *
- * The structure is `building-demand`'s: no control at all while the run is in progress or done, and on failure
- * the message plus the **manual re-run** — the one affordance an auto node has. The states are rendered to a
- * string (`@spatialhub/i18n` echoes the key) because the app has no DOM test environment.
- *
- * The one difference from `building-demand`'s view is the *source* of the run's state: that one reads it off
- * `auto.state`, while this node's progress lives in the store's `memeRun` port — the frame's `auto.state`
- * describes its own `run()` call, which returns as soon as the run is dispatched, minutes before it finishes.
- * So these cases hand the port the value under test and `auto` the guard and the rerun.
- */
+/** `run-meme-calliope`'s full-screen auto state, driven by the `memeRun` port. */
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { AutoRunState, MemeRun } from "@model-builder/core";
@@ -50,8 +39,7 @@ describe("run-meme-calliope's auto state view", () => {
   });
 
   it("shows the run done, with no control at all", () => {
-    // `auto.state` is not the source: it reads `done` the moment the dispatch returns, while the run is still
-    // going. The port is what says the run finished.
+    // `auto.state` is not the source: the `memeRun` port says the run finished.
     const html = render({ state: "running", rerun: () => {} }, run("completed"));
 
     expect(html).toContain(DONE);

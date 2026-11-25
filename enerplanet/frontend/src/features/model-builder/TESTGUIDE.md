@@ -15,8 +15,9 @@ model** — the first end-to-end run of every node, including the building confi
 
 ## How the bar moves
 
-The prior control is a *jump*: it goes back to an earlier node and **discards nothing**. There is
-**no forward control** — a step advances by *running itself*, and an `auto` node runs **on arrival**.
+The prior control is a **view**: it looks back at an earlier placement and **writes nothing** — no
+commit, no discard. There is **no forward control** — a step advances by *running itself*, and an
+`auto` node runs **on arrival**.
 
 ## The walk
 

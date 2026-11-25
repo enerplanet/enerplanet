@@ -1,43 +1,8 @@
 /**
  * The example module — a working example, and the template to copy.
  *
- * It is deliberately **not** a step of any workflow. It is the shape every module should have: a
- * declared port surface, honest `affect`, a `seal`, mock inputs, a `validate`, and one UI per declared region.
- * Everything it does is small on purpose — the value is in the parts, not the job.
- *
- * It declares **all four slots** the frame offers and gives each one a real interface, so it doubles as the
- * demonstration of the frame:
- *
- *   sidebar   the model form — the name and the resolution, committed together
- *   map       draw the area — click to place ring points, then commit the ring, and put it on the map
- *   bottom    module status — every declared port and whether the store holds it
- *   overlay   the review — the declared ports with their values, the drawn area, and what is missing
- *
- * **Putting UI over the map** is what the `map` region is for: the frame renders the map host's canvas underneath
- * and this region's element above it in a **pass-through** layer, so the map keeps taking clicks unless a control
- * opts in with `pointer-events-auto` (`modules/README.md`, "Putting UI on the map"). The card in this region is
- * that pattern; use `overlay` plus `OverlayControl.open()` instead when you want a modal over the whole module
- * column.
- *
- * **Each region owns its own overflow**, which is the rule the frame sets: the host hands over a bounded box
- * and never scrolls for you, so every region that can outgrow its box says what happens when it does. Here
- * the three that can grow carry `flex h-full flex-col overflow-auto`; `bottom` deliberately does not, because
- * it is a status strip whose box is a cap (¼), not a quota.
- *
- * **Each region also calls `run()` itself**, with what it collected — it holds those values in the module's own
- * model and hands them over with `hold()`, keyed to the node they were collected for. See the notes on `hold`
- * and `seal`.
- *
- * The map region draws locally and then puts the result on the map: it **names a layer** (`createLayer`), empties
- * it (`clearLayer`) and adds the ring (`addFeatures`) — create and place as two separate calls, which is the
- * shape of the service. Drawing *from* the map (`requestPolygon`) and reacting to clicks (`onElementClick`) need
- * a real renderer behind the service; they belong to `area-draw`, and `map-provider` is what makes them work.
- *
- * Scaffold a new one from it:
- *
- *   node src/features/model-builder/scripts/new-module.mjs <id> "Human label"
- *
- * The script copies this directory, rewrites the id and the label, and registers the entry.
+ * Not a step of any workflow. Declares all four slots (`sidebar`, `map`, `bottom`, `overlay`), one UI per
+ * region. Scaffold a new module from it: `node src/features/model-builder/scripts/new-module.mjs <id> "label"`.
  */
 
 import { useEffect, useState } from "react";
@@ -58,29 +23,13 @@ type Ring = [number, number][];
 /** The resolutions a building model is usually drawn at, in minutes. */
 const RESOLUTIONS = [1, 5, 15, 30, 60] as const;
 
-/**
- * The layer this module puts its ring on. The **module names it** — that is the service's shape: the id is how
- * this module finds its own layer again, how `getLayerOrder` talks about it, and nothing else has to agree on it.
- */
+/** The layer this module puts its ring on — the module names it, which is how the service works. */
 const AREA_LAYER = "example-area";
 
-/**
- * The module's own model: the values its regions have collected, and the node they were collected for.
- *
- * A module's UI gathers values that only `run()` can commit, so it keeps them itself — that is the design, not
- * a hole in the contract (see "Where a module's work comes from" in `modules/README.md`). What matters is
- * `nodeId`: the frame can move the session to another node while a form is half-filled, and a value collected
- * on one node must never be committed against another.
- */
+/** The module's own model: values its regions have collected, keyed by the node they were collected for. */
 const held: { nodeId: string | null; values: Partial<ModelData> } = { nodeId: null, values: {} };
 
-/**
- * Hold these values for `nodeId`, **dropping anything held for a different node**.
- *
- * The only way a region hands values to `run()`, and the path a test drives the module through — there is no
- * other door into it. Holding an *empty* set is meaningful: it is how a region says "the node changed, nothing
- * of the last one applies here".
- */
+/** Hold values for `nodeId`, dropping anything held for a different node; the only way a region hands values to `run()`. */
 export function hold(nodeId: string, values: Partial<ModelData> = {}): void {
   if (held.nodeId !== nodeId) {
     held.values = {};
@@ -123,42 +72,27 @@ const module = defineModule({
   id: "example-interactive",
   name: "Example interactive module",
 
-  // The module's whole store surface — and it is exactly what `run()` writes, nothing declared "just in
-  // case". Declaring a port is not paperwork: an undeclared write is rejected, and the flow gate reasons
-  // about `required` before the node is even allowed to run.
+  // The module's whole store surface — exactly what `run()` writes, nothing declared "just in case".
   params: [
     { port: "modelName" },
     { port: "resolution", required: true },
     { port: "coordinates" },
   ],
 
-  // Declared influence. Writing these three affects nothing downstream *here* — this module is not placed in a
-  // workflow and nothing in it reads another port — so `{}` is the honest answer. Keep this honest in a real
-  // module: the influence-honesty prober (`core/influence.ts`) fails one that understates it.
+  // Declared influence: this module is not placed in a workflow and nothing reads another port, so `{}` is honest.
   affect: {},
 
-  // How often this module's work reaches the log. `per-commit` seals one
-  // **atomic** transaction per `commit()`; the default `at-completion` seals one for the whole `run()`.
-  //
-  // `per-commit` is right here because the three ports are independent fields: nothing is derived from anything
-  // else, so a partial state is still one this module stands behind, and the user gets field-level undo for
-  // free. A module whose writes must land together leaves this at the default — `grid-generation` writes
-  // buildings + transformers + lines + grids from one drawn area, and undoing one of those would leave a store
-  // that violates the module's own guarantee. Atomicity is a property of the transaction either way; only the
-  // group differs, and which group is right is the module's call.
+  // `per-commit` seals one atomic transaction per `commit()`; the default `at-completion` seals one per `run()`.
   seal: "per-commit",
 
-  // Every slot the frame offers. A module that declares nothing is headless — that is how an `auto`
-  // node renders nothing.
+  // Every slot the frame offers. A module that declares nothing is headless — that is how an `auto` node renders nothing.
   layout: ["sidebar", "map", "bottom", "overlay"],
 
   run: (ctx) => {
     const collected = takeHeld();
     const proposed: Partial<ModelData> = {};
 
-    // Read before you write — the anti-clobber rule — and commit only what was collected actually changes.
-    // Committing nothing is fine: the run still seals one transaction either way, a zero-diff one when nothing
-    // changed, because a jump re-arms its target and the re-arm has to be clearable without inventing an edit.
+    // Read before you write, and commit only what changed; committing nothing still seals a zero-diff run.
     if (collected.modelName !== undefined) {
       const current = ctx.read("modelName");
       const trimmed = collected.modelName.trim();
@@ -197,11 +131,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
   const [typedResolution, setTypedResolution] = useState<number | null>(null);
   const [points, setPoints] = useState<Ring>([]);
 
-  // The frame can move the session to another node mid-edit — from the bar, while this form is half-filled.
-  // Nothing collected on one node may reach another, so a node change drops the held values and clears what
-  // was collected locally: the region shows the *store's* values again, and only a fresh hold can be
-  // committed from here. The layer this module put on the map goes with it — `removeLayer` is idempotent,
-  // so this is safe even when there was nothing on the map to begin with.
+  // A node change drops the held values and clears what was collected locally; the layer goes with it (`removeLayer` is idempotent).
   useEffect(() => {
     map?.removeLayer(AREA_LAYER);
     hold(nodeId, {});
@@ -210,8 +140,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
     setPoints([]);
   }, [nodeId, map]);
 
-  // ── bottom: module status. Intrinsic height on purpose — its box is a cap, so a strip that fits renders
-  //    as a strip. Each port says whether the store actually holds it, by colour *and* by word.
+  // ── bottom: module status. Intrinsic height on purpose — its box is a cap; each port says whether the store holds it.
   if (region === "bottom") {
     return (
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -232,8 +161,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
     );
   }
 
-  // ── map: draw the area locally, then put it on the map. What gets committed is the ring — the map service
-  //    never writes the store, and the layer is transient interaction state.
+  // ── map: draw the area locally, then put it on the map. What gets committed is the ring.
   if (region === "map") {
     const addPoint = (event: React.MouseEvent<SVGSVGElement>): void => {
       const box = event.currentTarget.getBoundingClientRect();
@@ -253,8 +181,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
 
       hold(nodeId, { coordinates: [ring] });
 
-      // Four separate calls, which is the shape of the service: name a layer, empty it, put the geometry on it,
-      // and say it is the one taking clicks. None of it is model state — the ring above is what was committed.
+      // Four separate calls, the shape of the service: name a layer, empty it, put the geometry on it, make it interactive.
       map?.createLayer(AREA_LAYER);
       map?.clearLayer(AREA_LAYER);
       map?.addFeatures(AREA_LAYER, area);
@@ -270,9 +197,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
     };
 
     return (
-      // A floating card, not a full-box panel: this region sits *over* the real map, so it takes only the space
-      // it needs and opts back into pointer events (the host's layer is pass-through, so a panel can never
-      // swallow a map click by accident).
+      // A floating card over the real map: it takes only the space it needs and opts back into pointer events.
       <div className="pointer-events-auto flex max-h-full max-w-md flex-col gap-3 overflow-auto rounded-lg border border-border bg-card/95 p-4 shadow-sm">
         <h3 className="shrink-0 text-base font-semibold">{t("modelBuilder.example-interactive.map.title")}</h3>
         <p className="shrink-0 text-sm text-muted-foreground">{t("modelBuilder.example-interactive.map.hint")}</p>
@@ -443,8 +368,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
       <button
         type="button"
         onClick={() => {
-          // Everything the form owns is held for *this* node and handed over in one gesture: the write
-          // boundary, anti-clobber and the cascade apply to it exactly as they do in a flow.
+          // Everything the form owns is held for this node and handed over in one gesture.
           hold(nodeId, {
             ...(typedName === null ? {} : { modelName: typedName }),
             ...(typedResolution === null ? {} : { resolution: typedResolution }),
@@ -477,9 +401,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId, map, 
 const builderModule: BuilderModule = {
   module,
   Component,
-  // The test data: the inputs this module needs to do its work in isolation — the seed of the host's scratch
-  // store. It carries the required port (resolution, which the contract check insists on) and a name, whose
-  // padding is deliberate: the form trims it, so committing the form's own value is a visible change.
+  // The test data: the seed of the host's scratch store; carries the required port and a deliberately padded name.
   mock: {
     modelName: "  Example fixture  ",
     resolution: 60,

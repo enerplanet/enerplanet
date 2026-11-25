@@ -2618,6 +2618,7 @@
     "loading": "Cargando instancias de Pylovo"
   },
   "regionSelector": {
+    "3dBuildingData": "Datos urbanos 3D disponibles",
     "goToRegion": "Ir a la región",
     "jumpToRegion": "Ir a una región con datos de cuadrícula disponibles",
     "searchPlaceholder": "Buscar región o código postal...",
@@ -3238,6 +3239,16 @@
         "subflowNote": "Un subflujo es un fragmento: se inserta en otro flujo de trabajo y se valida donde se inserta, no por sí solo."
       },
       "editor": {
+        "addNode": "Añadir nodo",
+        "addSuggestion": "Añadir una sugerencia",
+        "noNodes": "No hay nodos.",
+        "pickModule": "Añadir un módulo…",
+        "suggested": "Pasos siguientes sugeridos",
+        "suggestedEmpty": "Todavía no hay sugerencias. Añada abajo una sugerencia para empezar.",
+        "suggestedHint": "Pasos de seguimiento que se ofrecen una vez ejecutado el último paso de la cadena. Cada sugerencia se añade como una unidad.",
+        "suggestedProblem": "Los pasos siguientes sugeridos no son válidos: {{reason}}",
+        "suggestionTitle": "Título",
+        "suggestionWhy": "Por qué (el objetivo)",
         "back": "Volver a la lista",
         "version": "versión {{version}}",
         "unsaved": "Cambios sin guardar",
@@ -3272,7 +3283,8 @@
         "subflowOwnedBy": "Pasos de \"{{label}}\": se editan en ese flujo de trabajo, no aquí.",
         "subflowExpansionFailed": "Este flujo de trabajo no se puede expandir aquí.",
         "recursive": "contendría este flujo de trabajo: un subflujo no puede incluirse a sí mismo, ni directa ni transitivamente",
-        "unresolved": "no se puede resolver: nombra un módulo o un flujo de trabajo que esta compilación no tiene"
+        "unresolved": "no se puede resolver: nombra un módulo o un flujo de trabajo que esta compilación no tiene",
+        "pickWorkflow": "Flujos de trabajo"
       }
     },
     "run-meme-calliope": {
@@ -3359,6 +3371,9 @@
         "partial": "un lado aún sin ejecutar",
         "empty": "ningún lado ejecutado"
       }
+    },
+    "recommended": {
+      "title": "Próximos pasos sugeridos"
     }
   }
 }

@@ -2617,6 +2617,7 @@
     "loading": "Loading Pylovo instances"
   },
   "regionSelector": {
+    "3dBuildingData": "3D city data available",
     "goToRegion": "Go to region",
     "jumpToRegion": "Jump to a region with available grid data",
     "searchPlaceholder": "Search region or postcode...",
@@ -3237,6 +3238,16 @@
         "subflowNote": "A subflow is a fragment: it is spliced into another workflow and validated where it is inserted, not on its own."
       },
       "editor": {
+        "addNode": "Add node",
+        "addSuggestion": "Add a suggestion",
+        "noNodes": "No nodes.",
+        "pickModule": "Add a module…",
+        "suggested": "Suggested next steps",
+        "suggestedEmpty": "No suggestions yet. Add a suggestion below to begin.",
+        "suggestedHint": "Follow-up steps offered once the chain's last step has run. Each suggestion is appended as one unit.",
+        "suggestedProblem": "The suggested next steps are malformed: {{reason}}",
+        "suggestionTitle": "Title",
+        "suggestionWhy": "Why (the goal)",
         "back": "Back to the list",
         "version": "version {{version}}",
         "unsaved": "Unsaved changes",
@@ -3271,7 +3282,8 @@
         "subflowOwnedBy": "Steps from \"{{label}}\" - edited in that workflow, not here.",
         "subflowExpansionFailed": "This workflow cannot be expanded here.",
         "recursive": "would contain this workflow - a subflow cannot include itself, directly or transitively",
-        "unresolved": "cannot be resolved - it names a module or workflow this build does not have"
+        "unresolved": "cannot be resolved - it names a module or workflow this build does not have",
+        "pickWorkflow": "Workflows"
       }
     },
     "run-meme-calliope": {
@@ -3358,6 +3370,9 @@
         "partial": "one side not run yet",
         "empty": "neither side run yet"
       }
+    },
+    "recommended": {
+      "title": "Suggested next steps"
     }
   }
 }
