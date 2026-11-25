@@ -80,7 +80,7 @@ export function useMapLibreLayers(
   const connections = useMemo(() => reprojectGeoJSON(connectionGeoJSON), [connectionGeoJSON]);
   const userModels = useMemo(() => reprojectGeoJSON(userModelGeoJSON), [userModelGeoJSON]);
 
-  const { surfaces: lod2, loading: lod2Loading, country } = useLod2Surfaces(buildings, mapReady);
+  const { surfaces: lod2, loading: lod2Loading, country, credits } = useLod2Surfaces(buildings, mapReady);
   const pvSurfaceIds = usePvSurfaceIds(buildings, techsFor, country);
   // Keyed by content: techsFor is a new function on every render.
   const markerKey = JSON.stringify([...techMarkersOf(buildings, techsFor)]);
@@ -287,5 +287,5 @@ export function useMapLibreLayers(
   // Buildings left as flat footprints once the LoD2 lookup has finished.
   const footprintOnly = lod2Loading ? 0 : Math.max(0, (buildings?.features.length ?? 0) - lod2.size);
 
-  return { loadAll, footprintOnly, lod2LayerRef };
+  return { loadAll, footprintOnly, lod2LayerRef, credits };
 }
