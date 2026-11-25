@@ -241,9 +241,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
 
   const detached = edited && geometry !== null
     && isEnvelopeDetached(geometry.surfaces, new Set(Object.keys(building.envelope)));
-  // Only a saved model's building with stored series has a CSV to download.
-  const seriesCsvUrl = modelId && demandProfile
-    ? `${config.api.baseUrl}/models/${modelId}/buildings/${encodeURIComponent(osmId)}/series.csv`
+  const seriesCsvUrl = demandProfile
+    ? `${config.api.baseUrl}/${ownerPath}/buildings/${encodeURIComponent(osmId)}/series.csv`
     : undefined;
 
   return (

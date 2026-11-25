@@ -1,6 +1,7 @@
 package buem
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 
@@ -70,12 +71,60 @@ func (h *Handler) RunModelBuilding(c *gin.Context) {
 //	@Security		SessionAuth
 //	@Router			/drafts/{draft_id}/buildings/{building_ref}/buem [post]
 func (h *Handler) RunDraftBuilding(c *gin.Context) {
+	owner, ok := draftOwner(c)
+	if !ok {
+		return
+	}
+	h.runStored(c, owner, draftRevision, owner.DraftID)
+}
+
+// DraftBuildingSeriesCSV godoc
+//
+//	@Summary		Download one building's series of an unsaved model as CSV
+//	@Description	As GET /models/{id}/buildings/{building_ref}/series.csv, for the runs stored
+//	@Description	under a draft. 404 when the building has no stored series in the draft.
+//	@Tags			BuEM
+//	@Produce		text/csv
+//	@Param			draft_id		path	string	true	"Draft id the frontend created for the unsaved model"
+//	@Param			building_ref	path	string	true	"Building OSM id, or c2t:<object_id>"
+//	@Success		200	{file}	file
+//	@Failure		400	{object}	contracts.ErrorResponse
+//	@Failure		404	{object}	contracts.ErrorResponse
+//	@Security		SessionAuth
+//	@Router			/drafts/{draft_id}/buildings/{building_ref}/series.csv [get]
+func (h *Handler) DraftBuildingSeriesCSV(c *gin.Context) {
+	owner, ok := draftOwner(c)
+	if !ok {
+		return
+	}
+	ref := c.Param("building_ref")
+	linked, err := h.series.LinkedSeries(owner, ref)
+	if err != nil {
+		httputil.InternalError(c, fmt.Sprintf("failed to read the series of building %s in draft %s: %v", ref, owner.DraftID, err))
+		return
+	}
+	if len(linked) == 0 {
+		httputil.NotFound(c, fmt.Sprintf("building %s has no stored series in draft %s", ref, owner.DraftID))
+		return
+	}
+	// Buffered so a failure can still answer with an error instead of a cut-off file.
+	var buf bytes.Buffer
+	if err := demand.WriteBuildingCSV(&buf, linked); err != nil {
+		httputil.InternalError(c, fmt.Sprintf("failed to write CSV: %v", err))
+		return
+	}
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="draft-%s.csv"`, ref))
+	c.Data(http.StatusOK, "text/csv", buf.Bytes())
+}
+
+// draftOwner reads the draft id from the path, answering 400 when it is empty or too long.
+func draftOwner(c *gin.Context) (seriesstore.Owner, bool) {
 	draftID := c.Param("draft_id")
 	if draftID == "" || len(draftID) > 255 {
 		httputil.BadRequest(c, fmt.Sprintf("draft id %q must be 1 to 255 characters", draftID))
-		return
+		return seriesstore.Owner{}, false
 	}
-	h.runStored(c, seriesstore.Owner{DraftID: draftID}, draftRevision, draftID)
+	return seriesstore.Owner{DraftID: draftID}, true
 }
 
 // runStored runs or reuses the building's result, links it to owner and
