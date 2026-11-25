@@ -106,8 +106,9 @@ const ResetNotice: FC<{ onReset: () => void }> = ({ onReset }) => {
 /** Says that the OSM outline covers several 3D buildings and which one the view shows. */
 const SharedOutlineNotice: FC<{ count: number }> = ({ count }) => {
   const { t } = useTranslation();
+  // Kept above the package's undo button, centred at bottom-16 of Building3DView.
   return (
-    <div className="bg-card pointer-events-none absolute bottom-20 left-1/2 z-40 w-max max-w-xl -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow-lg">
+    <div className="bg-card pointer-events-none absolute bottom-32 left-1/2 z-40 w-max max-w-xl -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow-lg">
       <p className="text-muted-foreground">{t('buildingConfig.sharedOutline', { count })}</p>
     </div>
   );
