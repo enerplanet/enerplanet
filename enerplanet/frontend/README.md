@@ -135,7 +135,7 @@ The platform supports various energy technologies:
 ## Data
 
 - Initial technology data is loaded from JSON files in `public/initial-data/techs/`
-- Technology documentation is available in `public/docs/technology-reference-guide.pdf`
+- Technology documentation: [Technologies](https://enerplanet.github.io/enerplanet/enerplanet/technologies/) on the docs site
 - Building configuration uses detailed form parameters
 
 ## Configuration
