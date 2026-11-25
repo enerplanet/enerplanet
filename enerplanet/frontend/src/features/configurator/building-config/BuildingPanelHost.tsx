@@ -66,7 +66,9 @@ export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
 export type OnBuildingReset = (osmId: string) => void;
 
 /** Receives a building's PV arrays after each change in PV mode. */
-export type OnPvArrays = (osmId: string, arrays: PvArray[], products: Record<string, PvProductCopy>) => void;
+export type OnPvArrays = (
+  osmId: string, arrays: PvArray[], products: Record<string, PvProductCopy>, constraints: PvProductCopy['constraints'] | undefined,
+) => void;
 
 /** Receives a building's technologies after each edit in the Technologies tab. */
 export type OnTechsChange = (osmId: string, techs: BuildingTechs) => void;
@@ -189,7 +191,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const mode = useConfiguratorModeStore((s) => s.mode);
   const setMode = useConfiguratorModeStore((s) => s.setMode);
   const storeArrays = useCallback(
-    (arrays: PvArray[], products: Record<string, PvProductCopy>) => onPvArrays?.(osmId, arrays, products),
+    (arrays: PvArray[], products: Record<string, PvProductCopy>, constraints: PvProductCopy['constraints'] | undefined) =>
+      onPvArrays?.(osmId, arrays, products, constraints),
     [onPvArrays, osmId],
   );
   const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
