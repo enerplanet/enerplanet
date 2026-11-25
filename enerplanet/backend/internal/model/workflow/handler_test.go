@@ -245,8 +245,16 @@ func TestCreateWorkflowRejectsAMalformedDocument(t *testing.T) {
 		"missing label": {`{"id":"a","version":1,"nodes":[]}`, "label is required"},
 		"nodes not an array": {`{"id":"a","version":1,"label":"x","nodes":{}}`,
 			"nodes must be an array"},
-		"node without moduleId": {`{"id":"a","version":1,"label":"x","nodes":[{"id":"n1"}]}`,
-			"nodes[0].moduleId is required"},
+		"node with neither moduleId nor workflows": {`{"id":"a","version":1,"label":"x","nodes":[{"id":"n1"}]}`,
+			"nodes[0] carries neither moduleId nor workflows"},
+		"node with both moduleId and workflows": {`{"id":"a","version":1,"label":"x","nodes":[{"id":"n1","moduleId":"m","workflows":["w"]}]}`,
+			"nodes[0] carries both moduleId and workflows"},
+		"subflow with no workflows": {`{"id":"a","version":1,"label":"x","nodes":[{"id":"n1","workflows":[]}]}`,
+			"nodes[0].workflows must not be empty"},
+		"subflow with workflows not an array": {`{"id":"a","version":1,"label":"x","nodes":[{"id":"n1","workflows":"w"}]}`,
+			"nodes[0].workflows must be an array"},
+		"subflow with a blank workflow id": {`{"id":"a","version":1,"label":"x","nodes":[{"id":"n1","workflows":[""]}]}`,
+			"nodes[0].workflows[0] must not be empty"},
 		"node without id": {`{"id":"a","version":1,"label":"x","nodes":[{"moduleId":"m"}]}`,
 			"nodes[0].id is required"},
 		"node not an object": {`{"id":"a","version":1,"label":"x","nodes":[7]}`,
@@ -267,6 +275,34 @@ func TestCreateWorkflowRejectsAMalformedDocument(t *testing.T) {
 			}
 			if len(store.rows) != 0 {
 				t.Errorf("a rejected document was stored anyway: %+v", store.rows)
+			}
+		})
+	}
+}
+
+// A step may be a module or a workflow — the editor's "Insert a workflow" writes `workflows` where a
+// module step writes `moduleId`. Requiring moduleId on every node made any document carrying a subflow
+// step unsaveable, which is how a subflow ends up nested inside a fragment.
+func TestCreateWorkflowAcceptsASubflowStep(t *testing.T) {
+	cases := map[string]string{
+		"a flow with a subflow step":     `{"id":"variant-flow","version":1,"label":"Variant exploration","nodes":[{"id":"model-save","moduleId":"model-save"},{"id":"adjust","workflows":["adjust-model"]}]}`,
+		"a fragment with a subflow step": `{"id":"nested","version":1,"label":"Nested","isSubflow":true,"nodes":[{"id":"buildings","moduleId":"building-configurator"},{"id":"adjust","workflows":["adjust-model"]}]}`,
+	}
+
+	for name, body := range cases {
+		t.Run(name, func(t *testing.T) {
+			store := &fakeStore{}
+
+			rec := call(t, newHandler(store), http.MethodPost, "/workflows", body)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusOK, rec.Body.String())
+			}
+			if len(store.rows) != 1 {
+				t.Fatalf("the document was not stored: %+v", store.rows)
+			}
+			if string(store.rows[0].Definition) != body {
+				t.Errorf("the definition was reshaped on the way in: %s", store.rows[0].Definition)
 			}
 		})
 	}
