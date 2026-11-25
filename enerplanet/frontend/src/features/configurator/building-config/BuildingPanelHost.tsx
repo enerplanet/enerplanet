@@ -211,7 +211,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const pvCatalogue = usePvCatalogue();
   const pvMode = usePvMode(
     osmId, country, shownPv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null,
-    technologies ? removePv : undefined, pvCatalogue,
+    building?.envelope ?? null, technologies ? removePv : undefined, pvCatalogue,
   );
 
   if (preparing) {

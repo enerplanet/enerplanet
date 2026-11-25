@@ -16,7 +16,7 @@ import {
 
 import axios from '@/lib/axios';
 
-import { arrayWithLayout, bestFitArrays } from './pvBestFit';
+import { arrayWithLayout, bestFitArrays, type SurfaceAngles } from './pvBestFit';
 import {
   copyOfProduct, moduleOf, productCopies, withProductValue, withValues, type PvProductCopy, type PvValues,
 } from './pvProducts';
@@ -130,7 +130,8 @@ function stateOf(row: PvSurfaceRow, installed: boolean): PvSurface['state'] {
  * onArrays receives every change as the building's full list of arrays, each
  * laid out with its product's module on its surface's polygon where the view's
  * geometry has one, the copies of the products they name, and the building's
- * own PV values.
+ * own PV values. Each surface is laid out at its tilt and facing in envelope,
+ * the building's stored elements, or as edited in the open view.
  */
 export function usePvMode(
   osmId: string,
@@ -141,6 +142,7 @@ export function usePvMode(
   shownObjectId: string | null,
   t: (key: string, options?: Record<string, unknown>) => string,
   polygons: readonly SurfacePolygon[] | null,
+  envelope: Readonly<Record<string, SurfaceAngles>> | null,
   onRemove?: () => void,
   catalogue?: TechnologyProduct[],
 ): { pv: PvMode | undefined; failed: boolean } {
@@ -171,15 +173,25 @@ export function usePvMode(
     return moduleOf((values.copies?.[id] ?? (product && copyOfProduct(product)))?.constraints);
   }, [buildingModule, values.copies, catalogue]);
 
+  // The view reports only angles edited after it opened; a stored building starts from its envelope.
+  const [edited, setEdited] = useState<Record<string, SurfaceAngles>>({});
+  const [seenEnvelope, setSeenEnvelope] = useState(envelope);
+  if (envelope !== seenEnvelope) {
+    setSeenEnvelope(envelope);
+    setEdited({});
+  }
+  const angles = useMemo(() => ({ ...envelope, ...edited }), [envelope, edited]);
+
   // A building still on automatic placement shows the best fit; the first change stores it.
   const installed = useMemo(
-    () => arrays ?? bestFitArrays(rows ?? [], polygons ?? [], DEFAULT_USABLE_SHARE, buildingModule),
-    [arrays, rows, polygons, buildingModule],
+    () => arrays ?? bestFitArrays(rows ?? [], polygons ?? [], DEFAULT_USABLE_SHARE, buildingModule, angles),
+    [arrays, rows, polygons, buildingModule, angles],
   );
   const polygonById = useMemo(() => new Map((polygons ?? []).map((p) => [p.id, p])), [polygons]);
   const laidOut = useCallback(
-    (array: PvArray) => arrayWithLayout(array, polygonById.get(array.surface_id), moduleFor(array.product_id)),
-    [polygonById, moduleFor],
+    (array: PvArray, at: SurfaceAngles | undefined = angles[array.surface_id]) =>
+      arrayWithLayout(array, polygonById.get(array.surface_id), moduleFor(array.product_id), at),
+    [polygonById, moduleFor, angles],
   );
 
   // The view can call two callbacks in one event (assign, then toggle); the second must see the first's result.
@@ -242,6 +254,13 @@ export function usePvMode(
     change(installed.map((a) => (a.surface_id === surfaceId ? laidOut({ ...a, mounting, orientation }) : a)));
   }, [installed, change, laidOut]);
 
+  // Automatic placement follows the angles through installed; stored arrays are laid out again and stored.
+  const onSurfaceAnglesChange = useCallback((surfaceId: string, next: SurfaceAngles) => {
+    setEdited((current) => ({ ...current, [surfaceId]: next }));
+    if (arrays === null || !latest.current.some((a) => a.surface_id === surfaceId)) return;
+    change(latest.current.map((a) => (a.surface_id === surfaceId ? laidOut(a, next) : a)));
+  }, [arrays, change, laidOut]);
+
   const typeLabel = t("technologies.types.pv_supply", { defaultValue: building?.typeLabel ?? "" });
   const pv = useMemo<PvMode | undefined>(() => {
     if (!active || !rows) return undefined;
@@ -265,10 +284,11 @@ export function usePvMode(
     }
     const products = catalogue ? { catalogue, productId, onAssignProduct, products: shownProducts, onConstraintChange } : {};
     return {
-      surfaces, notice, typeLabel, onToggle, onShareChange, onMountingChange, module: buildingModule, onRemove: remove, ...products,
+      surfaces, notice, typeLabel, onToggle, onShareChange, onMountingChange, onSurfaceAnglesChange,
+      module: buildingModule, onRemove: remove, ...products,
     };
   }, [
-    active, rows, installed, notice, typeLabel, onToggle, onShareChange, onMountingChange, shownObjectId, t,
+    active, rows, installed, notice, typeLabel, onToggle, onShareChange, onMountingChange, onSurfaceAnglesChange, shownObjectId, t,
     buildingModule, remove, catalogue, productId, onAssignProduct, shownProducts, onConstraintChange,
   ]);
 
