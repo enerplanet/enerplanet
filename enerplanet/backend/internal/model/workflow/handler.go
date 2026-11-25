@@ -263,9 +263,15 @@ func validateDocument(raw []byte) (documentFields, error) {
 	return documentFields{ID: id, Version: version, Label: label, Description: description, IsSubflow: isSubflow}, nil
 }
 
-// requireNodes checks that nodes is an array of objects, each carrying a non-empty string id and
-// moduleId. The node id is what an error message can name ("which node is wrong"); moduleId is the
-// module a future reader resolves against the frontend catalogue.
+// requireNodes checks that nodes is an array of objects, each carrying a non-empty string id and exactly
+// one of the two kinds of step: moduleId (a module at this position) or workflows (a subflow spliced in
+// here). The node id is what an error message can name ("which node is wrong"); the step kind is what a
+// future reader resolves against the frontend catalogue.
+//
+// The discriminant is the frontend's own (`workflows/types.ts` `nodeProblem`): a step is a module xor a
+// subflow, never both and never neither. Keeping the two halves in step is what makes "a document the
+// editor can author is a document this validator accepts" true — it was false while a subflow step was
+// rejected here for lacking a moduleId the editor had deliberately left out.
 func requireNodes(raw json.RawMessage) error {
 	if raw == nil {
 		return errors.New("nodes is required")
@@ -277,14 +283,56 @@ func requireNodes(raw json.RawMessage) error {
 	}
 
 	for i, rawNode := range *nodes {
-		var node map[string]json.RawMessage
-		if err := json.Unmarshal(rawNode, &node); err != nil || node == nil {
-			return fmt.Errorf("nodes[%d] must be an object", i)
-		}
-		if _, err := requireString(fmt.Sprintf("nodes[%d].id", i), node["id"], true); err != nil {
+		if err := requireNode(i, rawNode); err != nil {
 			return err
 		}
-		if _, err := requireString(fmt.Sprintf("nodes[%d].moduleId", i), node["moduleId"], true); err != nil {
+	}
+
+	return nil
+}
+
+// requireNode checks one node: its id, and exactly one step kind.
+func requireNode(index int, rawNode json.RawMessage) error {
+	var node map[string]json.RawMessage
+	if err := json.Unmarshal(rawNode, &node); err != nil || node == nil {
+		return fmt.Errorf("nodes[%d] must be an object", index)
+	}
+	if _, err := requireString(fmt.Sprintf("nodes[%d].id", index), node["id"], true); err != nil {
+		return err
+	}
+
+	_, hasModule := node["moduleId"]
+	_, hasWorkflows := node["workflows"]
+
+	switch {
+	case hasModule && hasWorkflows:
+		return fmt.Errorf(
+			"nodes[%d] carries both moduleId and workflows; a step is a module or a subflow, never both", index)
+	case !hasModule && !hasWorkflows:
+		return fmt.Errorf(
+			"nodes[%d] carries neither moduleId nor workflows; every step is a module or a subflow", index)
+	case hasModule:
+		if _, err := requireString(fmt.Sprintf("nodes[%d].moduleId", index), node["moduleId"], true); err != nil {
+			return err
+		}
+		return nil
+	default:
+		return requireWorkflowIDs(index, node["workflows"])
+	}
+}
+
+// requireWorkflowIDs checks a subflow step's workflows: a non-empty array of non-empty workflow ids.
+func requireWorkflowIDs(index int, raw json.RawMessage) error {
+	var ids *[]json.RawMessage
+	if err := json.Unmarshal(raw, &ids); err != nil || ids == nil {
+		return fmt.Errorf("nodes[%d].workflows must be an array", index)
+	}
+	if len(*ids) == 0 {
+		return fmt.Errorf("nodes[%d].workflows must not be empty", index)
+	}
+
+	for j, rawID := range *ids {
+		if _, err := requireString(fmt.Sprintf("nodes[%d].workflows[%d]", index, j), rawID, true); err != nil {
 			return err
 		}
 	}
