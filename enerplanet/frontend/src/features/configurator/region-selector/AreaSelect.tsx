@@ -680,18 +680,16 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
             >
               <div className="flex min-w-0 flex-1 justify-center">
-                {!isMapLibre3D && (
-                  <div className="pointer-events-auto">
-                    <WorkflowBar
-                      polygonCount={state.allPolygons.length}
-                      isGeneratingGrid={state.isGeneratingGrid}
-                      hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-                      siteMode={siteMode}
-                      hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
-                      gridStale={gridStale}
-                    />
-                  </div>
-                )}
+                <div className="pointer-events-auto">
+                  <WorkflowBar
+                    polygonCount={state.allPolygons.length}
+                    isGeneratingGrid={state.isGeneratingGrid}
+                    hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                    siteMode={siteMode}
+                    hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+                    gridStale={gridStale}
+                  />
+                </div>
               </div>
               {gridResultIds.length > 0 && (
                 <div className="md-fade-in pointer-events-auto w-60 shrink-0 xl:w-72">
