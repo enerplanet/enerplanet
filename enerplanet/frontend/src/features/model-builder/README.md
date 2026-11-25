@@ -91,18 +91,20 @@ plan. There is no `cursor` and no `discarded` section: a move is not persisted, 
 tail to record. The `projection` is the fast path and the `log` the recovery path; the fingerprint
 stops the two from lying to each other silently.
 
-## Recommended sections
+## Suggested next steps
 
-A workflow may declare **recommended sections** (`workflows/types.ts`): follow-up node groups offered
-to the user to **append** once a run (or a compare) has finished — the malleable-flow side of "we
-start with a predefined workflow and add to it". They are keyed by the terminal node's **stable
-name** (a `moduleId`, or a seed node's own id — never the placement id, which changes on every
-re-run), and each section carries a workflow-local `key` and a `description` stating its goal.
+A workflow may declare **suggested next steps** (`workflows/types.ts`, the `recommended` field): follow-up
+steps offered to the user to **append** once a run (or a compare) has finished — the malleable-flow side of
+"we start with a predefined workflow and add to it". They are a **plain list**, applied to the chain's **last
+node**, so nothing needs re-anchoring when the chain is edited. Each carries a title, a `description` stating
+its goal, and a **key derived once from the title** — a functional handle the edit helpers match on, never
+shown and never typed. A step may be a **module or a workflow**.
 
 Appending one is a **plan addition** (`workflows/recommended.ts`): it grows the placed flow by fresh
-placements, validated like any other, so a recommendation can never append a broken node.
-`recommendedFor` decides what is on offer, and only when the newest done placement stands at the
-transcript's tip — a run still in flight offers nothing.
+placements, validated like any other, so a suggestion can never append a broken node — a subflow is flattened
+into its module nodes first, because a subflow is never a runtime node. `recommendedFor` decides what is on
+offer, once the last placed node has finished; `takeableSections` drops what this build cannot run — a module
+it does not declare, or a workflow no longer stored.
 
 ## The flows this feature runs
 
