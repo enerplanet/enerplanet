@@ -1,10 +1,5 @@
 /**
- * The workflow document, and the shape the API hands back.
- *
- * The document is exactly the one `shell/workflow.ts`'s `toWorkflow` consumes — `{id, version, label,
- * seed, nodes}` — and the editor edits this and nothing else. Nothing here reshapes it: the stored
- * document travels as the document's own bytes, so the two sides of the clipboard pair (`document.ts`)
- * stay equal by construction rather than by a rule someone has to remember.
+ * The workflow document, and the shape the API hands back. The editor edits this and nothing else.
  */
 
 /** One node of the chain that places a module: a module at a position, named the way history names a position. */
@@ -14,23 +9,14 @@ export interface ModuleNodeDocument {
   label?: string;
 }
 
-/**
- * One node of the chain that places a subflow: one or more workflows, any of which may be inserted here.
- *
- * Not a module — it declares no ports and no `run()` — so the runtime never sees it. `expand` replaces it
- * with the chosen workflow's nodes at that position, which is why a node of this kind has no `moduleId`.
- * The value is a list even when it holds one entry, because a position may offer several candidates.
- */
+/** One node of the chain that places a subflow: one or more workflows, any of which may be inserted here. */
 export interface SubflowNodeDocument {
   id: string;
   workflows: readonly string[];
   label?: string;
 }
 
-/**
- * A node is a module **xor** a subflow. `moduleId` xor `workflows` is the discriminant, and it is
- * structural, so every document stored before subflows existed is a module node untouched.
- */
+/** A node is a module xor a subflow: `moduleId` xor `workflows` is the discriminant, and it is structural. */
 export type WorkflowNodeDocument = ModuleNodeDocument | SubflowNodeDocument;
 
 /** Whether a node places a subflow rather than a module. */
@@ -38,13 +24,7 @@ export function isSubflowNode(node: WorkflowNodeDocument): node is SubflowNodeDo
   return "workflows" in node;
 }
 
-/**
- * Why a node is neither a module nor a subflow, or `undefined` when it is exactly one of them.
- *
- * The editor reports the answer, and the loader refuses on it, because a node is untrusted input the moment
- * it stops being a local literal. The two conditions are the two ways the discriminant fails: a node with
- * neither field names nothing to place, and one with both does not say which kind it is.
- */
+/** Why a node is neither a module nor a subflow, or `undefined` when it is exactly one of them. */
 export function nodeProblem(node: WorkflowNodeDocument): string | undefined {
   const record = node as unknown as Record<string, unknown>;
   const hasModule = record.moduleId !== undefined;
@@ -58,35 +38,76 @@ export function nodeProblem(node: WorkflowNodeDocument): string | undefined {
   return undefined;
 }
 
+/** A follow-up node group a workflow offers after a run finishes, appended to the placed flow as fresh placements. */
+export interface RecommendedSection {
+  /** A workflow-local handle for this section; unique within the document, not across documents. */
+  key: string;
+  /** A short title, e.g. for the button that offers it. */
+  label: string;
+  /** The goal, so the user knows why to append it. */
+  description: string;
+  /** The nodes appended as one unit when the section is taken. */
+  nodes: WorkflowNodeDocument[];
+}
+
+/** Why a document's `recommended` list is malformed, or `undefined` when it is well-formed. */
+export function documentProblem(document: WorkflowDocument): string | undefined {
+  const recommended = document.recommended;
+  if (recommended === undefined) return undefined;
+  if (!Array.isArray(recommended)) {
+    return "suggested next steps are not a list of suggestions";
+  }
+
+  const seenKeys = new Set<string>();
+  for (const section of recommended) {
+    const key = typeof section?.key === "string" ? section.key : "";
+    if (key.trim().length === 0) {
+      return "a suggestion has a blank key; keys are derived from a suggestion's title";
+    }
+    if (seenKeys.has(key)) {
+      const title = typeof section?.label === "string" && section.label.trim().length > 0 ? section.label : key;
+      return `two suggestions share the title "${title}"; a title must be unique within its workflow`;
+    }
+    seenKeys.add(key);
+
+    const nodes = section.nodes;
+    if (!Array.isArray(nodes)) {
+      return `suggestion "${key}" has no nodes`;
+    }
+    for (const node of nodes) {
+      const problem = nodeProblem(node);
+      if (problem !== undefined) {
+        return `suggestion "${key}" has a malformed node: ${problem}`;
+      }
+    }
+  }
+  return undefined;
+}
+
 export interface WorkflowDocument {
   id: string;
   version: number;
   label: string;
-  /**
-   * A human line for wherever a user has to choose a workflow. Optional: a document may carry one or
-   * leave it out, and the column is derived from it the way `label` is.
-   */
+  /** A human line for wherever a user has to choose a workflow. Optional. */
   description?: string;
   /**
-   * Marks the document as a fragment inserted into another flow — authored without standalone
-   * validation and never offered as a flow of its own. Optional; absent means a normal flow, and the
-   * column is derived from it the way `label` is.
+   * Marks the document as a fragment inserted into another flow — authored without standalone validation
+   * and never offered as a flow of its own. Optional; absent means a normal flow.
    */
   isSubflow?: boolean;
-  /**
-   * The seed file the definition names. Part of the stored shape, and preserved across an edit, but absent
-   * for a workflow authored here — there is no seed file for one yet, and inventing a path would be a lie.
-   */
+  /** The seed file the definition names; preserved across an edit, absent for a workflow authored here. */
   seed?: string;
   nodes: WorkflowNodeDocument[];
+  /**
+   * The follow-up node groups a run of this workflow may offer once its last node finishes. Optional;
+   * an absent or empty list is well-formed.
+   */
+  recommended?: RecommendedSection[];
 }
 
 /**
- * One row of `GET /workflows`: the thin scalar surface the table queries on, plus the whole document.
- *
- * The scalar fields mirror the definition's own — `workflow_id` is the definition's `id` — because a
- * session references a workflow by that id, not by the row's serial. `description` and
- * `is_subflow` mirror the document's optional `description`/`isSubflow` for the same reason.
+ * One row of `GET /workflows`: the thin scalar surface the table queries on, plus the whole document
+ * (`workflow_id` is the definition's own `id`).
  */
 export interface WorkflowSummary {
   workflow_id: string;

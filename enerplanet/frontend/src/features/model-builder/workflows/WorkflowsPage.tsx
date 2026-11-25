@@ -1,31 +1,20 @@
 /**
  * Workflows — the list, the create form, and the editor.
  *
- * It lives inside `features/model-builder/` because the editor's palette **is** this feature's
- * module catalogue; a separate feature would need the project's first cross-feature import.
- *
- * Stage 1: this surface reads and writes the database, and the running builder still reads its
- * baked-in definition. So nothing here drives a run — it is a list of stored documents plus the editor.
- *
- * A stored flow may name a module the catalogue no longer declares. `toWorkflow` throws on that for the
- * builder's baked-in configuration, which is right there; here it is **user data**, so the editor reports
- * it by node and module instead of taking the surface down (`WorkflowEditor`).
+ * It lives inside `features/model-builder/` because the editor's palette **is** this feature's module
+ * catalogue. The surface reads and writes the database; nothing here drives a run.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "@spatialhub/i18n";
 import { Copy, ExternalLink, Layers, Pencil, Plus, Trash2, Workflow as WorkflowIcon } from "lucide-react";
 import { MODULES } from "../shell/moduleRegistry";
-import { copyPayload, documentWithNodes, newDocument, slugify } from "./document";
+import { copyPayload, newDocument, slugify } from "./document";
 import { workflowService } from "./service";
-import type { WorkflowDocument, WorkflowNodeDocument, WorkflowSummary } from "./types";
+import { documentProblem, type WorkflowDocument, type WorkflowSummary } from "./types";
 import { WorkflowEditor } from "./WorkflowEditor";
 
-/**
- * The example modules a developer copies to start a new module. The branch (`main`) is a placeholder to
- * update if the path moves: the directory lands on `main` only once the change introducing it is merged,
- * so this link 404s until then.
- */
+/** The example modules a developer copies to start a new module. The path 404s until its introducing change merges. */
 const EXAMPLE_MODULES_URL =
   "https://github.com/enerplanet/enerplanet/tree/main/enerplanet/frontend/src/features/model-builder/modules/examples";
 
@@ -95,22 +84,26 @@ const WorkflowsPage: React.FC = () => {
     if (label.length === 0) return;
     setSaveError(null);
     setDirty(true);
-    // The same create path for both kinds: the id derives from the label (`newDocument` slugifies it) and
-    // `isSubflow` is the one difference — a fragment, spliced into another flow and validated where inserted.
     setEditing({ document: newDocument(label, newKind === "subflow"), persisted: false });
     setShowNewForm(false);
     setNewLabel("");
   };
 
-  const changeNodes = (nodes: readonly WorkflowNodeDocument[]): void => {
-    setEditing((current) =>
-      current === null ? current : { ...current, document: documentWithNodes(current.document, nodes) },
-    );
+  /** Keep the document the editor hands back; the editor owns the merge, this stores the result and marks the session dirty. */
+  const changeDocument = (document: WorkflowDocument): void => {
+    setEditing((current) => (current === null ? current : { ...current, document }));
     setDirty(true);
   };
 
   const save = useCallback(async (): Promise<void> => {
     if (editing === null) return;
+    const problem = documentProblem(editing.document);
+    if (problem !== undefined) {
+      setSaveError(
+        t("modelBuilder.workflows.error.save", "The workflow could not be saved: {{reason}}", { reason: problem }),
+      );
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
@@ -137,10 +130,7 @@ const WorkflowsPage: React.FC = () => {
     }
   }, []);
 
-  /**
-   * Delete asks first, and **refuses the default rather than doing it silently**: the seeded
-   * default is what a fresh database runs, and removing it would leave nothing runnable without saying so.
-   */
+  /** Delete asks first, and refuses the default rather than doing it silently. */
   const remove = useCallback(
     async (summary: WorkflowSummary): Promise<void> => {
       if (summary.is_default) {
@@ -168,12 +158,8 @@ const WorkflowsPage: React.FC = () => {
 
   const newId = useMemo(() => slugify(newLabel), [newLabel]);
 
-  // Every stored row's document, the catalogue a subflow node's expansion resolves through. Built from the one
-  // list call the page already makes, so a subflow costs no extra request (`shell/workflow.ts` reads the same
-  // list the same way).
   const workflowDocuments = useMemo(() => items.map((item) => item.definition), [items]);
 
-  // ── the editor, when one is open ───────────────────────────────────────────
   if (editing !== null) {
     return (
       <WorkflowEditor
@@ -184,7 +170,7 @@ const WorkflowsPage: React.FC = () => {
         dirty={dirty}
         saving={saving}
         error={saveError}
-        onChange={changeNodes}
+        onChange={changeDocument}
         onSave={() => void save()}
         onBack={() => {
           setEditing(null);
@@ -238,7 +224,6 @@ const WorkflowsPage: React.FC = () => {
         </div>
       </header>
 
-      {/* New: asks for a label; the id derives from it. */}
       {showNewForm && (
         <form
           className="flex shrink-0 flex-wrap items-end gap-3 border-b border-border bg-muted/40 px-6 py-3"

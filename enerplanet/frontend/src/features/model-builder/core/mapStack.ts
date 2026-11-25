@@ -1,13 +1,7 @@
 /**
- * The pure half of the map host.
- *
- * Which layers exist, in what order, which one takes clicks, and what is on each — as plain data with no
- * renderer behind it. That is deliberate: the rules G and H describe (a module names its own layer, the order
- * is a list, designating the clickable layer does not disturb the order) are *decisions*, not effects of
- * whichever engine is underneath, so they live where they can be reasoned about and tested without a DOM.
- *
- * Both hosts build on this: the frame's stub (no map library yet) and the `map-provider` module (MapLibre).
- * Duplicating the rules in each would mean two answers to "what order is this layer in".
+ * The pure half of the map host: which layers exist, in what order, which one takes clicks, and what is
+ * on each — as plain data with no renderer behind it. Both hosts build on it (the frame's stub and the
+ * `map-provider` module).
  */
 
 import type { LayerExtrusion, LayerOptions, MapFeature } from "./view";
@@ -22,11 +16,7 @@ export interface MapStack {
   removeLayer(id: string): void;
   /** Empty the layer, keeping it and its place in the order. */
   clearLayer(id: string): void;
-  /**
-   * Append features to a layer: each is normalised to a `MapFeature`, so a bare geometry gets empty
-   * properties and a GeoJSON Feature keeps its own. Unknown layer → throws, because adding to a layer you
-   * never created is a bug, not a no-op.
-   */
+  /** Append features to a layer, each normalised to a `MapFeature`; an unknown layer throws. */
   addFeatures(id: string, data: GeoJSON.GeoJSON | MapFeature): void;
 
   /** The order, bottom to top. A copy — mutating what you get back does not touch the host. */
@@ -38,12 +28,7 @@ export interface MapStack {
   setInteractiveLayer(id: string | null): void;
   interactiveLayer(): string | null;
 
-  /**
-   * What the layer was created with.
-   *
-   * The host keeps these because a module declares *what it draws* once and draws it many times: the renderer
-   * asks here rather than being told again on every redraw.
-   */
+  /** What the layer was created with — the renderer asks here rather than being told on every redraw. */
   optionsOf(id: string): LayerOptions | undefined;
 
   /** What is on a layer, in the order it was added. */
@@ -55,13 +40,7 @@ function isMapFeature(value: GeoJSON.GeoJSON | MapFeature): value is MapFeature 
   return typeof (value as MapFeature).properties === "object" && (value as MapFeature).properties !== null;
 }
 
-/**
- * One thing the caller passed, as the 0..n features it means.
- *
- * A `FeatureCollection` is several, a `Feature` is one with its properties, and a bare geometry is one with
- * none — which is what makes `addFeatures(id, await requestPolygon())` and `addFeatures(id, someCollection)`
- * the same call.
- */
+/** One thing the caller passed, as the 0..n features it means. */
 function normalise(data: GeoJSON.GeoJSON | MapFeature): MapFeature[] {
   if (isMapFeature(data)) {
     return [{ properties: { ...data.properties }, ...(data.geometry === undefined ? {} : { geometry: data.geometry }) }];
@@ -113,8 +92,7 @@ export function boundsOf(geometry: GeoJSON.GeoJSON | undefined): Extent | undefi
     for (const child of node) visitPositions(child);
   };
 
-  // One walk that knows where positions hide: through a collection's features, a feature's geometry, a
-  // geometry collection's children — and finally into the coordinate arrays themselves.
+  // One walk that knows where positions hide — collections, features, geometry collections, coordinates.
   const visitGeometry = (node: unknown): void => {
     if (node === null || typeof node !== "object") return;
     const shape = node as {
@@ -152,12 +130,7 @@ function sameExtrusion(a: LayerExtrusion | undefined, b: LayerExtrusion): boolea
   );
 }
 
-/**
- * Whether a fresh set of options says the same thing as what is held, so a re-render is not a change.
- *
- * Only the keys actually provided are compared: a module may declare one option on mount and another on a later
- * render, and a key it says nothing about this time must not read as a change.
- */
+/** Whether a fresh set of options says the same thing as what is held, so a re-render is not a change. */
 function sameOptions(held: LayerOptions | undefined, next: LayerOptions): boolean {
   if (held === undefined) return false;
   if (next.extrusion !== undefined && !sameExtrusion(held.extrusion, next.extrusion)) return false;
@@ -167,10 +140,7 @@ function sameOptions(held: LayerOptions | undefined, next: LayerOptions): boolea
   return true;
 }
 
-/**
- * The host's layer bookkeeping. `onChange` is called after a call that actually changed something, so a view
- * can re-render without polling.
- */
+/** The host's layer bookkeeping. `onChange` fires after a call that actually changed something. */
 export function createMapStack(onChange: () => void = () => undefined): MapStack {
   const order: string[] = [];
   const features = new Map<string, MapFeature[]>();
@@ -189,9 +159,7 @@ export function createMapStack(onChange: () => void = () => undefined): MapStack
         interactive = id;
         changed = true;
       }
-      // An option that arrives after the layer was created still applies — a module creates its layer when it
-      // mounts and may declare what it draws on a later render — but only when it differs, or every redraw of a
-      // layer would look like a change and call `onChange` again.
+      // An option that arrives after the layer was created still applies, but only when it differs.
       if (options !== undefined) {
         // Only what was actually named this time: an option left out is not a request to clear it.
         const provided = Object.fromEntries(

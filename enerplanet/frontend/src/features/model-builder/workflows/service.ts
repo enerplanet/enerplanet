@@ -1,9 +1,6 @@
 /**
- * The workflows API. Its own group, isolated from the legacy model routes, and read through the
- * app-wide CSRF-aware client so writes carry the token like every other feature's.
- *
- * Every response is wrapped `{data: …}`; `unwrap` is the single place that knows it, so a change to the
- * envelope is one edit rather than a hunt.
+ * The workflows API — its own group, isolated from the legacy model routes, read through the app-wide
+ * CSRF-aware client. Every response is wrapped `{data: …}`, peeled by `unwrap`.
  */
 
 import axios from "@/lib/axios";

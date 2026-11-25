@@ -1,30 +1,10 @@
 /**
  * The `building-demand` module — per-building demand, one slice per energy vector.
  *
- * **This is a fetch, and a fetch is an auto job**. It reads the buildings the grid node produced, turns
- * each into a request, and commits what came back. It gathers nothing of its own and holds no cursor: the
- * request is a pure function of the projection, so re-running it after an upstream change re-derives the same
- * calls. It declares `auto: true`, so there is **no button anywhere**: the frame runs it the moment the
- * session lands on it and advances by itself when it is done (`shell/autoRun.ts`), and this module's only UI
- * concern is its full-screen state — in progress, done, or failed with a manual re-run.
- *
- * **Two vectors, two sources, deliberately different.**
- *
- * - **Electricity** comes from the energy service (`POST /v1/pylovo/estimate-energy`), **one request per
- *   building**. The backend also offers a batch endpoint, but the legacy never calls it; the real behaviour is
- *   per building, and that is what this models. The service arrives through an injected slot, so this module
- *   knows nothing about the app's HTTP client.
- * - **Heat** is computed here, from the building's class and area — a *faithful mirror* of the backend's own
- *   TABULA-flavoured defaults, which the backend generates but does not persist. That mirror is the one
- *   deliberate duplicate in the codebase, and `heat.ts` explains why it is defensible.
- *
- * **No grid, no weather.** The estimate is a function of a building's own attributes. `grids` is not read
- * (earlier drafts had it as required) and `weatherSelection` is not an input either — weather shapes the
- * *run*, not a per-building annual figure. The module still *declares* `weatherSelection`, because it is
- * invalidated when the weather changes and a module must know every port it can affect.
- *
- * **Merged, not replaced.** Other vectors may already hold params from another module; this module writes only
- * electricity and heat, and reads the port first so the merge is a licensed rewrite rather than a clobber.
+ * An `auto` node: it reads the grid's buildings, turns each into a request, and commits what came back.
+ * Electricity comes from the injected energy service (one request per building); heat is computed here by the
+ * `heat.ts` mirror. It writes only electricity and heat, merging into `buildingParams`. Regions: `overlay`,
+ * `sidebar`, `bottom`.
  */
 
 import {
@@ -40,11 +20,7 @@ import { useTranslation } from "@spatialhub/i18n";
 import { demandSource, type BuildingAttributes } from "./source";
 import { estimateYearlyHeatDemand } from "./heat";
 
-/**
- * The module's own surface, re-exported: a host installs a source through the same entry point it imports the
- * module from, so it never reaches into the module's files. Same shape as `setGridEngine` and
- * `setWeatherSource`.
- */
+/** The module's own surface, re-exported so a host installs a source through the module's entry point. */
 export { setDemandSource } from "./source";
 
 /** The two vectors this module fills. The store's vector set is open — these are ours, not the limit. */
@@ -73,13 +49,7 @@ export function osmIdOf(feature: GeoJSON.Feature): string | undefined {
   return stringOf(id);
 }
 
-/**
- * What the estimate is computed from, read off the feature.
- *
- * Undefined when the building has no usable area: the service has nothing to scale, and inventing an area
- * would put a number in the store that nobody can trace. Such a building is simply left out, and the module's
- * gate reports it as unfinished.
- */
+/** What the estimate is computed from, read off the feature; undefined when the building has no usable area. */
 export function attributesOf(feature: GeoJSON.Feature): BuildingAttributes | undefined {
   const props = feature.properties ?? {};
   const areaM2 = numberOf(props.area_m2) ?? numberOf(props.area);
@@ -100,13 +70,7 @@ export function attributesOf(feature: GeoJSON.Feature): BuildingAttributes | und
   };
 }
 
-/**
- * What this module stands behind: every building the grid wrote has demand for both vectors.
- *
- * Silence before anything is written — the node is `pending`, not stale. After a run, a building with no
- * params means the estimate was skipped for it (no area) or the flow was interrupted, and either way this
- * module is not finished with it.
- */
+/** What this module stands behind: every building the grid wrote has demand for both vectors. */
 export function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   const buildings = projection.buildings;
   if (buildings === undefined) return [];
@@ -129,18 +93,14 @@ const module = defineModule({
   // An automatic step: a fetch with nothing for the user to collect, so it runs on arrival (`shell/autoRun.ts`).
   auto: true,
 
-  // What it writes, what it reads, and what it can affect. `buildings` is required — without the grid there is
-  // nothing to estimate. `weatherSelection` is declared without being read: a weather change invalidates these
-  // params, and a module must know every port its writes can affect.
+  // What it writes, what it reads, and what it can affect. `buildings` is required; `weatherSelection` is declared without being read.
   params: [
     { port: "buildings", required: true },
     { port: "buildingParams" },
     { port: "weatherSelection" },
   ],
 
-  // Both edges are real. A new grid means these params describe buildings that no longer exist; a different
-  // weather dataset means the model's demand basis moved. `technologies` is *not* named here — that edge
-  // belongs to the module that owns it, and the influence closure carries this one onward on its own.
+  // Both edges are real: a new grid invalidates these params, and a different weather dataset moves the demand basis.
   affect: { buildings: ["buildingParams"], weatherSelection: ["buildingParams"] },
 
   layout: ["overlay", "sidebar", "bottom"],
@@ -158,8 +118,7 @@ const module = defineModule({
       throw new Error("building-demand needs the grid's buildings before it can estimate");
     }
 
-    // Read before write, and read for the *merge*: other vectors may already hold params from another module,
-    // and the vector set is open, so replacing the whole port would throw someone else's work away.
+    // Read before write, and read for the merge: other vectors may already hold params from another module.
     const current = ctx.read("buildingParams") ?? {};
     const electricity: Record<string, BuildingParams> = {};
     const heat: Record<string, BuildingParams> = {};
@@ -182,8 +141,7 @@ const module = defineModule({
         source: "estimate",
       };
 
-      // The heat mirror: a function of the class and the area, flagged as an estimate. No peak — the backend
-      // sizes heat at run time, and inventing one here would be a number with no author.
+      // The heat mirror: a function of the class and the area, flagged as an estimate. No peak — the backend sizes heat at run time.
       const mirror = estimateYearlyHeatDemand(estimate.fClass, attributes.areaM2);
       heat[osmId] = {
         fClass: estimate.fClass,
@@ -211,13 +169,7 @@ function totalsOf(params: Record<string, BuildingParams> | undefined): { count: 
   };
 }
 
-/**
- * The **full-screen state view** for an `auto` node — the only thing an auto node shows (`autoRun.ts`).
- *
- * There is no Continue button: the node runs on arrival and the flow advances by itself, so all this region
- * has to say is where the run is. `error` is the one state with a control — the **manual re-run** — and even
- * that does not advance on its own: a failed run stays put, so the retry is the user's decision.
- */
+/** The full-screen state view for an `auto` node — no Continue button; `error` is the one state with a manual re-run. */
 const OverlayRegion: React.FC<{ auto?: AutoRunState }> = ({ auto }) => {
   const { t } = useTranslation();
   // Test mode renders no overlay (none is forced open and there is no position), so there is nothing to show.
@@ -337,7 +289,6 @@ const builderModule: BuilderModule = {
   module,
   Component,
   // The test data: buildings with the attributes the estimate reads, so the module can be run in isolation.
-  // The source is injected, not mocked here — a host installs one, and the module's tests install a fake.
   mock: {
     buildings: {
       type: "FeatureCollection",

@@ -1,10 +1,4 @@
-/**
- * The document helpers. The one that matters: the copy payload is the stored document,
- * **pretty-printed with its own key order** — the paste target is a source file, so a diff after a paste
- * must be the change, not a reshuffle.
- *
- * Written failing first.
- */
+/** The document helpers: the copy payload is the stored document, pretty-printed in its own key order. */
 import { describe, expect, it } from "vitest";
 import { copyPayload, documentWithNodes, newDocument, slugify } from "./document";
 import type { WorkflowDocument } from "./types";
@@ -17,6 +11,16 @@ describe("slugify — the id derived from a label", () => {
 
   it("trims leading and trailing dashes", () => {
     expect(slugify("  A/B test  ")).toBe("a-b-test");
+  });
+
+  it("transliterates umlauts rather than dropping them", () => {
+    expect(slugify("Öl-Kessel")).toBe("oel-kessel");
+    expect(slugify("Änderung der Größe")).toBe("aenderung-der-groesse");
+    expect(slugify("Straße")).toBe("strasse");
+  });
+
+  it("strips accents it has no transliteration for", () => {
+    expect(slugify("Café Écologie")).toBe("cafe-ecologie");
   });
 });
 
@@ -52,9 +56,6 @@ describe("the copy payload", () => {
   });
 
   it("imposes the canonical order, because jsonb cannot preserve the document's", () => {
-    // The document comes back from Postgres reordered — jsonb sorts by key length and then alphabetically — so
-    // `seed` arrives before `version`. Preserving the order it arrives in is not possible for the document and
-    // would reshuffle the seed file on the first paste, so the copy stamps the order a person writes instead.
     const stored = JSON.parse('{"id":"x","version":2,"label":"X","seed":"a.json","nodes":[]}') as WorkflowDocument;
     const round = JSON.parse(copyPayload(stored)) as Record<string, unknown>;
 
@@ -89,9 +90,6 @@ describe("the copy payload", () => {
   });
 
   it("writes a document with a description and a subflow node byte-identically, so an unchanged one pastes back as a no-op", () => {
-    // The fixture the byte-identity claim was missing: a description (the field step 1 added after `label`)
-    // and a subflow node (the second kind). Before these keys were ordered, a copy reshuffled the seed file
-    // on the first paste — the exact defect this pins.
     const stored = JSON.parse(
       `{
       "id": "dev-flow",
@@ -144,5 +142,39 @@ describe("a saved document", () => {
     expect(saved.seed).toBe("a.json");
     expect(Object.keys(saved)).toEqual(["id", "version", "label", "seed", "nodes"]);
     expect(saved.nodes).toEqual([{ id: "n", moduleId: "m" }]);
+  });
+});
+
+describe("a copy of a document with recommended sections", () => {
+  const SECTION = {
+    key: "insulate",
+    label: "Insulate",
+    description: "Add insulation.",
+    nodes: [{ id: "b", moduleId: "building-configurator" }],
+  };
+  const doc: WorkflowDocument = {
+    id: "dev-flow",
+    version: 1,
+    label: "Development flow",
+    nodes: [{ id: "model-start", moduleId: "model-start" }],
+    recommended: [SECTION],
+  };
+
+  it("round-trips the recommended list, so a copy pastes back with its follow-ups intact", () => {
+    const round = JSON.parse(copyPayload(doc)) as WorkflowDocument;
+    expect(round.recommended).toEqual(doc.recommended);
+  });
+
+  it("orders the list after nodes and each section's own keys, rather than trusting arrival order", () => {
+    const shuffled = JSON.parse(
+      '{"id":"x","version":1,"label":"X","nodes":[],"recommended":[{"description":"D","label":"L","nodes":[{"moduleId":"m","id":"b"}],"key":"k"}]}',
+    ) as WorkflowDocument;
+    const round = JSON.parse(copyPayload(shuffled)) as Record<string, unknown> & {
+      recommended: Array<Record<string, unknown> & { nodes: Array<Record<string, unknown>> }>;
+    };
+
+    expect(Object.keys(round)).toEqual(["id", "version", "label", "nodes", "recommended"]);
+    expect(Object.keys(round.recommended[0])).toEqual(["key", "label", "description", "nodes"]);
+    expect(Object.keys(round.recommended[0].nodes[0])).toEqual(["id", "moduleId"]);
   });
 });

@@ -1,25 +1,10 @@
 /**
- * Folding the store's ports back into the legacy's shape.
+ * Folding the store's ports back into the legacy's shape — the outbound half of the port↔feature seam.
  *
- * The store keeps demand and technologies as **ports**; the legacy keeps them **on the building features**, in
- * `properties`, and saves `config.buildings` as that same feature collection. Both are true at once, and this
- * is the seam between them: `model-save` runs every building feature through `foldBuilding` before the payload
- * goes out, so what a legacy consumer reads is what it has always read.
- *
- * **Read off the legacy, not guessed.** Two sources agree, and the second is what makes the key names facts:
- *
- * - `saveAreaData` builds its config with `{ ...pylovoData }` — the whole grid object spread — so
- *   `config.buildings` is the feature collection the map was holding, edits and all.
- * - `configFingerprint` then counts `f.properties.technologies.length`, which only means anything if a
- *   technology assignment is an **array on the feature**.
- *
- * The demand keys come from `useBuildingDemandRecalculation`, which writes them onto the feature as it goes:
- * total and peak under two names each (the legacy writes both), the per-class breakdown as `fclass_details`,
- * and heat with the `heat_demand_estimated` flag that distinguishes a mirror from a user's own entry.
- *
- * **What this deliberately does not do** is invent keys for the fields the store has no port for — the run
- * mode, the cooking carrier, the prices, the site scope. Those belong to modules that do not exist yet,
- * and a fabricated value would be worse than an absent one.
+ * The store keeps demand and technologies as ports; the legacy keeps them on the building features, in
+ * `properties`, and saves `config.buildings` as that same feature collection. `foldBuilding` runs every
+ * feature through the fold before the payload goes out, so a legacy consumer reads what it always read;
+ * `load/unfold.ts` is the return trip.
  */
 
 import type { BuildingParams, ModelData, TechAssignment } from "@model-builder/core";
@@ -36,13 +21,7 @@ function fclassDetails(params: BuildingParams | undefined): LegacyProperties[] {
   }));
 }
 
-/**
- * A technology assignment, in the legacy's shape: keyed by its type, naming the catalogue product, carrying the
- * product's parameters.
- *
- * The vector typing we designed deliberately does **not** travel: the legacy has no notion of it, and adding
- * fields a consumer does not expect is how a payload stops being the shape it claims to be.
- */
+/** A technology assignment, in the legacy's shape — keyed by its type, naming the product, carrying its parameters. */
 function legacyTechnology(assignment: TechAssignment): LegacyProperties {
   const params = assignment.params ?? {};
   const product = typeof params.product === "string" ? params.product : assignment.techId;
@@ -57,12 +36,7 @@ function legacyTechnology(assignment: TechAssignment): LegacyProperties {
   };
 }
 
-/**
- * One building feature with its ports folded back in.
- *
- * Returns the feature unchanged when nothing applies, so a model with no demand or technologies saves exactly
- * the grid it was given rather than a copy with empty keys added.
- */
+/** One building feature with its ports folded back in; returns it unchanged when nothing applies. */
 export function foldBuilding(
   feature: GeoJSON.Feature,
   params: Readonly<ModelData>["buildingParams"],
@@ -89,7 +63,7 @@ export function foldBuilding(
     if (details.length > 0) folded.fclass_details = details;
   }
 
-  // A mirrored figure is an estimate; a user's own entry is not. That is the whole meaning of the flag.
+  // A mirrored figure is an estimate; a user's own entry is not.
   if (heat !== undefined && heat.yearlyKwh !== undefined) {
     folded.demand_heat = heat.yearlyKwh;
     folded.yearly_heat_demand_kwh = heat.yearlyKwh;
@@ -103,12 +77,7 @@ export function foldBuilding(
   return { ...feature, properties: folded };
 }
 
-/**
- * A building feature collection with every feature folded.
- *
- * Returns `undefined` for an absent collection rather than an empty one: the legacy omits the key entirely when
- * there was no grid, and an empty collection would claim there was.
- */
+/** A building feature collection with every feature folded; `undefined` for an absent collection. */
 export function foldBuildings(
   buildings: Readonly<ModelData>["buildings"],
   params: Readonly<ModelData>["buildingParams"],

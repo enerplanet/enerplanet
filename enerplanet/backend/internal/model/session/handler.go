@@ -1,5 +1,5 @@
 // Package session serves the modular builder's session for a model — the artefact the builder
-// writes and reads: the workflow reference, the projection, the log, the cursor, the redo tail and
+// writes and reads: the workflow reference, the projection, the flow, the log and
 // the fingerprint.
 //
 // It is deliberately **isolated from the legacy model API**: its own routes
@@ -80,8 +80,8 @@ func NewHandler(db *gorm.DB, kc *platformkeycloak.Client, store SessionStore) *H
 // PutModelSession stores the session for a model, replacing any earlier one.
 //
 // The whole artefact arrives in one request — the client owns the shape inside it — and is checked
-// only at the boundary: the workflow reference, the projection and the fingerprint are required, the
-// cursor cannot be negative, and the log and the redo tail must be arrays. Anything deeper is the
+// only at the boundary: the workflow reference, the projection and the fingerprint are required, and
+// the flow and the log must be arrays. Anything deeper is the
 // client's business, which is what keeps this endpoint evolvable.
 func (h *Handler) PutModelSession(c *gin.Context) {
 	model, ok := h.load(c, true)
@@ -106,8 +106,7 @@ func (h *Handler) PutModelSession(c *gin.Context) {
 		Initial:         datatypes.JSON(defaultJSON(req.Initial, `{}`)),
 		Projection:      datatypes.JSON(req.Projection),
 		Log:             datatypes.JSON(defaultJSON(req.Log, `[]`)),
-		Discarded:       datatypes.JSON(defaultJSON(req.Discarded, `[]`)),
-		Cursor:          req.Cursor,
+		Flow:            datatypes.JSON(defaultJSON(req.Flow, `[]`)),
 		Fingerprint:     req.Fingerprint,
 	}
 
@@ -207,19 +206,15 @@ type putRequest struct {
 	Initial         json.RawMessage `json:"initial"`
 	Projection      json.RawMessage `json:"projection" binding:"required"`
 	Log             json.RawMessage `json:"log"`
-	Discarded       json.RawMessage `json:"discarded"`
-	Cursor          int             `json:"cursor"`
+	Flow            json.RawMessage `json:"flow"`
 	Fingerprint     string          `json:"fingerprint" binding:"required"`
 }
 
 func (r putRequest) validate() error {
-	if r.Cursor < 0 {
-		return errors.New("cursor cannot be negative")
-	}
 	if err := requireJSONArray("log", r.Log); err != nil {
 		return err
 	}
-	if err := requireJSONArray("discarded", r.Discarded); err != nil {
+	if err := requireJSONArray("flow", r.Flow); err != nil {
 		return err
 	}
 	if err := requireJSONObject("initial", r.Initial); err != nil {
@@ -238,8 +233,7 @@ type sessionResponse struct {
 	Initial         json.RawMessage `json:"initial"`
 	Projection      json.RawMessage `json:"projection"`
 	Log             json.RawMessage `json:"log"`
-	Discarded       json.RawMessage `json:"discarded"`
-	Cursor          int             `json:"cursor"`
+	Flow            json.RawMessage `json:"flow"`
 	Fingerprint     string          `json:"fingerprint"`
 }
 
@@ -251,8 +245,7 @@ func toResponse(row *appModels.ModelSession) sessionResponse {
 		Initial:         json.RawMessage(row.Initial),
 		Projection:      json.RawMessage(row.Projection),
 		Log:             json.RawMessage(row.Log),
-		Discarded:       json.RawMessage(row.Discarded),
-		Cursor:          row.Cursor,
+		Flow:            json.RawMessage(row.Flow),
 		Fingerprint:     row.Fingerprint,
 	}
 }

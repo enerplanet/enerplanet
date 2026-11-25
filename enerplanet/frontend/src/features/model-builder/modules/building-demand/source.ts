@@ -1,18 +1,4 @@
-/**
- * The demand-estimate slot — what `building-demand` needs from a host, and nothing more.
- *
- * The module declares that it *can* estimate and never learns how; a host installs the implementation at
- * startup, the same shape as the grid engine and the weather source. That is what keeps this module free of
- * the app's HTTP client, and what lets every case below run against a fake.
- *
- * **One building per call, on purpose.** The backend also offers a batch endpoint
- * (`estimate-energy-batch`), but the legacy never calls it — the real behaviour is one request per building,
- * and that is what this slot models. A source that wants to batch internally still satisfies this interface.
- *
- * **No grid and no weather.** The estimate is a function of the building's own attributes, so this request
- * carries no grid ids and no weather selection. Weather belongs to the *run*, not to a per-building figure —
- * a distinction the module was corrected on twice.
- */
+/** The demand-estimate slot — what `building-demand` needs from a host, and nothing more. */
 
 /** The per-building attributes the estimate is computed from — the pylovo feature properties. */
 export interface BuildingAttributes {

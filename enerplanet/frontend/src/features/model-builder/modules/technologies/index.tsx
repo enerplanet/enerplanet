@@ -1,26 +1,9 @@
 /**
  * The `technologies` module — what each building is heated and supplied by.
  *
- * **This is the one step with no fetch at all.** In the legacy, placing a technology calls nothing: the
- * assignment is written onto the building's feature. So this is an interactive node, not an auto job — the
- * user is deciding, and the flow has nothing to derive. The only network call in this area belongs to loading
- * the catalogue, and that is picker data, not model data.
- *
- * **Two ways an assignment arrives.**
- *
- * 1. **The user assigns a type to every building** — one click per type, `source: "user"`. There is no
- *    per-building selection yet: `MapService` has no way to ask for one, and inventing a selection mechanism
- *    here would be a host concern solved in a module.
- * 2. **The expected-fit autoresolve** fills in heat for buildings that have heat demand and no supply, when
- *    the toggle is on. Those assignments are flagged `estimated`, because the heuristic is review-flagged and
- *    the user is meant to be able to disagree with it.
- *
- * **One heat supply per building**, enforced here: the legacy *skips* a second heat technology rather than
- * replacing it, and a building with two boilers is not a state worth being able to reach.
- *
- * **The redesign is the vector typing.** The legacy keys assignments by a type slug and knows nothing about
- * carriers; here an assignment carries `inputVector`/`outputVector`, so a heat pump is `electricity → heat`
- * rather than a special case. The cost is that the save must merge this port back into `config.buildings`.
+ * The one step with no fetch: assignments are written onto the building's feature. An interactive node — the
+ * user assigns a type to every building (`source: "user"`), or the expected-fit autoresolve fills heat
+ * (`source: "estimated"`). One heat supply per building. The catalogue is an injected slot.
  */
 
 import { useEffect, useState } from "react";
@@ -98,12 +81,7 @@ export function hasHeatSupply(assignments: readonly TechAssignment[] | undefined
   return (assignments ?? []).some((assignment) => HEAT_SUPPLY_TYPES.includes(assignment.techId));
 }
 
-/**
- * Add an assignment, honouring the one-heat-per-building rule.
- *
- * A second heat supply is a no-op rather than a replacement — the legacy's own behaviour. Assigning the same
- * type twice is also a no-op, so a repeated click cannot stack duplicates.
- */
+/** Add an assignment, honouring the one-heat-per-building rule; a repeat or a second heat supply is a no-op. */
 export function assign(
   existing: readonly TechAssignment[] | undefined,
   next: TechAssignment,
@@ -114,12 +92,7 @@ export function assign(
   return [...current, next];
 }
 
-/**
- * What this module stands behind: every building with heat demand has a heat supply.
- *
- * A building whose heat demand is zero — a garage, or one the demand step found nothing for — is *not* asked
- * for a technology, so this stays silent rather than demanding supplies nobody needs.
- */
+/** What this module stands behind: every building with heat demand has a heat supply. */
 export function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   const buildings = projection.buildings;
   const heat = projection.buildingParams?.heat;
@@ -152,12 +125,7 @@ function applyToAll(
   }
 }
 
-/**
- * The expected-fit pass: heat for every building that has demand and nothing supplying it.
- *
- * A building whose heat demand is zero — a garage, or one the demand step found nothing for — resolves to
- * nothing, so it is left alone rather than given a supply it does not need.
- */
+/** The expected-fit pass: heat for every building that has demand and nothing supplying it. */
 function autoresolveHeat(
   buildings: GeoJSON.FeatureCollection,
   params: Readonly<ModelData>["buildingParams"],
@@ -176,19 +144,14 @@ function autoresolveHeat(
   }
 }
 
-/**
- * The module's own surface, re-exported: a host installs a source through the same entry point it imports the
- * module from, so it never reaches into the module's files. Same shape as `setGridEngine` and
- * `setWeatherSource`.
- */
+/** The module's own surface, re-exported so a host installs a source through the module's entry point. */
 export { setCatalogueSource } from "./catalogue";
 
 const module = defineModule({
   id: "technologies",
   name: "Technologies",
 
-  // The grid (assignments hang off its buildings and its transformers), the demand it resolves, and the
-  // settings port the autoresolve toggle is written to.
+  // The grid (assignments hang off its buildings and transformers), the demand it resolves, and the settings port the toggle writes.
   params: [
     { port: "buildings", required: true },
     { port: "transformers", required: true },
@@ -197,8 +160,7 @@ const module = defineModule({
     { port: "advancedParams" },
   ],
 
-  // Both edges are real: a new grid or new transformer assignment means these technologies were chosen for a
-  // network that no longer exists, and a demand change means they were sized for a different demand.
+  // Both edges are real: a new grid or transformer assignment means these technologies were chosen for a network that no longer exists.
   affect: { buildings: ["technologies"], buildingParams: ["technologies"] },
 
   layout: ["sidebar"],
@@ -214,8 +176,7 @@ const module = defineModule({
 
     const next: Record<string, TechAssignment[]> = { ...current };
 
-    // 1. What the user asked for, then 2. the expected-fit fill. Each pass is simpler than the run that
-    //    composes them, which is the only reason this stays readable.
+    // 1. What the user asked for, then 2. the expected-fit fill.
     applyToAll(buildings, collected.types, next);
 
     const autoresolve = collected.autoresolve ?? advanced?.[AUTORESOLVE] === true;
@@ -285,17 +246,11 @@ const Component: React.FC<ModuleViewProps> = ({ data, run, nodeId }) => {
   const { products, failed } = useCatalogue();
   const [busy, setBusy] = useState(false);
 
-  /**
-   * What the user has chosen here but not yet committed.
-   *
-   * Nothing commits on click any more. A click that ran the node also ended its turn, so the panel moved on
-   * before the choice could be looked at — and the auto-assign toggle, which is a *setting* rather than an
-   * action, moved the session on as if it were one. Collect both, and let one Continue hand them over together.
-   */
+  /** What the user has chosen but not yet committed; nothing commits on click, one Continue hands it all over. */
   const [typedType, setTypedType] = useState<string | null>(null);
   const [typedAutoresolve, setTypedAutoresolve] = useState<boolean | null>(null);
 
-  // The frame can move the session mid-selection. Nothing collected on one node may reach another.
+  // A node change drops what was collected; nothing collected on one node may reach another.
   useEffect(() => {
     held.nodeId = nodeId;
     held.types = [];

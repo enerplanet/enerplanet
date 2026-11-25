@@ -3224,6 +3224,16 @@
         "subflowNote": "Ein Subflow ist ein Fragment: Er wird in einen anderen Workflow eingefügt und dort validiert, wo er eingesetzt wird, nicht für sich allein."
       },
       "editor": {
+        "addNode": "Knoten hinzufügen",
+        "addSuggestion": "Vorschlag hinzufügen",
+        "noNodes": "Keine Knoten.",
+        "pickModule": "Modul hinzufügen…",
+        "suggested": "Vorgeschlagene nächste Schritte",
+        "suggestedEmpty": "Noch keine Vorschläge. Fügen Sie unten einen Vorschlag hinzu, um zu beginnen.",
+        "suggestedHint": "Folgeschritte, die angeboten werden, sobald der letzte Schritt der Kette gelaufen ist. Jeder Vorschlag wird als eine Einheit angehängt.",
+        "suggestedProblem": "Die vorgeschlagenen nächsten Schritte sind fehlerhaft: {{reason}}",
+        "suggestionTitle": "Titel",
+        "suggestionWhy": "Warum (das Ziel)",
         "back": "Zurück zur Liste",
         "version": "Version {{version}}",
         "unsaved": "Ungespeicherte Änderungen",
@@ -3258,7 +3268,8 @@
         "subflowOwnedBy": "Schritte aus \"{{label}}\" - bearbeitet in diesem Workflow, nicht hier.",
         "subflowExpansionFailed": "Dieser Workflow kann hier nicht expandiert werden.",
         "recursive": "würde diesen Workflow enthalten - ein Subflow kann sich nicht selbst enthalten, weder direkt noch transitiv",
-        "unresolved": "kann nicht aufgelöst werden - er nennt ein Modul oder einen Workflow, den dieser Build nicht hat"
+        "unresolved": "kann nicht aufgelöst werden - er nennt ein Modul oder einen Workflow, den dieser Build nicht hat",
+        "pickWorkflow": "Workflows"
       }
     },
     "run-meme-calliope": {
@@ -3345,6 +3356,9 @@
         "partial": "eine Seite noch nicht berechnet",
         "empty": "keine Seite berechnet"
       }
+    },
+    "recommended": {
+      "title": "Vorgeschlagene nächste Schritte"
     }
   }
 }

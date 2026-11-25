@@ -1,25 +1,12 @@
 /**
  * Unfolding a saved model back into the store's ports — the inverse of `save/fold.ts`.
  *
- * A legacy model's `config` keeps demand and technologies **on its building features**; our store keeps them
- * as ports. `fold.ts` is the outbound direction and this is the return trip, so a model saved by the legacy —
- * or by us — loads into a session that can be edited and saved again.
- *
- * **It is a real inverse, and the ways it is not are worth naming.**
- *
- * - **`source` on a technology is not recoverable.** The legacy has no such field; it is ours, invented so an
- *   autoplaced estimate could be told from a deliberate choice. A loaded assignment gets `"catalogue"`, which
- *   is the honest reading: it came from the catalogue, and nobody in this session placed it.
- * - **Extra properties are kept.** A legacy feature carries far more than the keys we fold — areas, storeys,
- *   geometry-derived facts — and dropping them would lose data the next save would then not write back. They
- *   ride along on the `buildings` port, and the fold leaves them untouched.
- * - **Absent means absent.** A model with no `weatherScenario` gets no `weatherSelection` rather than a
- *   fabricated default; the weather module owns defaults, and inventing one here would make a load look like a
- *   choice somebody made.
- *
- * `config.buildings` is still the `buildings` port: the same collection, minus nothing. The demand and
- * technology keys are *additionally* lifted out into their ports, which is the whole point — the store's
- * modules read ports, and the fold puts them back when the model is saved again.
+ * A legacy model's `config` keeps demand and technologies on its building features; our store keeps them
+ * as ports. `fold.ts` is the outbound direction and this is the return trip, so a model saved by the
+ * legacy — or by us — loads into a session that can be edited and saved again. The inverse is real but
+ * not exact: a technology's `source` is ours and not on the wire (a loaded assignment reads `catalogue`),
+ * a legacy feature's extra properties are kept so the next save writes them back, and an absent key stays
+ * absent rather than being defaulted.
  */
 
 import type { BuildingParams, ClassDemand, EnergyVector, ModelData, TechAssignment } from "@model-builder/core";
@@ -63,13 +50,7 @@ function byClassOf(value: unknown): ClassDemand[] | undefined {
   return classes.length > 0 ? classes : undefined;
 }
 
-/**
- * A technology assignment, back from the legacy's shape.
- *
- * The legacy's `key` is the *type*, which is what our `techId` holds; its `product` names the catalogue entry
- * and becomes a parameter. The vectors are ours and are not on the wire, so nothing is recovered for them —
- * the catalogue knows, and a module that needs them asks it.
- */
+/** A technology assignment, back from the legacy's shape. */
 function unfoldTechnology(value: unknown): TechAssignment | undefined {
   const record = (value ?? {}) as Record<string, unknown>;
   const techId = stringOf(record.key) ?? stringOf(record.techId);
@@ -199,12 +180,7 @@ function buildingsOf(config: Record<string, unknown>): UnfoldedConfig {
   };
 }
 
-/**
- * The weather, back from its three keys.
- *
- * A recorded year wins, exactly as it does on the way out. Absent keys mean the model chose nothing, which is
- * not the same as choosing the default — so nothing is fabricated here.
- */
+/** The weather, back from its three keys; a recorded year wins, and absent keys mean nothing was chosen. */
 function weatherOf(config: Record<string, unknown>): Pick<UnfoldedConfig, "weatherSelection"> {
   const provider = stringOf(config.weatherProvider) ?? null;
   const year = numberOf(config.weatherYear);
@@ -218,12 +194,7 @@ function weatherOf(config: Record<string, unknown>): Pick<UnfoldedConfig, "weath
   return { weatherSelection: { provider, choice: "p50" } };
 }
 
-/**
- * The demand, technologies and weather a saved `config` describes.
- *
- * The grid collections other than buildings are left to the caller: `buildings` comes back here because this
- * function has to walk it anyway, but a line has nothing to unfold.
- */
+/** The demand, technologies and weather a saved `config` describes. */
 export function unfoldConfig(config: Record<string, unknown> | null | undefined): UnfoldedConfig {
   if (config === null || config === undefined) return {};
   return { ...buildingsOf(config), ...weatherOf(config) };

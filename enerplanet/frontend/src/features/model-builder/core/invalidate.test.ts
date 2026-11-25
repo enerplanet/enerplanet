@@ -1,8 +1,6 @@
 /**
  * The invalidator: *the cascade is the affected closure, minus what it cannot touch*.
  *
- * Written failing first.
- *
  * The cascade is staged from a **primary** diff (what an action changed) and answers one question:
  * which *other* ports does this working model no longer have a right to keep? The answer is three
  * rules, and each of them is a case below:
@@ -84,7 +82,7 @@ async function applied(): Promise<ReturnType<typeof createStore>> {
   const store = createStore(seed({ coordinates: [] }));
   const engine = createEngine(store);
   for (const module of [start, draw, grid]) {
-    await engine.runModule(module, { id: module.id });
+    await engine.runModule(module, { id: module.id, moduleId: module.id });
   }
   return store;
 }
@@ -160,5 +158,32 @@ describe("the cascade is the affected closure, minus what it cannot touch", () =
     const buildings = cascade.find((op) => op.path === portPath("buildings"));
 
     expect(buildings).toMatchObject({ op: "remove", prev: before });
+  });
+
+  it("does not prune anything when the change has no affected outputs", async () => {
+    const store = await applied();
+    const invalidate = createInvalidator(FLOW, registry);
+
+    // Nothing declares an edge out of `buildings`, so changing it leaves no port stale.
+    const cascade = invalidate([primaryRoad("buildings", [])], store.data);
+
+    expect(cascade).toEqual([]);
+  });
+
+  it("folds a nested primary path to its top-level port, so that port is superseded", async () => {
+    const store = await applied();
+    const invalidate = createInvalidator(FLOW, registry);
+
+    // The action writes under `coordinates` — a nested path — which supersedes the whole port,
+    // however deep in `region`'s closure `coordinates` sits.
+    const cascade = invalidate(
+      [
+        primaryRoad("region", ELSEWHERE),
+        { op: "replace", path: "/coordinates/0/0", prev: undefined, next: [8.7, 49.5] },
+      ],
+      store.data,
+    );
+
+    expect(cascade.map((op) => op.path)).toEqual([portPath("buildings")]);
   });
 });

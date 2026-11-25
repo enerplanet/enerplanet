@@ -1,37 +1,10 @@
 /**
- * The `model-variant` module — make a **family copy** of the saved model, record it, and switch this page onto
- * the copy.
+ * The `model-variant` module — make a family copy of the saved model, record it, and switch this page onto the
+ * copy.
  *
- * **What an interactive node is.** A step the user starts: there is no `auto`, nothing runs on arrival, and the
- * node carries its own forward action (`shell/actions.ts`: the frame's `Continue` is gone, so an interactive
- * module advances by running itself). Pressing the control runs `run()`, which creates the copy and commits the
- * record; a clean `validate()` then leaves the node behind.
- *
- * **Why this node exists.** A family comparison needs two models of one location: the family's original and a
- * variant of it. This node makes the variant. It creates the copy through an injected gateway (`./source.ts`)
- * that a host installs at startup — the module knows nothing of the app's HTTP client — and there is no default,
- * because a fabricated variant would be a lie about the backend.
- *
- * **What it commits, and why the record is a port.** The record of the copy — `modelVariant` in `core/ports.ts` —
- * names the copy and the family's root original. It is a **port** and not an `advancedParams` entry because the
- * compare node (E) declares it `required`, which is what places the comparison *after* this node by construction.
- * Adding the port was a core change.
- *
- * **The switch is the same transaction.** Alongside the record, `run()` writes `modelId` = the copy's id. The
- * node already reads `modelId`, so the write is the supported read → rewrite shape (`core/engine.ts`'s
- * anti-clobber rule licenses a port the module consumed), and a port a module both reads and rewrites is a
- * self-edge — its own write is not pruned by its own invalidation (`core/invalidate.ts`, `core/influence.ts`).
- * The consequences are the wanted ones: committing `modelId` *is* the switch — the frame renders this one store
- * and no page is navigated — and every node that reads `modelId` (both run nodes, the results node) is pruned
- * and left `stale`, which is how the run downstream re-runs against the variant. The copy's own session row is
- * the shell's job, not this node's: the row is a snapshot taken *after* this transaction seals, and the shell
- * owns the session (`shell/variantSession.ts`).
- *
- * **Copying twice is refused.** `run()` reads `modelVariant` before writing it, and uses the read as the guard:
- * a recorded variant means the copy was already made, so a second press seals a zero-diff step and forks
- * nothing. That is the same read-before-write the anti-clobber rule forces, doing the double duty the node needs.
- *
- * `seal` is left at the default, `at-completion`: the record and the switch are one record, one transaction.
+ * An interactive node: pressing its control runs `run()`, which creates the copy and commits the record. The
+ * copy is made through an injected gateway (`source.ts`); there is no default. It commits `modelVariant` and
+ * writes `modelId` = the copy's id (the switch). Regions: `sidebar`, `bottom`.
  */
 
 import {
@@ -44,19 +17,10 @@ import {
 import { useTranslation } from "@spatialhub/i18n";
 import { modelVariantGateway } from "./source";
 
-/**
- * The module's own surface, re-exported: a host installs a gateway through the same entry point it imports the
- * module from, so it never reaches into the module's files. Same shape as `setMemeRunGateway`.
- */
+/** The module's own surface, re-exported so a host installs a gateway through the module's entry point. */
 export { setModelVariantGateway, type ModelVariantGateway } from "./source";
 
-/**
- * What this module stands behind: a **variant it made**.
- *
- * An absent record means the copy has not been made, so the session rests on this node (the node stays `stale`)
- * and the user can still act — which is how this node requires its action before the flow moves on. Once the
- * record is present the gate is clean.
- */
+/** What this module stands behind: a variant it made. */
 export function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   if (projection.modelVariant === undefined) {
     return [{ port: "modelVariant", message: "No variant of this model has been made yet." }];
@@ -68,15 +32,13 @@ const module = defineModule({
   id: "model-variant",
   name: "Model variant",
 
-  // `modelId` is required — the backend copies a saved model, and `model-save` is what produces the id. It is
-  // read and, on a fork, rewritten: the switch (`run()`). `modelVariant` is what this node records.
+  // `modelId` is required (the backend copies a saved model); it is read and, on a fork, rewritten. `modelVariant` is what this node records.
   params: [
     { port: "modelId", required: true },
     { port: "modelVariant" },
   ],
 
-  // The one edge: a different model is a different copy, so this record is invalidated with it — the variant
-  // describes a model that changed. `run-meme-calliope` declares the same edge for its run record.
+  // The one edge: a different model is a different copy, so this record is invalidated with it.
   affect: { modelId: ["modelVariant"] },
 
   // The form and the result it made are a handful of lines in the sidebar; `bottom` names where the copy stands.
@@ -95,16 +57,14 @@ const module = defineModule({
       throw new Error("model-variant needs a saved model (modelId) before it can make a variant");
     }
 
-    // Read before writing — and the read is the guard against a second copy. A recorded variant means the copy
-    // was already made, so pressing the control again seals a zero-diff step and never forks a second time.
+    // Read before writing — and the read is the guard against a second copy.
     const existing = ctx.read("modelVariant");
     if (existing !== undefined) {
       ctx.commit({});
       return;
     }
 
-    // The record and the switch, in one transaction. `modelId` was read above, so the rewrite is legal
-    // (`core/engine.ts`) and it is a self-edge, so the node does not re-stale itself (`core/invalidate.ts`).
+    // The record and the switch, in one transaction; `modelId` was read above, so the rewrite is legal and a self-edge.
     const variant = await gateway.createVariant(modelId);
     ctx.commit({ modelVariant: variant, modelId: variant.variantModelId });
   },
@@ -112,11 +72,7 @@ const module = defineModule({
   validate: (ctx) => issuesFor(ctx.store),
 });
 
-/**
- * The `bottom` region: a status strip naming the node and whether it has made a variant.
- *
- * Intrinsic height on purpose — its box is a cap, so a strip that fits renders as a strip.
- */
+/** The `bottom` region: a status strip naming the node and whether it has made a variant. */
 const StatusStrip: React.FC<ModuleViewProps> = ({ data, nodeId }) => {
   const { t } = useTranslation();
   const variant = data.modelVariant;
@@ -142,15 +98,7 @@ const StatusStrip: React.FC<ModuleViewProps> = ({ data, nodeId }) => {
   );
 };
 
-/**
- * The `sidebar` region: the node's description, what it did once a variant exists, and its forward action.
- *
- * The forward action is one control. Before a variant exists it creates it; after one exists the same control
- * re-seals the step (advancing without forking — see `run()`). Once a variant exists the sidebar states plainly
- * what the switch did: this page is now on the copy — its title and id — and the family's root original, which is
- * the id the comparison reads as its baseline. Everything shown comes from the `modelVariant` port; nothing here
- * is invented.
- */
+/** The `sidebar` region: the description, what the node did once a variant exists, and its forward action. */
 const Sidebar: React.FC<ModuleViewProps> = ({ data, run }) => {
   const { t } = useTranslation();
   const variant = data.modelVariant;
@@ -186,8 +134,7 @@ const Sidebar: React.FC<ModuleViewProps> = ({ data, run }) => {
         </div>
       )}
 
-      {/* The forward action an interactive step needs to be left behind — the frame renders none of its own
-          (`shell/actions.ts`). It creates the variant once; pressed again it forks nothing and only re-seals. */}
+      {/* The forward action an interactive step needs; it creates the variant once, and pressed again only re-seals. */}
       <button
         type="button"
         onClick={() => void run()}
@@ -208,8 +155,7 @@ const Component: React.FC<ModuleViewProps> = (props) =>
 const builderModule: BuilderModule = {
   module,
   Component,
-  // The test data: the input the node cannot run without — a saved model. The gateway is not mocked here (the
-  // module has no default); a test installs a fake through `setModelVariantGateway`.
+  // The test data: the input the node cannot run without — a saved model.
   mock: {
     modelId: 1,
   },

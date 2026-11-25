@@ -1,14 +1,4 @@
-/**
- * The scaffold script, exercised for real.
- *
- * The script copies a template, rewrites it and splices `shell/moduleRegistry.ts` — the file writing and the
- * registry splice are the risky parts, so these cases run the script **as a subprocess**, not by importing its
- * helpers. To make that safe, each case builds a throwaway checkout in the OS temp dir that mirrors the paths
- * the script resolves from its own location (`<root>/scripts/…`, `<root>/modules/examples/…`,
- * `<root>/shell/moduleRegistry.ts`) and runs the script *there*. The script then reads and writes only inside
- * that copy, so the real tree cannot be touched — which the last case proves by re-hashing the real registry
- * and checking the real `modules/` for anything the runs could have created.
- */
+/** The scaffold script, exercised for real: run as a subprocess against a throwaway checkout. */
 import { describe, it, expect, afterAll } from "vitest";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -20,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const SCRIPT_FILE = "new-module.mjs";
 const REGISTRY_FILE = "moduleRegistry.ts";
 
-// The two types, and the module ids the cases use — named once so the literal is not repeated everywhere.
+// The two types and the module ids the cases use.
 const INTERACTIVE = "interactive";
 const AUTO = "auto";
 const TARIFF = "tariff-settings";
@@ -118,12 +108,11 @@ describe("the scaffold script", () => {
     const manifest = JSON.parse(moduleFile(root, TARIFF, "package.json")) as Manifest;
     expect(manifest.name).toBe(`@model-builder/${TARIFF}`);
 
-    // The `file:` dependency paths are deliberately correct for where the copy lands and must be left alone.
+    // The `file:` dependency paths are correct for where the copy lands and are left alone.
     expect(manifest.dependencies["@model-builder/core"]).toBe(DEP_CORE);
     expect(manifest.dependencies["@spatialhub/i18n"]).toBe(DEP_I18N);
 
-    // The declared id, the name and the i18n prefix are rewritten; the declared id does not survive. The bare
-    // word "example" in the copied prose is *not* rewritten — that is the dedicated case below.
+    // The declared id, the name and the i18n prefix are rewritten; the declared id does not survive.
     const index = moduleFile(root, TARIFF, "index.tsx");
     expect(index).toContain(`id: "${TARIFF}"`);
     expect(index).toContain('name: "Tariff settings"');
@@ -166,8 +155,7 @@ describe("the scaffold script", () => {
     const index = moduleFile(root, AREA, "index.tsx");
     expect(index).toContain(`id: "${AREA}"`);
     expect(index).toContain(`AREA_SUMMARY_KEY = "${AREA}.areaSummary"`);
-    // The template's declared id is gone. The bare *word* "example" in its prose is not, on purpose — those
-    // comments describe the template the reader is looking at (see the next case).
+    // The template's declared id is gone; the bare word "example" in its prose is left on purpose (next case).
     expect(index).not.toContain(TEMPLATE_ID);
 
     // The two workspace config files are walked but carry none of the template's ids.
@@ -183,10 +171,7 @@ describe("the scaffold script", () => {
     const root = sandbox();
     run(root, [AREA, AUTO, "Area summary"]);
 
-    // The rewrite pass is deliberately blunt, so what it must NOT do is worth pinning. A rule mapping the bare
-    // word onto the identifier would rewrite these comments into the new module's own name; the auto template's
-    // identifier is `exampleAuto`, so such a rule could only ever reach prose like this. Comments that still
-    // describe the template are worth more to the person editing the copy than a uniformly renamed word.
+    // A rule mapping the bare word onto the identifier would rewrite these comments; it must not.
     const source = moduleFile(root, AREA, "source.ts");
 
     expect(source).toContain("This example ships a working default");
@@ -198,10 +183,7 @@ describe("the scaffold script", () => {
     const root = sandbox();
     run(root, [TARIFF, INTERACTIVE, "Tariff settings"]);
 
-    // The same property as the case above, for the interactive template: its declared id is a compound
-    // (`example-interactive`), so the blunt pass rewrites the id and the identifier but leaves the bare word
-    // "example" in the template's own comments. A rule mapping that word onto the identifier would have turned
-    // the opening comment into the copy's own name.
+    // The same property for the interactive template: the compound id is rewritten, the bare word "example" is not.
     const index = moduleFile(root, TARIFF, "index.tsx");
 
     expect(index).toContain("a working example"); // the template's opening comment
@@ -213,10 +195,7 @@ describe("the scaffold script", () => {
     const root = sandbox();
     run(root, [TARIFF, INTERACTIVE]);
 
-    // These are the template's own layer and form-control ids, and they are not its declared id, so no id rule
-    // reaches them. They were rewritten by accident until the template was renamed — the bare-id rule used to
-    // catch the short word inside `example-area` — so a copy that still ships them is a real regression, and the
-    // acceptance for it is these three literals rather than the absence of the template's id.
+    // The template's own layer and form-control ids are not its declared id, so they need their own rule.
     const index = moduleFile(root, TARIFF, "index.tsx");
 
     expect(index).not.toContain("example-area");

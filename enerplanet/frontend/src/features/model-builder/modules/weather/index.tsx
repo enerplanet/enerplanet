@@ -1,27 +1,8 @@
 /**
- * The `weather` module — **which** backend weather dataset a model's runs use.
+ * The `weather` module — which backend weather dataset a model's runs use.
  *
- * It selects; it does not fetch. The config *references* a dataset and the backend retrieves the series at
- * run time. The one backend call this module makes is listing the archives and years
- * it can choose from (`GET /weather/years` in the legacy) — and even that arrives through a **provider
- * slot**, not an import, so the module knows nothing about the app's HTTP client and every case below runs
- * against a fake.
- *
- * **The shape is the legacy's, on purpose.** Its `WeatherSettings` is `{ provider: string | null; choice }`
- * and its `isScenario(weather)` is `choice !== "year"`. An explicit `mode` field would be a second way to
- * say what the choice already says — the module used to have one, and the legacy is why it does not now.
- * `provider: null` means "the server's default archive", **not** "unset": that is what makes a save omit the
- * key rather than write a default value, so the default can change server-side without rewriting models.
- *
- * Two consequences of that shape are easy to get wrong, so both are stated here:
- *
- * - **A scenario has no calendar year.** The legacy pins scenario dates to a non-leap year so its 365-day
- *   series stays aligned; the year a model runs on belongs to *its period*, not to the scenario. This
- *   module therefore stores no year for a scenario rather than inventing one.
- * - **A recorded year needs a period to come from.** The year is the period's, so it is read from
- *   `fromDate` when the choice is `year`. Until a period exists the choice cannot be finished — and that is
- *   what this module's own gate reports, so the node stays unfinished instead of the flow walking on
- *   with a half-specified dataset.
+ * It selects; it does not fetch. The one backend call it makes — listing archives and years — arrives through
+ * a provider slot (`archives.ts`), not an import. `provider: null` means "the server's default archive".
  */
 
 import { useEffect, useState } from "react";
@@ -37,10 +18,7 @@ import {
 import { useTranslation } from "@spatialhub/i18n";
 import { useArchives } from "./archives";
 
-/**
- * The module's own surface, re-exported: a host installs a source through the same entry point it imports the
- * module from, so it never reaches into the module's files. Same shape as `setGridEngine` and `setRegionSource`.
- */
+/** The module's own surface, re-exported so a host installs a source through the module's entry point. */
 export { setWeatherSource } from "./archives";
 export type { WeatherArchives, WeatherSource } from "./archives";
 
@@ -54,13 +32,7 @@ const ARCHIVE_NAMES: Record<string, string> = {
   "cosmo-rea6": "COSMO-REA6",
 };
 
-/**
- * The module's own model: what its controls have collected, and the node they were collected for.
- *
- * A module's UI gathers values that only `run()` can commit, so it keeps them itself. `nodeId` matters for
- * the same reason it does everywhere: the frame can move the session while a choice is half-made, and a
- * value collected on one node must never be committed against another.
- */
+/** The module's own model: what its controls have collected, keyed by the node they were collected for. */
 const held: { nodeId: string | null; values: Partial<ModelData> } = { nodeId: null, values: {} };
 
 /** Hold these values for `nodeId`, dropping anything held for a different node. */
@@ -99,12 +71,7 @@ export function sameSelection(
 /** The default the legacy opens with: the typical scenario on the server's default archive. */
 export const DEFAULT_SELECTION: WeatherSelection = { provider: null, choice: "p50" };
 
-/**
- * What this module stands behind, asked of any projection so `validate()` and the panel agree.
- *
- * Silence means either "nothing chosen yet" — the node is `pending`, not stale — or "the choice is usable".
- * An issue means the choice cannot be finished as it stands: a recorded year with no period to take it from.
- */
+/** What this module stands behind — an issue only when a recorded year has no period to take it from. */
 export function issuesFor(projection: Readonly<ModelData>): ValidationIssue[] {
   const selection = projection.weatherSelection;
   if (selection === undefined) return [];
@@ -124,22 +91,10 @@ const module = defineModule({
   id: "weather",
   name: "Weather",
 
-  // What it writes, plus what it reads and what it may invalidate. `fromDate` is **required**: a recorded
-  // year takes its year from the period, and a scenario's dates are the model's, so this node cannot be
-  // finished without a period — stating the reliance here makes it part of the contract rather than an
-  // assumption. `model-start`, which produces the period, sits upstream, so the flow gate still places it.
-  //
-  // `buildingParams` is declared without being written: a module must *know* every port it can affect, and
-  // declaring one is not a claim to write it (the engine still refuses an undeclared write). This module
-  // never touches it — the cascade removes it.
+  // What it writes, plus what it reads and may invalidate. `fromDate` is required: it carries a recorded year.
   params: [{ port: "weatherSelection" }, { port: "fromDate", required: true }, { port: "buildingParams" }],
 
-  // The direct edges only; invalidation is transitive, so `building-demand`'s own declaration carries
-  // the choice onward to `technologies`. Writing that far edge here would be claiming someone else's coupling.
-  //
-  // `fromDate` is named because the module genuinely reads it: a recorded year *comes from* the period, so
-  // changing the period invalidates the selection this module wrote. The influence prober is what found
-  // that, and it is right — without the edge, a period change would leave a stale year behind.
+  // The direct edges only; invalidation is transitive. `fromDate` is named because a recorded year comes from the period.
   affect: { weatherSelection: ["buildingParams"], fromDate: ["weatherSelection"] },
 
   layout: ["sidebar"],
@@ -149,12 +104,10 @@ const module = defineModule({
     const chosen = collected.weatherSelection as WeatherSelection | undefined;
     if (chosen === undefined) return; // a bare run with nothing collected proposes nothing (the trace still lands)
 
-    // Read before write — the anti-clobber rule — and this read is also what licenses the rewrite.
+    // Read before write, and this read is also what licenses the rewrite.
     const current = ctx.read("weatherSelection");
 
-    // The year is the *period's*, so it comes from `fromDate` rather than from the picker. Only a `year`
-    // choice has one: a scenario has no calendar year of its own, and storing a fake one is how the legacy's
-    // non-leap-year convention would end up in the wrong place.
+    // The year is the period's, from `fromDate`; only a `year` choice has one.
     const year = chosen.choice === "year" ? yearOf(ctx.read("fromDate")) : undefined;
     const resolved: WeatherSelection = { ...chosen, ...(year === undefined ? {} : { year }) };
 
@@ -196,26 +149,16 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
   const { t } = useTranslation();
   const { archives } = useArchives();
 
-  /**
-   * What the user has picked here but not yet committed.
-   *
-   * The selections no longer commit on click. A click that immediately ran the node also ended its turn — the
-   * session moved on, so there was nothing to compare, defaults were unreachable, and a second parameter would
-   * have needed a second gesture. Collecting first and committing once means the panel shows what it is about to
-   * do, and it has room to grow.
-   */
+  /** What the user has picked but not yet committed; a click collects, and one commit hands it all over. */
   const [typed, setTyped] = useState<WeatherSelection | null>(null);
 
-  // The frame can move the session mid-choice. Nothing collected on one node may reach another, so a node
-  // change drops what was held and the panel shows the store's selection again.
+  // A node change drops what was held; the panel shows the store's selection again.
   useEffect(() => {
     hold(nodeId, {});
     setTyped(null);
   }, [nodeId]);
 
-  // Scenario only. The legacy's other mode reads a *recorded* year out of the period, and this feature does not
-  // support it yet — a control that cannot be honoured is worse than no control, so the mode row is gone rather
-  // than disabled. `issuesFor` still reports a `year` choice, because a loaded model can carry one.
+  // Scenario only. The year mode reads a recorded year from the period and is not supported yet, so the row is gone.
   if (region !== "sidebar") return null;
 
   const stored = data.weatherSelection ?? DEFAULT_SELECTION;
@@ -233,8 +176,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
   const commit = (): void => {
     hold(nodeId, { weatherSelection: selection });
     void run().finally(() => {
-      // The store's value takes over again, so a failed run leaves the panel showing the truth rather than the
-      // attempt.
+      // The store's value takes over again, so a failed run leaves the panel showing the truth.
       setTyped(null);
     });
   };
@@ -274,8 +216,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
             onChoose={(name) =>
               setTyped({
                 ...selection,
-                // Choosing the default *is* choosing "none": the key is omitted on save, so the server's
-                // default keeps applying even if it changes later.
+                // Choosing the default is choosing "none": the key is omitted on save, so the server default keeps applying.
                 provider: name === archives.defaultProvider ? null : name,
               })
             }
@@ -292,8 +233,7 @@ const Component: React.FC<ModuleViewProps> = ({ region, data, run, nodeId }) => 
         {t("modelBuilder.weather.continue")}
       </button>
 
-      {/* A disabled button has to say what it is waiting for, or it reads as broken. The gate's own message is
-          the honest one — it is the same sentence the save node would report. */}
+      {/* A disabled button says what it waits for; the gate's own message. */}
       {ready ? null : (
         <p className="shrink-0 text-xs text-muted-foreground">{issues[0]?.message}</p>
       )}
@@ -309,7 +249,6 @@ const builderModule: BuilderModule = {
   module,
   Component,
   // The test data: the period (so a `year` choice has something to resolve from) and a starting selection.
-  // Both are what a session would already hold by the time this node is reached.
   mock: {
     fromDate: "2025-01-01",
     toDate: "2025-12-31",

@@ -1,8 +1,4 @@
-/**
- * Test-only fixtures and factories. Not a test file itself — imported by `*.test.ts`.
- *
- * Kept deliberately free of shared mutable state: every test builds its own store.
- */
+/** Test-only fixtures and factories. Not a test file itself — imported by `*.test.ts`. */
 
 import { PortWriteRejected } from "./errors";
 import type { ModelData } from "./ports";

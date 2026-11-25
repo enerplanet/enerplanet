@@ -1,10 +1,6 @@
 /**
- * The auto-run decision and its guard — written failing first.
- *
- * The rule this file pins is the whole point of the change: an auto node runs **on arrival** and **once**,
- * and it must not run again for a re-render or for a bare move — only for a genuine input change
- * (the invalidator's staleness), or the first time it is ever seen. `autoRunFor` is the decision and
- * `createAutoGuard` is the idempotency, so both are exercised here without a frame.
+ * The auto-run decision and its guard: an auto node runs on arrival and once — not for a re-render or
+ * a bare move, only for a genuine input change or the first time it is seen.
  */
 
 import { describe, expect, it } from "vitest";
@@ -84,7 +80,11 @@ function session(): Store {
 
 /** Run one node the way the frame does — the auto node stamped `auto`. */
 async function runNode(store: Store, id: string, moduleId: string, auto = false): Promise<void> {
-  await createEngine(store).runModule(REGISTRY[moduleId], auto ? { id, auto: true } : { id });
+  await createEngine(store).runModule(REGISTRY[moduleId], {
+    id,
+    moduleId,
+    ...(auto ? { auto: true } : {}),
+  });
 }
 
 function replace(port: PortKey, prev: unknown, next: unknown): DiffOp {
@@ -111,8 +111,7 @@ describe("the auto-run decision (autoRunFor)", () => {
     // `auto-node` declares `auto`, so arriving at its node runs…
     expect(autoRunFor(FLOW, REGISTRY, store)?.module.id).toBe("auto-node");
 
-    // …and the same flow, with an interactive module at that same node, plans nothing. The node carries no
-    // flag of its own — the module does.
+    // …and the same flow, with an interactive module at that node, plans nothing — the module carries the flag.
     const interactiveAt: ModuleRegistry = {
       ...REGISTRY,
       "auto-node": { ...autoModule, auto: undefined },
@@ -146,16 +145,7 @@ describe("the auto-run decision (autoRunFor)", () => {
     await runNode(store, "a", "producer");
     await runNode(store, "auto", "auto-node", true);
 
-    // Coming back: a bare jump to the auto node, discarding nothing. Its work is still in the store.
-    store.applyTransaction([], [], {
-      node: { id: "auto", auto: true },
-      kind: "jump",
-      jump: { from: "n", to: "auto" },
-    });
-
-    // A move is not a change: the auto node's work is still in the store, so there is nothing to re-run. The
-    // position rests on it (it is `done`, so the frontier is past it), but `autoRun` reads the node's *work*, not
-    // the move — the trap this rule exists to avoid.
+    // A view changes no data, so the auto node's work is still in the store and there is nothing to re-run.
     expect(autoRunFor(FLOW, REGISTRY, store)).toBeUndefined();
     expect(store.data.buildings).toBeDefined();
   });
@@ -165,9 +155,8 @@ describe("the auto-run decision (autoRunFor)", () => {
     await runNode(store, "a", "producer");
     await runNode(store, "auto", "auto-node", true);
 
-    // An input change: the invalidator prunes what that input affects. `coordinates` affects `buildings`,
-    // so the auto node's output is gone and it is genuinely stale — not merely re-armed.
-    store.applyTransaction([replace(COORDINATES, AREA_0, AREA_1)], undefined, { node: { id: "a" } });
+    // An input change prunes what it affects: `coordinates` affects `buildings`, so the auto node is stale.
+    store.applyTransaction([replace(COORDINATES, AREA_0, AREA_1)], undefined, { node: { id: "a", moduleId: "producer" } });
 
     expect(position(FLOW, REGISTRY, store)).toMatchObject({ index: 1, nodeId: "auto" });
     expect(autoRunFor(FLOW, REGISTRY, store)).toMatchObject({ id: "auto" });
@@ -193,9 +182,8 @@ describe("the auto-run guard (createAutoGuard)", () => {
 
     expect(guard.claim(autoRunFor(FLOW, REGISTRY, store)!)).toBe(true);
 
-    // The change prunes the auto node's output and moves the store's change token, so the next plan is a new
-    // attempt — the same node, a different fingerprint.
-    store.applyTransaction([replace(COORDINATES, AREA_0, AREA_1)], undefined, { node: { id: "a" } });
+    // The change moves the store's change token, so the next plan is a new attempt — the same node, a new fingerprint.
+    store.applyTransaction([replace(COORDINATES, AREA_0, AREA_1)], undefined, { node: { id: "a", moduleId: "producer" } });
     const next = autoRunFor(FLOW, REGISTRY, store)!;
 
     expect(guard.claim(next)).toBe(true);

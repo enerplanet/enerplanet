@@ -1,59 +1,30 @@
 /**
- * Reversible diffs and sealed transactions.
+ * Reversible diffs and sealed commits.
  *
  * A transaction is pure data: `primary` is what the action changed, `cascade` is what
- * invalidation pruned. Because every op carries `prev` *and* `next`, undo/redo/replay are
- * offline operations — no module and no backend involved.
+ * invalidation pruned. Every op carries `prev` and `next`, so replay is an offline operation.
  */
 
 import type { ModelData, PortKey } from "./ports";
+import type { NodeRef } from "./module";
 
 export type DiffOp =
   | { op: "replace"; path: string; prev: unknown; next: unknown }
   | { op: "remove"; path: string; prev: unknown };
 
-/** Why a transaction exists. */
-export type TransactionKind =
-  /** A change to the model, produced by running a module. */
-  | "action"
-  /** A position move inside the immutable flow — the target's outputs are
-   *  pruned structurally, and everything it discarded rides in `cascade`. */
-  | "jump";
-
-/** Where a jump came from and where it went — node ids within the one immutable flow. */
-export interface JumpRef {
-  from: string;
-  to: string;
-}
-
-/**
- * One sealed action. `revision` is 1-based and monotonically increasing; the log is
- * append-only, so a revision identifies an entry for the lifetime of the session.
- */
+/** One sealed commit. `revision` is 1-based and monotonically increasing; the log is append-only. */
 export interface Transaction {
   readonly revision: number;
-  /** The action's own diff. Empty for a jump — moving the position changes no value. */
-  readonly primary: readonly DiffOp[];
-  /** Downstream values the action invalidated, or a jump discarded. */
-  readonly cascade: readonly DiffOp[];
-  /** Workflow node that produced it, when known. */
-  readonly nodeId?: string;
-  /**
-   * The workflow node that produced it was an **auto** node.
-   *
-   * Stamped at seal time so history never has to consult the workflow to know which
-   * transactions it may skip when undoing.
-   */
+  /** The placement that produced it. Absent on a rollback. */
+  readonly node?: NodeRef;
+  /** Set when the commit was produced by an auto module. */
   readonly auto?: boolean;
-  /**
-   * `"jump"` for a position move, `"action"` (or absent) for a change.
-   *
-   * A jump that prunes nothing is the one documented **zero-diff transaction**: the intent is
-   * itself what is being recorded, which is the deliberate exception to "a no-op seals nothing".
-   */
-  readonly kind?: TransactionKind;
-  /** Set with `kind: "jump"`. */
-  readonly jump?: JumpRef;
+  /** What the run changed. Empty for a commit that resolved the model without a diff of its own. */
+  readonly primary: readonly DiffOp[];
+  /** Downstream values the action invalidated. */
+  readonly cascade: readonly DiffOp[];
+  /** Marks a rollback commit — an undo/redo resolving revision `of`. */
+  readonly rollback?: { readonly of: number };
 }
 
 /** JSON-pointer path of a top-level port, e.g. `"/buildings"`. */
@@ -74,13 +45,7 @@ export function getAtPath(data: unknown, path: string): unknown {
   return current;
 }
 
-/**
- * Immutable write: clones only the objects along `path`, shares everything else.
- *
- * Paths address **object keys**, not array indices — nested writes so far are vector-keyed
- * records (`/buildingParams/electricity`). Replacing an array (a GeoJSON collection, the
- * coordinates) happens whole, at a key.
- */
+/** Immutable write: clones only the objects along `path`, shares everything else. */
 function setAtPath(root: ModelData, path: string, value: unknown): ModelData {
   const parts = segments(path);
   const next = { ...root } as Record<string, unknown>;
@@ -134,13 +99,7 @@ export function applyDiffs(data: ModelData, ops: readonly DiffOp[]): ModelData {
   return ops.reduce<ModelData>((acc, op) => applyDiff(acc, op), data);
 }
 
-/**
- * Reverse a diff. Applied in reverse order so multi-op diffs restore correctly:
- * undo restores a transaction's pre-values exactly.
- *
- * Inverting a `remove` therefore restores the value it dropped — the first bug this
- * function had.
- */
+/** Reverse a diff, applied in reverse order so multi-op diffs restore correctly. */
 export function invertDiffs(ops: readonly DiffOp[]): DiffOp[] {
   return [...ops].reverse().map((op) =>
     op.op === "replace"

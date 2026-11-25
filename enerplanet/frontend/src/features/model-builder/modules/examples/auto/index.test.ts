@@ -1,17 +1,4 @@
-/**
- * `example-auto`'s tests.
- *
- * Two things are asserted, the same two worth asserting about any module: that its **declaration** is
- * consistent (`contractIssues`), and that its **behaviour** is what it claims (through the real engine).
- * The declaration cases pin the shape the auto path depends on — the required area, the single `affect`
- * edge, the two-region layout, and the default `seal`.
- *
- * The behaviour cases drive the module the way the frame does: it reads `coordinates` from the store, so a
- * case changes that port to give it a different area, and the summary lands in `advancedParams` under the
- * module's own key. There is no test-only door into the module.
- *
- * Written failing first.
- */
+/** `example-auto`'s tests: its declaration, and its behaviour through the real engine. */
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   contractIssues,
@@ -67,8 +54,7 @@ describe("example-auto's declaration", () => {
   it("declares the one real edge, and not the port it reads only to merge", () => {
     // A different drawn area invalidates the summary.
     expect([...exampleAuto.module.affect.coordinates!]).toEqual(["advancedParams"]);
-    // Reading `advancedParams` to merge into it is not an invalidation edge — exactly as `building-demand`
-    // leaves `buildingParams` undeclared in `affect`.
+    // Reading `advancedParams` to merge into it is not an invalidation edge.
     expect(exampleAuto.module.affect.advancedParams).toBeUndefined();
   });
 
@@ -111,11 +97,10 @@ describe("example-auto's behaviour", () => {
     const store = createStore({ ...exampleAuto.mock });
     const engine = createEngine(store);
 
-    await engine.runModule(exampleAuto.module, { id: NODE });
-    await engine.runModule(exampleAuto.module, { id: NODE });
+    await engine.runModule(exampleAuto.module, { id: NODE, moduleId: exampleAuto.module.id });
+    await engine.runModule(exampleAuto.module, { id: NODE, moduleId: exampleAuto.module.id });
 
-    // Two runs, two traces — the second is a zero-diff transaction: the summary was already there, so the
-    // deterministic source commits nothing.
+    // Two runs, two traces: the second is a zero-diff transaction.
     expect(store.log).toHaveLength(2);
     expect(store.log[1].primary).toHaveLength(0);
   });
@@ -124,7 +109,7 @@ describe("example-auto's behaviour", () => {
     const store = createStore({ coordinates: MOCK_RINGS });
     const engine = createEngine(store);
 
-    await engine.runModule(exampleAuto.module, { id: NODE });
+    await engine.runModule(exampleAuto.module, { id: NODE, moduleId: exampleAuto.module.id });
     const first = store.data.advancedParams?.[AREA_SUMMARY_KEY];
 
     // A new area arrives as an ordinary change to the input port — what a redraw would seal.
@@ -132,9 +117,8 @@ describe("example-auto's behaviour", () => {
       { op: "replace", path: "/coordinates", prev: MOCK_RINGS, next: OTHER_RINGS },
     ]);
 
-    // The second run rewrites `advancedParams`, which the first run left holding a value. A blind write would
-    // be rejected as `clobber`; succeeding is the proof that run() read the port first.
-    await engine.runModule(exampleAuto.module, { id: NODE });
+    // The second run rewrites `advancedParams`; succeeding proves run() read the port first.
+    await engine.runModule(exampleAuto.module, { id: NODE, moduleId: exampleAuto.module.id });
     const second = store.data.advancedParams?.[AREA_SUMMARY_KEY];
 
     expect(first).toMatchObject({ ringCount: 2 });
@@ -142,8 +126,7 @@ describe("example-auto's behaviour", () => {
   });
 
   it("reports the missing area rather than pretending there is something to summarise", async () => {
-    // `validate()` is asked against the store before the run, so a mock without an area is exactly what it
-    // should catch — the verdict the save node would turn into "what is missing".
+    // `validate()` is asked against the store before the run, so a mock without an area is caught.
     const { issues } = await runInScratch({ ...exampleAuto, mock: {} });
 
     expect(issues).toEqual([{ port: "coordinates", message: MISSING_AREA }]);

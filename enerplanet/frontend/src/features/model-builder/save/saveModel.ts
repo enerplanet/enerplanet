@@ -1,35 +1,10 @@
 /**
  * The save node's logic — the two-call split, and the legacy payload built from the store.
  *
- * The payload shape is not invented here: it reproduces the legacy `saveAreaData`
- * (`configurator/hooks/useAreaSelect.ts:370-404`) verbatim, and `buildSaveConfig` / `buildModelPayload`
- * reproduce it key for key. That legacy shape is the oracle the tests check against — parity is the whole reason this code
- * exists, so it is pinned rather than approximated.
- *
- * One respect in which the oracle is *not* the original, worth knowing before trusting the comparison blindly:
- * the extraction curates `config` to the ports the store holds, while the legacy spread the whole `pylovoData`
- * object — so `meta` and `boundary` travelled on the real wire and do not here. One legacy config key is
- * still written absent rather than reproduced: **`site`**,
- * which the legacy sets when the user edits the grid — it clones pylovo's grid into an editable site and
- * records that copy's identity (`{ mode: 'site', site_id, revision }`) so the save points at the copy rather
- * than the original. That is `grid-editor`'s output, and `grid-editor` is deferred, so there is nothing
- * honest to write. The other keys (`weather*`, `cookingCarrier`, `mode`,
- * `electricity_prices`) now have ports and are written verbatim.
- *
- * Two deliberate differences from the legacy original:
- *
- * 1. **The config is never absent.** The legacy sent `undefined` when it had no grid data; here an
- *    unfinished model sends `{}` (a valid, empty `model.json`) and a finished one sends the built
- *    config or `{}`. Call A requires a config, and a half-built model should look unfinished to a
- *    legacy consumer rather than like a model with only defaults in it. Nothing is lost by that: the
- *    real state travels in Call B's artefact.
- * 2. **The status comes from the flow.** `incomplete` while the flow has unfinished nodes, `draft` on
- *    a first complete save, `modified` when an existing model is saved again. The legacy's finer rule
- *    ("only mark modified if the config fingerprint moved") needs an original-config handle the store
- *    does not carry yet — it belongs to `model-load`, not here.
- *
- * Call A's failure propagates: nothing was saved. Call B's failure does not — the model *is* saved,
- * so the outcome says exactly what is missing instead of throwing away the model id.
+ * The payload shape reproduces the legacy `saveAreaData` verbatim: `buildSaveConfig` / `buildModelPayload`
+ * reproduce it key for key, and that legacy shape is the oracle the tests check against — parity is the
+ * whole reason this code exists, so it is pinned rather than approximated. Call A's failure propagates
+ * (nothing was saved); Call B's does not — the model is saved, and the outcome says what is missing.
  */
 
 import { toArtefact, type WorkflowRef } from "../core/artefact";
@@ -47,13 +22,7 @@ const PYPSA_DEFAULTS = {
   line_type_lv: "NAYY 4x150 SE",
 } as const;
 
-/**
- * The legacy's three settings keys, each written verbatim from its port — including the odd spelling (`mode`
- * lowercase, `electricity_prices` snake_case beside `cookingCarrier` camelCase), because parity is the point.
- *
- * An absent port writes nothing rather than a default: the defaults belong to `model-start`, which seeds them
- * on every model. A save that invented its own would let a model look decided when nobody decided anything.
- */
+/** The legacy's three settings keys, each written verbatim from its port (odd spelling and all). */
 function settingsKeys(data: Readonly<ModelData>): Record<string, unknown> {
   return {
     ...(data.cookingCarrier === undefined ? {} : { cookingCarrier: data.cookingCarrier }),
@@ -64,14 +33,12 @@ function settingsKeys(data: Readonly<ModelData>): Record<string, unknown> {
 
 /**
  * The `config` object for a complete flow — the legacy `buildSaveConfig`, reading ports instead of
- * `pylovoData`. Note `mvLines` → `mv_lines`: the store keeps camelCase, the wire keeps the legacy
- * snake_case, and the mapping is exactly the kind of thing parity tests exist to hold still.
+ * `pylovoData` (`mvLines` → `mv_lines`: the store keeps camelCase, the wire snake_case).
  */
 export function buildSaveConfig(data: Readonly<ModelData>): Record<string, unknown> {
   const config: Record<string, unknown> = {};
 
-  // The buildings go out **folded**: the store keeps demand and technologies as ports, the legacy keeps them on
-  // the features, and `config.buildings` is that same feature collection (`save/fold.ts`).
+  // Buildings go out folded (see `save/fold.ts`).
   const buildings = foldBuildings(data.buildings, data.buildingParams, data.technologies);
   if (buildings !== undefined) config.buildings = buildings;
 
@@ -80,14 +47,13 @@ export function buildSaveConfig(data: Readonly<ModelData>): Record<string, unkno
   if (data.transformers) config.transformers = data.transformers;
   if (data.grids) config.grids = data.grids;
 
-  // The weather, in the legacy's three keys — this is `applyWeatherToConfig`, which the legacy calls with the
-  // period's year. A recorded year wins over a scenario, and the archive is omitted when it is the default.
+  // The weather, in the legacy's three keys (`applyWeatherToConfig`).
   const weather = data.weatherSelection;
   if (weather !== undefined && weather.provider !== null) config.weatherProvider = weather.provider;
   if (weather?.choice === "year" && weather.year !== undefined) config.weatherYear = weather.year;
   if (weather !== undefined && weather.choice !== "year") config.weatherScenario = weather.choice;
 
-  // The legacy's three settings keys, each written verbatim from its port. See `settingsKeys`.
+  // The legacy's three settings keys, written verbatim from their ports (see `settingsKeys`).
   Object.assign(config, settingsKeys(data));
 
   // PyPSA is on unless a settings module turned it off (`pypsa_enabled === false`).
@@ -122,17 +88,14 @@ export function buildModelPayload(
     coordinates: (data.coordinates ?? []).map((ring) => [ring]),
   };
 
-  // An unfinished flow sends an empty config on purpose: there is no model yet, and the session
-  // (Call B) is what carries the state that does exist.
+  // An unfinished flow sends an empty config on purpose; Call B carries the real state.
   const config = options.status === "incomplete" ? {} : buildSaveConfig(data);
 
   return {
     title: (data.modelName ?? "").trim(),
     from_date: data.fromDate ?? "",
     to_date: data.toDate ?? "",
-    // Hard-coded to 60, because that is what the legacy does — its own comment says "only 60-minute steps are
-    // supported", so the store's `resolution` is a port the backend currently ignores. Reading it here would
-    // send a value the backend cannot honour and call it parity.
+    // Hard-coded to 60, as the legacy does — the store's `resolution` is a port the backend ignores.
     resolution: 60,
     ...(options.workspaceId === undefined ? {} : { workspace_id: options.workspaceId }),
     coordinates,
@@ -168,21 +131,9 @@ export interface SaveRequest {
   workspaceId?: number;
   draftId?: string;
   userId?: string;
-  /**
-   * The caller's own record of the save, written **between Call A and the artefact** — the seam.
-   *
-   * It is a function because the model id does not exist until Call A creates it, so the caller cannot state
-   * the record up front. The workflow bar passes nothing: its save has no such record, and its artefact is
-   * exactly what it was. The save *node* passes the two ports it records, which is what puts them in both the
-   * projection and the log of the save that first writes them. See `saveModel`'s seam.
-   */
+  /** The caller's own record of the save, written between Call A and the artefact (see `saveModel`). */
   onCreated?: (modelId: number, created: boolean) => void | Promise<void>;
-  /**
-   * Pin the status instead of deriving it from completeness. The workflow bar's save pins `incomplete`:
-   * an unfinished model still round-trips with its session, and *finishing* one — the real `model.json`,
-   * promoted to `draft` so that a run accepts it — belongs to the save node behind its completeness gate.
-   * Absent, the status is derived below, which is what that node's own path relies on.
-   */
+  /** Pin the status instead of deriving it from completeness (the workflow bar's save pins `incomplete`). */
   status?: SaveStatus;
 }
 
@@ -203,8 +154,7 @@ export async function saveModel(
   if (refusal !== undefined) return { ok: false, reason: refusal };
 
   const complete = position(flow, registry, store).complete;
-  // Pinned by the caller when the caller is the workflow bar; otherwise derived from completeness, which is
-  // the difference between the bar's save and the save node's.
+  // Pinned by the bar's save; otherwise derived from completeness.
   const status: SaveStatus =
     request.status ?? (complete ? (request.modelId === undefined ? "draft" : "modified") : "incomplete");
 
@@ -228,23 +178,15 @@ export async function saveModel(
   }
 
   /**
-   * The seam: the caller's own record of this save, written **here** — after Call A has produced the id and the
-   * created flag, and before the artefact is taken.
-   *
-   * The caller cannot state it earlier, because both values come out of Call A; and it cannot state it later,
-   * because the session this save persists is built from the store a few lines below. Anything the saver records
-   * about the save has to be *in the store* by this point, or the artefact describes a save whose own record is
-   * missing — which is not a cosmetic gap: the saver's node then reads `pending` on every reload, the flow reads
-   * incomplete, and a model that was saved cannot be re-saved as complete.
-   *
-   * This is the only reason the function has a midpoint. The workflow bar's save passes nothing and behaves
-   * exactly as it did when there was no seam.
+   * The seam: the caller's own record of this save, written after Call A produced the id and the created
+   * flag, and before the artefact is taken — the earliest moment both values exist.
    */
   await request.onCreated?.(modelId, created);
 
   const artefact = toArtefact({
     store,
     workflow: request.workflow,
+    flow: request.flow,
     modelId,
   });
   try {

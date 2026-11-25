@@ -1,26 +1,8 @@
 /**
  * Installs the building configurator: the legacy's `BuildingPanelHost`, wrapped for our module's slot.
  *
- * **Imports only — nothing in the legacy is edited** (the boundary rule). The host already takes what it needs
- * as props and owns its own chrome — the scrim, the back button, Escape (an open surface editor first, the
- * building second) — so nothing here re-implements any of it.
- *
- * Three translations live here, at the seam, and nowhere else:
- *
- * - **Open and close.** The legacy drives the panel through `useConfiguratorParams`, a URL param rather than a
- *   prop, so this wrapper calls `openBuilding(osmId)` when the module hands it a building, and reports the
- *   param returning to `null` — the host's own close, by Escape or its back button — as the module's
- *   `onClose`. The module never learns that a param exists.
- * - **The building's stored edit.** The view returns a `StoredBuem`: the legacy's envelope and thermal block,
- *   kept on the feature under `properties.buem`. Our store has no port for it and does not pretend to — it
- *   rides on the feature, which is where the legacy keeps it and where the save's fold already writes.
- * - **Technologies.** The view returns a `BuildingTechs` map keyed by type; the store holds `TechAssignment[]`.
- *   The constraint list becomes the assignment's params, and `alias` becomes its catalogue product.
- *
- * The owner path is the store's own `draftId` — the module reads it and passes it down, because
- * `BuildingPanelHost` refuses to render without one (it scopes draft-scoped transformer results). The draft is
- * a client-side UUID in the legacy too (`useAreaSelect`), not something the backend hands out, so the shell
- * seeds it rather than fetching it.
+ * Imports only — nothing in the legacy is edited. Three translations live here: open/close (a URL param),
+ * the building's stored edit, and technologies.
  */
 
 import { useEffect, useRef, type FC } from "react";
@@ -58,27 +40,12 @@ function toBuildingTechs(assignments: TechAssignment[] | undefined): BuildingTec
   return techs;
 }
 
-/**
- * The view the module renders.
- *
- * It is deliberately thin: the host does the work, and everything here is either a prop translation or the
- * open/close dance. `onCommit` is called only when the host hands back a *changed* building — it compares
- * itself, and passes the building it was given when nothing happened.
- */
+/** The view the module renders. */
 const View: FC<BuildingViewProps> = ({ osmId, technologies, draftId, grid, onCommit, onClose }) => {
   const { buildingId, openBuilding, close } = useConfiguratorParams();
   const setGrid = useModelStore((state) => state.setPylovoGridData);
 
-  /**
-   * Put our grid where the legacy's building state looks for it.
-   *
-   * `useBuildingState` resolves a building out of `useModelStore.pylovoGridData` — the legacy's own grid, which
-   * nothing in this feature ever filled — so without this the configurator opens on "This building is not in the
-   * loaded grid" while the building is right there in ours. Two stores, two grids, one of them empty.
-   *
-   * The spelling is the legacy's (`mv_lines`), and the keys stay absent when a collection is: the legacy reads
-   * absence as "nothing there", which is the truth here.
-   */
+  /** Put our grid where the legacy's building state looks for it. */
   useEffect(() => {
     if (grid === undefined) return;
     setGrid({
@@ -90,8 +57,7 @@ const View: FC<BuildingViewProps> = ({ osmId, technologies, draftId, grid, onCom
     } as Parameters<typeof setGrid>[0]);
   }, [grid, setGrid]);
 
-  // Open on the building the module picked. The host renders nothing until the param is set, so this is the
-  // call that makes it appear rather than a race with its first render.
+  // Open on the building the module picked; the host renders nothing until the param is set.
   useEffect(() => {
     openBuilding(osmId);
     return () => close();
@@ -108,8 +74,6 @@ const View: FC<BuildingViewProps> = ({ osmId, technologies, draftId, grid, onCom
     <BuildingPanelHost
       draftId={draftId}
       onBuildingEdited={(_id, buem) => {
-        // The legacy's envelope/thermal block. Our store has no port for it, so it rides on the feature, which
-        // is where the legacy keeps it (`properties.buem`) and where the save's fold already writes.
         onCommit({ buem: buem as unknown });
       }}
       onTechsChange={(_id, techs) => {
@@ -130,17 +94,7 @@ export function installBuildingConfigurator(): void {
   setBuildingConfigurator({ View });
 }
 
-/**
- * Starts the 3D preparation for the grid on screen, and renders nothing.
- *
- * The package draws a building from City2TABULA's 3D geometry, which is produced by a preparation run the legacy
- * starts when it has a grid (`useAreaPreparation`, *mount once per page*). Nothing in this feature mounted it, so
- * every building opened on "City2TABULA holds no 3D geometry for this building" — the geometry it draws was never
- * asked for. The shell renders this once, beside the bars.
- *
- * It reads the grid out of the same legacy store the view seeds, which is why it has to be mounted where the grid
- * is already there rather than per building.
- */
+/** Starts the 3D preparation for the grid on screen, and renders nothing. */
 export const BuildingPreparation: FC = () => {
   useAreaPreparation();
   return null;

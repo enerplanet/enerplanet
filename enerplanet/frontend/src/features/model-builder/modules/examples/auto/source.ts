@@ -1,21 +1,9 @@
 /**
- * The area-summary slot — the one piece of I/O `example-auto` has, and where a host would put a real
- * implementation.
+ * The area-summary slot — the one piece of I/O `example-auto` has.
  *
- * The module declares that it *can* summarise a drawn area and never learns how the summary is made: the job
- * is a function of the rings alone, so the module takes the answer from an injected source and knows nothing
- * about projections, tiling or a backend. That is the same slot shape `building-demand` uses, with one
- * deliberate difference.
- *
- * **This example ships a working default.** `building-demand`'s slot starts empty and a host *must* install
- * one, because a demand estimate comes from a service nobody can reimplement locally. An area summary is pure
- * geometry, so the example carries its own deterministic implementation and runs with **no host at all** —
- * which is what lets the module be developed and tested in isolation. A real module whose I/O genuinely
- * leaves the process would, like `building-demand`, have no default and *require* a host to install one; this
- * one does not, precisely so it can serve as the auto-path template without an app behind it.
- *
- * The exported installer is the seam a host replaces it through. Passing `null` restores the default, so a
- * test can reset the slot without re-deriving the module's behaviour.
+ * The module summarises a drawn area through an injected source. Unlike the slots that call a backend:
+ * This example ships a working default — the example carries its own deterministic implementation — so it
+ * runs with no host at all. `null` restores the default.
  */
 
 import type { Coordinates } from "@model-builder/core";
@@ -37,18 +25,10 @@ export interface AreaSummarySource {
   summarise(rings: Coordinates): Promise<AreaSummary>;
 }
 
-/**
- * How long the default source takes. Deliberate, not cosmetic: a real source's answer arrives later than the
- * frame's render, so the run's states have to be visible. A source that resolved synchronously would hide the
- * running state entirely, and a module developed against that would break the moment a real service — with
- * real latency — was installed in its place.
- */
+/** How long the default source takes — deliberate, so the run's states are visible (a real source has latency). */
 const LOCAL_DELAY_MS = 400;
 
-/**
- * Summarise the rings. Pure and total, so the same rings always give the same summary — which is what lets a
- * second run with an unchanged input commit nothing.
- */
+/** Summarise the rings. Pure and total, so the same rings always give the same summary. */
 function summariseRings(rings: Coordinates): AreaSummary {
   let pointCount = 0;
   let minLon = Infinity;

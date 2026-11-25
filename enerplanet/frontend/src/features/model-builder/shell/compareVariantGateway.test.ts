@@ -1,11 +1,6 @@
 /**
- * `compareVariantGateway`'s payload mapping — the one part worth pinning.
- *
- * The gateway's axios call is a thin wrapper and is left to the module's own tests (which drive it through a
- * fake); what can break silently is the *shape* — how the endpoint's top-level totals become the summary, and
- * how an absent payload becomes `null` rather than a set of zeros. It lives in a pure function (`summaryOf`),
- * tested directly, without stubbing axios, so the mapping can be checked against the fields
- * `features/model-results/types.ts` (`StructuredModelResults`) serves.
+ * `compareVariantGateway`'s payload mapping — the endpoint's totals as the summary, or `null` when there
+ * are none. A pure function, tested directly.
  */
 import { describe, expect, it } from "vitest";
 import { summaryOf } from "./compareVariantGateway";

@@ -2,23 +2,8 @@
  * The results-overview gateway the frame installs — the backend's structured-results endpoint, through the
  * app's HTTP client.
  *
- * The module declares the slot (`modules/result-overview/source.ts`) and never learns which gateway it has;
- * this is the implementation a host provides, beside the MEME-run gateway and for the same reason — a module
- * may only depend on `@model-builder/core`, while the app's CSRF-aware axios instance is the app's. The module
- * is told about this one at startup (`setResultOverviewGateway`, via `installResultOverviewGateway`).
- *
- * **The endpoint is `GET /models/:id/results/structured`.** Of the two results endpoints, this is the one that
- * answers a small summary: the handler's own note calls it "all small summary result tables"
- * (`internal/store/result/store.go`), while `GET /models/:id/results` returns the raw result rows. It is also
- * the very endpoint the results page and the compare page read, so this summary agrees with the page the link
- * opens — see `features/model-results/api.ts`, `fetchStructuredResults`.
- *
- * **Copied, not imported.** A feature may not import another feature, so the envelope and the handful of
- * fields read below are copied from `features/model-results/types.ts` (`StructuredModelResults`): the response
- * is `{ success, data }`, and the summary uses the top-level totals `sum_production`, `sum_consumption`,
- * `peak_demand`, `timestep_count`, the `carrier_summaries` keys and the `coordinates` count. Every other field
- * the endpoint serves — the per-location tables, the cost and capacity rows — is ignored here; the full page
- * is where those belong.
+ * The module declares the slot (`modules/result-overview/source.ts`) and never learns which gateway it has.
+ * The envelope and fields read here are copied from `features/model-results/types.ts`.
  */
 
 import axios from "@/lib/axios";
@@ -35,10 +20,8 @@ interface ResultEnvelope {
 }
 
 /**
- * The fields of `StructuredModelResults` this summary reads, and none of the rest.
- *
- * Copied from `features/model-results/types.ts`. All optional on purpose: the endpoint omits a table it has no
- * rows for, so a field may legitimately be absent and is only then read as zero.
+ * The fields of `StructuredModelResults` this summary reads, and none of the rest. Copied from
+ * `features/model-results/types.ts`; all optional because the endpoint omits a table it has no rows for.
  */
 interface StructuredPayload {
   sum_production?: number;

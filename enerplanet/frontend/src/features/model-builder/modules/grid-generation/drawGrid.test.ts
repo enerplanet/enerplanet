@@ -1,15 +1,4 @@
-/**
- * The grid reaching the map — the one thing about this module nothing could check.
- *
- * Written failing first, and written because of a real bug: the buildings drew and the cables did not, which
- * looked like a data problem and was not (the store held 134 cables). The draw was a `useEffect` inside the
- * component, and the app has no DOM test environment, so it could never be run. Pulling it out into `drawGrid`
- * makes it checkable against a real `MapStack` — the map control is a pure interface, so the real stack *is*
- * the test double, not a mock of it.
- *
- * These cases do not test the effect; they test everything the effect calls. If the store holds a collection and
- * `drawGrid` runs, the map holds it too.
- */
+/** The grid reaching the map, pinned against a real `MapStack` rather than the effect. */
 
 import { describe, expect, it } from "vitest";
 import { createMapStack, type MapStack } from "@model-builder/core";
@@ -113,8 +102,7 @@ describe("drawGrid", () => {
 
     drawGrid(map, { buildings, lines, mvLines, transformers });
 
-    // `setLayerOrder` throws unless every layer is named exactly once — including the ones this module does
-    // not own, which is why the grid failed to draw while area-draw was mounted.
+    // `setLayerOrder` throws unless every layer is named exactly once, including ones this module does not own.
     expect(map.getLayerOrder()).toEqual(["area-draw-polygons", ...LAYERS]);
   });
 

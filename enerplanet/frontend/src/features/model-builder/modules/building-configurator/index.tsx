@@ -1,19 +1,8 @@
 /**
  * `building-configurator` — configure buildings and their technologies, using the npm package's 3D view.
  *
- * **This module is the deliberate counter-example to "one module, one job".** It writes two ports — a
- * building's demand parameters and its technologies — which `building-demand` and `technologies` also write.
- * The overlap is the point: the all-in-one view is the legacy's only
- * building-configuration path, and `simple-building-editor` + `simple-technology-editor` exist as the clean
- * split it could be replaced by.
- *
- * What it owns is narrow and worth naming: **the opening, the picking, and the committing.** The view is a
- * blackbox the shell installs (`view.ts`), so this file never learns what renders a building — only that
- * something does, and what it hands back.
- *
- * The flow is the legacy's: the buildings layer accepts clicks, a click names one building, the overlay opens
- * on it, and **closing commits**. Nothing is written while the view is open, so an abandoned overlay changes
- * nothing — which is why `onCommit` is the only path to a transaction here.
+ * Writes both `buildingParams` and `technologies`; the view is a blackbox the shell installs (`view.ts`).
+ * Clicking a building opens the overlay, and closing it commits.
  */
 import { useEffect, useMemo, useSyncExternalStore, type FC } from "react";
 
@@ -36,39 +25,20 @@ export type { BuildingConfigurator, BuildingEdit, BuildingViewProps } from "./vi
 
 const NODE = "building-configurator";
 
-/**
- * The buildings layer's id.
- *
- * **A shared convention:** a module names a layer *after the port*
- * it holds, so `grid-generation`'s buildings layer is `buildings` and not `grid-generation-buildings`. The
- * alternative — a `setInteractiveLayer(port)` form — would put a port⇄layer map inside the map service; this
- * keeps the service addressing ids and makes them predictable instead.
- */
+/** The buildings layer's id — a module names a layer after the port it holds. */
 const LAYER = "buildings";
 
-/**
- * The highlight layer: the buildings the user has configured, drawn over the grid's own buildings layer.
- *
- * The grid's layer is the one that takes clicks, so the provider raises it to the front — this layer opts to sit
- * above it (`onTop`), or the highlight would be drawn under the very footprints it marks.
- */
+/** The highlight layer: the configured buildings, drawn above the grid's own layer (`onTop`). */
 const CONFIGURED_LAYER = "buildings-configured";
 
 /** The highlight colour: green, the "done" the old sidebar showed as a tick. */
 const CONFIGURED_COLOR = "#16a34a";
 
-// ── The pick and the pending edit. Shared across this module's regions, so it lives outside React: the module
-//    renders once per region it declares, and a component-local store would be per-region.
+// ── The pick and the pending edit. Shared across this module's regions, so it lives outside React.
 
 interface Picked {
   osmId: string | null;
-  /**
-   * Edits the view returned, by building, waiting for the module's own Continue.
-   *
-   * Keyed by building rather than kept in a single slot: a user working through a grid would otherwise lose every
-   * edit but the last, and the point of continuing deliberately is that they can configure several buildings
-   * before committing any of them.
-   */
+  /** Edits the view returned, by building, waiting for the module's own Continue. */
   pending: ReadonlyMap<string, BuildingEdit>;
 }
 
@@ -85,10 +55,7 @@ function setPicked(osmId: string | null): void {
   announce();
 }
 
-/** Hold what the view returned, for the module's Continue to commit.
- *
- *  Exported for the module's own surfaces — the panel and the isolation tests — exactly as the technologies
- *  module exports its `hold*` helpers. Nothing outside the module may use it. */
+/** Hold what the view returned, for the module's Continue to commit; exported for the module's own surfaces. */
 export function holdEdit(osmId: string, edit: BuildingEdit): void {
   const pending = new Map(picked.pending);
   pending.set(osmId, edit);
@@ -115,10 +82,7 @@ function usePicked(): Picked {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
-/** The id a clicked or collected feature is keyed by — `osm_id`, then the GeoJSON id.
- *
- *  Structural on purpose: the map hands back its own `MapFeature`, which carries `properties` but is not a
- *  GeoJSON `Feature`, and the store hands back real ones. Both are read the same way. */
+/** The id a clicked or collected feature is keyed by — `osm_id`, then the GeoJSON id. */
 function idOf(
   feature: { properties?: Record<string, unknown> | null; id?: string | number } | undefined,
 ): string | null {
@@ -143,39 +107,20 @@ function areaOf(feature: GeoJSON.Feature): number {
   return numberOf(props.area_m2) ?? numberOf(props.area) ?? 0;
 }
 
-/**
- * Whether the user has configured a building here.
- *
- * **Not** "has a demand entry": `building-demand` runs before this node and fills one for *every* building, so
- * that test marked the whole grid and the old tick meant nothing. What a user actually does in this view is
- * assign a technology or edit the building's envelope, both of which only this view writes — so those are the
- * signals.
- */
+/** Whether the user has configured this building here: assigned a technology or edited its envelope. */
 function isConfigured(data: Readonly<ModelData>, id: string, feature: GeoJSON.Feature): boolean {
   if ((data.technologies?.[id] ?? []).length > 0) return true;
   const buem = feature.properties?.buem;
   return buem !== undefined && buem !== null;
 }
 
-/**
- * The buildings to offer.
- *
- * A redrawn grid means the buildings the old edits described are gone, so this reads the *current* collection
- * every time rather than caching a list.
- */
+/** The buildings to offer — read from the current collection every time, since a redrawn grid replaces them. */
 function buildingsOf(data: Readonly<ModelData>): GeoJSON.Feature[] {
   const features = data.buildings?.features;
   return Array.isArray(features) ? features : [];
 }
 
-/**
- * Apply one building's edit to the store's ports.
- *
- * Both ports are rebuilt rather than mutated: the demand entries are merged per building — so a building the
- * user never opened keeps what it had — and `technologies` is replaced for the one building the view returned
- * them for. An empty list means "the user removed them all", which is a real answer and clears the entry
- * rather than storing an empty one.
- */
+/** Apply one building's edit to the store's ports, rebuilding both rather than mutating them. */
 function applyEdit(
   data: Readonly<ModelData>,
   osmId: string,
@@ -185,8 +130,7 @@ function applyEdit(
   technologies: ModelData["technologies"] | undefined;
   buildings: ModelData["buildings"] | undefined;
 } {
-  // The envelope block rides on the feature rather than in a port: it describes the building's shape and
-  // fabric, not the model's energy data. Handled first because it is the one edit that rewrites `buildings`.
+  // The envelope block rides on the feature, not in a port; handled first because it rewrites `buildings`.
   if (edit.buem !== undefined && data.buildings !== undefined) {
     const buildings: ModelData["buildings"] = {
       ...data.buildings,
@@ -206,8 +150,7 @@ function applyEdit(
   };
 
   if (edit.params !== undefined) {
-    // Every building has an electricity entry; a heat entry is only merged where one already existed, since
-    // inventing one here would claim a heat demand the demand step never found.
+    // Every building has an electricity entry; heat is only merged where one already existed.
     params.electricity![osmId] = { ...(params.electricity?.[osmId] ?? {}), ...edit.params };
     if (params.heat?.[osmId] !== undefined) {
       params.heat[osmId] = { ...params.heat[osmId], ...edit.params };
@@ -227,28 +170,16 @@ function applyEdit(
   return { buildingParams: params, technologies, buildings: data.buildings };
 }
 
-/**
- * This module's completeness: **nothing.**
- *
- * It is optional editing, and it cannot be incomplete — a node that refuses to be done until every building has a
- * technology would block the flow on a rule that is simply wrong: not every building has solar, and one that does
- * not need a technology is not missing anything. A building left without demand is not this node's failure either;
- * the technologies node after it is what assigns to buildings the 3D view cannot configure.
- *
- * The old rule here wanted demand *or* a technology per building and was the reason Continue appeared to do
- * nothing: the node could never be done, so a run with nothing to write sealed a transaction and changed nothing.
- */
+/** This module's completeness: nothing — it is optional editing and cannot be incomplete. */
 export function issuesFor(store: Readonly<ModelData>): ValidationIssue[] {
-  // Taken so this gate has the shape every other module's has, and deliberately not read: there is nothing about
-  // this store that could make optional editing incomplete. See above.
+  // Taken so this gate has every other module's shape, and deliberately not read.
   void store;
   return [];
 }
 
 const contract: Module = {
   id: NODE,
-  // The grid, and whatever demand already exists — a baseline it may adopt rather than invent. Both ports it
-  // writes are declared here too: the contract requires every port an `affect` output names be a declared port.
+  // The grid, and whatever demand already exists — a baseline it may adopt rather than invent.
   params: [
     { port: "buildings", required: true },
     { port: "buildingParams" },
@@ -261,19 +192,11 @@ const contract: Module = {
     // It writes the pair together, so a demand change moves the technologies with it.
     buildingParams: ["technologies"],
   },
-  /**
-   * Commit every edit the view returned.
-   *
-   * The view is what collected them, and `holdEdit` is how they got here — so a run with nothing held is a no-op
-   * rather than an error: the module is also reachable by the frame, and continuing without having opened a
-   * building should do nothing rather than fail.
-   */
+  /** Commit every edit the view returned; a run with nothing held is a no-op. */
   run: (ctx) => {
     if (picked.pending.size === 0) return;
 
-    // Read what this write touches: the engine's anti-clobber requires the ports be read before they are
-    // rewritten, and reading `buildings` is what tells a run against an empty store to do nothing rather than
-    // commit a demand entry for a building that is not on the map.
+    // Read what this write touches (anti-clobber); an empty store means nothing to commit.
     const buildings = ctx.read("buildings");
     if (buildings === undefined) return;
 
@@ -298,8 +221,7 @@ const contract: Module = {
     ctx.commit({
       buildingParams: current.buildingParams,
       ...(current.technologies === undefined ? {} : { technologies: current.technologies }),
-      // Only when an envelope block changed: committing `buildings` on every edit would rewrite a port this
-      // module has no business touching otherwise.
+      // Only when an envelope block changed: otherwise this module has no business rewriting `buildings`.
       ...(touchedBuildings ? { buildings: current.buildings } : {}),
     });
     // Consumed: continuing again without another edit must not re-commit them.
@@ -308,8 +230,7 @@ const contract: Module = {
   validate: (ctx) => issuesFor(ctx.store),
 };
 
-// ── The regions. Each is its own component: the module renders once per declared region, and every one of
-//    them needs hooks of its own.
+// ── The regions. Each is its own component (the module renders once per declared region).
 
 /** Makes the buildings layer the one that accepts clicks, opens the overlay on a hit, and keeps the highlight up. */
 const MapRegion: FC<{ map: MapService; overlay: OverlayControl; data: Readonly<ModelData> }> = ({
@@ -337,8 +258,7 @@ const MapRegion: FC<{ map: MapService; overlay: OverlayControl; data: Readonly<M
     };
   }, [map, overlay]);
 
-  // The highlight, redrawn whenever the store changes: a building gains it the moment it is configured, and
-  // loses it when the grid is redrawn and the building is gone.
+  // The highlight, redrawn whenever the store changes.
   useEffect(() => {
     const configured = buildingsOf(data).filter((feature) => {
       const id = idOf(feature);
@@ -367,8 +287,7 @@ const OverlayRegion: FC<{
     [data, osmId],
   );
 
-  // Memoised on the collections themselves: the view seeds a store from this, and a fresh object every render
-  // would write that store on every render for no change.
+  // Memoised on the collections themselves, so the view's seeded store is not rewritten every render.
   const grid = useMemo(
     () => ({
       ...(data.buildings === undefined ? {} : { buildings: data.buildings }),
@@ -391,12 +310,10 @@ const OverlayRegion: FC<{
       params={data.buildingParams?.electricity?.[osmId] ?? data.buildingParams?.heat?.[osmId]}
       technologies={data.technologies?.[osmId]}
       draftId={data.draftId}
-      // The whole grid, because the installed view resolves the building out of its own grid state rather than
-      // out of `feature`. Handing it the grid is what keeps that a view's business and not a store's.
+      // The whole grid: the installed view resolves the building out of its own grid state, not `feature`.
       grid={grid}
       onCommit={(edit) => {
-        // Held until the module's Continue. Nothing is written while the view is open, so an abandoned overlay
-        // still changes nothing — and several buildings can be configured before any of them commit.
+        // Held until the module's Continue; nothing is written while the view is open.
         holdEdit(osmId, edit);
         overlay.close();
       }}
@@ -413,14 +330,7 @@ const Stat: FC<{ label: string; value: string }> = ({ label, value }) => (
   </div>
 );
 
-/**
- * The batch side: **how much there is, not which ones.**
- *
- * A list of buildings used to live here — one row of raw `osm_id`s per building. It said nothing a user could
- * act on (an id is not a name), and choosing a building is a gesture on the map, so the sidebar now summarises
- * the grid and points at the map instead. Which buildings are already configured is shown *on the map*, not
- * here, so the summarised count can stay a count.
- */
+/** The batch side: how much there is, not which ones. */
 const SidebarRegion: FC<{ data: Readonly<ModelData> }> = ({ data }) => {
   const { t } = useTranslation();
 
@@ -450,8 +360,7 @@ const SidebarRegion: FC<{ data: Readonly<ModelData> }> = ({ data }) => {
       areaM2,
       yearlyKwh,
       peakKw,
-      // The demand figures only mean something once `building-demand` has run; before that they would read as a
-      // confident zero.
+      // Demand figures only mean something once `building-demand` has run.
       hasDemand: Object.keys(electricity).length > 0,
     };
   }, [data]);
@@ -460,8 +369,7 @@ const SidebarRegion: FC<{ data: Readonly<ModelData> }> = ({ data }) => {
 
   return (
     <div className="flex h-full flex-col gap-5 overflow-auto">
-      {/* The instruction is the sidebar's most useful sentence, so it leads — not a muted footnote at the
-          bottom where a reader looking for "what do I do here" would never find it. */}
+      {/* The instruction is the sidebar's most useful sentence, so it leads. */}
       <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
         <p className="text-sm font-medium text-foreground">
           {t(
@@ -525,8 +433,7 @@ const BottomRegion: FC<{
             )
           : ready
             ? t("modelBuilder.building-configurator.hint", "Click a building on the map to configure it in detail.")
-            : // A disabled button has to say what it is waiting for, or pressing it reads as broken — which is
-              // exactly how it read. The gate's own message is the honest one.
+            : // A disabled button says what it waits for; the gate's own message.
               issues[0]?.message}
       </span>
       <button
@@ -560,13 +467,7 @@ const Component: FC<ModuleViewProps> = ({ region, data, run, map, overlay }) => 
   return null;
 };
 
-/**
- * What the frame loads.
- *
- * The `mock` is not decoration: the contract check **fails a module that cannot state the inputs it needs**,
- * because such a module cannot be developed or tested on its own. This is the one place the buildings come from
- * without a grid having produced them.
- */
+/** What the frame loads. `mock` gives the contract check the inputs it needs to develop the module standalone. */
 export const buildingConfiguratorModule: BuilderModule = {
   module: contract,
   Component,

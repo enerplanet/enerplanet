@@ -1,28 +1,5 @@
 /**
- * The steps panel — the frame's right-hand band.
- *
- * A **sibling of the module frame**, full height, collapsed to a rail by default: its job is to answer "where
- * am I in this workflow" at a glance and then get out of the way. The rail keeps the state legible as a dot
- * even when there is no room for words, so collapsing costs context but not information.
- *
- * **A step behind the session is a control; nothing else is.** Clicking one **moves** there — a pure position
- * move, the same `moveToNode` the bar's prior control calls, which seals a `jump` with an empty cascade: it
- * rests the session on the node it lands on — leaving that node `done`, not stale — and discards nothing. What
- * goes stale is decided by *influence* when a node actually runs, never by how far the panel moved, so a
- * move cannot invalidate anything by itself.
- *
- * Steps **ahead** of the session are deliberately not clickable, and that is the core's rule rather than a UI
- * preference: `moveToNode` refuses a forward target (`JumpNotBackwards`), because a later node is reached by
- * *running* it, not by standing on it. Rendering an unreachable step as a button would offer something that
- * throws.
- *
- * This panel was info-only while jumping was deferred, and the reason recorded for that deferral was that a
- * jump "deserves the discard preview it ought to show before it commits". That reason dissolved when movement
- * was built as a pure position move — there is no discard to preview. What the deferral was guarding against
- * is handled by the direction rule above instead, which is a shape the user can see rather than a dialog they
- * must answer.
- *
- * Colours come from the theme's semantic pairs rather than raw hues, so the states survive dark mode.
+ * The steps panel — the frame's right-hand band, a sibling of the module frame.
  */
 
 import { useState } from "react";
@@ -49,11 +26,9 @@ interface Props {
   flow: Flow;
   registry: ModuleRegistry;
   store: Store;
-  /**
-   * Move the session to a step behind it. Absent in test mode, where there is no position to move — and a step
-   * with nowhere to move to is plain text, which is the honest rendering: a disabled button still looks like
-   * something you are being kept from.
-   */
+  /** The placement the session is looking at; absent, the frontier is what is marked. */
+  view?: string;
+  /** Move the view to a step behind it. Absent in test mode, where there is no position to move. */
   onMove?: (nodeId: string) => void;
 }
 
@@ -94,11 +69,11 @@ const StepBody: React.FC<{ step: StepRow; open: boolean }> = ({ step, open }) =>
   );
 };
 
-export const StepsPanel: React.FC<Props> = ({ flow, registry, store, onMove }) => {
+export const StepsPanel: React.FC<Props> = ({ flow, registry, store, view, onMove }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
-  const steps = stepsState(flow, registry, store);
+  const steps = stepsState(flow, registry, store, view);
 
   return (
     <aside

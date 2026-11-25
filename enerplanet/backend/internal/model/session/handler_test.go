@@ -97,9 +97,8 @@ const artefact = `{
 	"workflow_version": 3,
 	"initial": {},
 	"projection": {"modelName": "demo"},
+	"flow": [{"id": "n1", "type": "source"}],
 	"log": [{"revision": 1, "primary": [], "cascade": []}],
-	"discarded": [],
-	"cursor": 1,
 	"fingerprint": "fp-abc"
 }`
 
@@ -185,7 +184,7 @@ func TestPutStoresTheArtefact(t *testing.T) {
 	if store.saved.ModelID != 7 || store.saved.WorkflowID != "wf-core" || store.saved.WorkflowVersion != 3 {
 		t.Errorf("unexpected identity: %+v", store.saved)
 	}
-	if store.saved.Cursor != 1 || store.saved.Fingerprint != "fp-abc" {
+	if string(store.saved.Flow) != `[{"id": "n1", "type": "source"}]` || store.saved.Fingerprint != "fp-abc" {
 		t.Errorf("unexpected artefact: %+v", store.saved)
 	}
 	if string(store.saved.Projection) != `{"modelName": "demo"}` {
@@ -205,16 +204,15 @@ func TestPutDefaultsAnAbsentTailToAnEmptyArray(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d: %s", rec.Code, rec.Body.String())
 	}
-	if string(store.saved.Log) != `[]` || string(store.saved.Discarded) != `[]` {
-		t.Errorf("want empty arrays, got log=%s discarded=%s", store.saved.Log, store.saved.Discarded)
+	if string(store.saved.Log) != `[]` || string(store.saved.Flow) != `[]` {
+		t.Errorf("want empty arrays, got log=%s flow=%s", store.saved.Log, store.saved.Flow)
 	}
 }
 
 func TestPutRejectsAMalformedArtefact(t *testing.T) {
 	cases := map[string]string{
 		"log is not an array":        `{"workflow_id":"wf","projection":{},"fingerprint":"fp","log":{}}`,
-		"discarded is not an array":  `{"workflow_id":"wf","projection":{},"fingerprint":"fp","discarded":7}`,
-		"negative cursor":            `{"workflow_id":"wf","projection":{},"fingerprint":"fp","cursor":-1}`,
+		"flow is not an array":       `{"workflow_id":"wf","projection":{},"fingerprint":"fp","flow":7}`,
 		"missing projection":         `{"workflow_id":"wf","fingerprint":"fp"}`,
 		"missing fingerprint":        `{"workflow_id":"wf","projection":{}}`,
 		"missing workflow reference": `{"projection":{},"fingerprint":"fp"}`,
@@ -280,8 +278,7 @@ func TestGetReturnsTheStoredSession(t *testing.T) {
 		Initial:         []byte(`{}`),
 		Projection:      []byte(`{"modelName": "demo"}`),
 		Log:             []byte(`[]`),
-		Discarded:       []byte(`[]`),
-		Cursor:          1,
+		Flow:            []byte(`[{"id": "n1"}]`),
 		Fingerprint:     "fp-abc",
 	}}
 
@@ -294,7 +291,7 @@ func TestGetReturnsTheStoredSession(t *testing.T) {
 	var envelope struct {
 		Data struct {
 			WorkflowID  string          `json:"workflow_id"`
-			Cursor      int             `json:"cursor"`
+			Flow        json.RawMessage `json:"flow"`
 			Fingerprint string          `json:"fingerprint"`
 			Projection  json.RawMessage `json:"projection"`
 		} `json:"data"`
@@ -302,7 +299,7 @@ func TestGetReturnsTheStoredSession(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &envelope); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if envelope.Data.WorkflowID != "wf-core" || envelope.Data.Cursor != 1 || envelope.Data.Fingerprint != "fp-abc" {
+	if envelope.Data.WorkflowID != "wf-core" || string(envelope.Data.Flow) != `[{"id":"n1"}]` || envelope.Data.Fingerprint != "fp-abc" {
 		t.Errorf("unexpected response: %+v", envelope.Data)
 	}
 	// The bytes are not preserved verbatim, and cannot be: `json.Marshal` compacts a RawMessage, and
@@ -315,7 +312,7 @@ func TestGetReturnsTheStoredSession(t *testing.T) {
 }
 
 func TestGetHonoursReadAccess(t *testing.T) {
-	store := &fakeStore{row: &appModels.ModelSession{ModelID: 7, WorkflowID: "wf", Projection: []byte(`{}`), Log: []byte(`[]`), Discarded: []byte(`[]`), Initial: []byte(`{}`)}}
+	store := &fakeStore{row: &appModels.ModelSession{ModelID: 7, WorkflowID: "wf", Projection: []byte(`{}`), Log: []byte(`[]`), Flow: []byte(`[]`), Initial: []byte(`{}`)}}
 	handler := &Handler{models: fakeModels{model: ownedModel()}, access: fakeAccess{allow: false}, store: store}
 
 	rec := call(t, handler, "someone-else", "user", http.MethodGet, "")

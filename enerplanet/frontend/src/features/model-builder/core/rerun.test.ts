@@ -1,39 +1,29 @@
 /**
- * Re-run and jump mechanics.
- *
- * A jump moves the session back inside the same
- * immutable flow. It discards **only what a later node uses** — a node overwrites its own params
- * when it runs again, and configuration nothing reads is worth keeping. It also rests the position
- * on its target (`position.ts`), so a jump that discards nothing (a bare re-save) still moves the
- * session — without marking the target stale.
- *
- * Written failing first.
+ * Re-run and repair: first-run-fills / re-run-appends, and goal-driven repair that re-runs only the
+ * influence-affected placements, in transcript order, to a fixpoint.
  */
 import { describe, it, expect } from "vitest";
-import { jumpTo, planJump, walkTail } from "./rerun";
-import { nodeStates, position } from "./position";
-import { JumpNotBackwards } from "./errors";
-import type { ModuleRegistry } from "./flow";
+import { repair, runPlacement, runTarget } from "./rerun";
+import { transcript, type Flow, type ModuleRegistry } from "./flow";
 import { createEngine } from "./engine";
 import { createStore } from "./store";
 import { defineModule } from "./module";
 import { building, fc, seed } from "./fixtures";
 import type { PortKey } from "./ports";
 
-// ── a four-node flow, with two params no later node reads ───────────────────
+// ── a five-node flow: start → draw → settings → grid → save ──────────────────
+// `settings` writes a port nothing downstream reads — the untouched-middle control.
 
 const REGION: PortKey = "region";
 const COORDINATES: PortKey = "coordinates";
 const BUILDINGS: PortKey = "buildings";
-/** Configuration the tail writes that nothing reads — `grid` must survive a jump keeping it. */
-const TRANSFORMERS: PortKey = "transformers";
-/** An output nothing consumes — `save`'s, preserved for the same reason. */
+const ADVANCED: PortKey = "advancedParams";
 const SAVE_RESULT: PortKey = "saveResult";
 
 const start = defineModule({
   id: "start",
   params: [{ port: REGION }],
-  affect: {},
+  affect: { region: [] },
   layout: [],
   run: (ctx) => ctx.commit({ region: { country: "DE", state: "BW" } }),
   validate: () => [],
@@ -51,17 +41,27 @@ const draw = defineModule({
   validate: () => [],
 });
 
+/** Writes a port nothing downstream reads — a middle placement that must never be re-run. */
+const settings = defineModule({
+  id: "settings",
+  params: [{ port: "resolution" }, { port: ADVANCED }],
+  affect: {},
+  layout: [],
+  run: (ctx) => {
+    const resolution = ctx.read("resolution") ?? 60;
+    ctx.commit({ advancedParams: { resolution } });
+  },
+  validate: () => [],
+});
+
 const grid = defineModule({
   id: "grid",
-  params: [{ port: COORDINATES, required: true }, { port: BUILDINGS }, { port: TRANSFORMERS }],
+  params: [{ port: COORDINATES, required: true }, { port: BUILDINGS }],
   affect: { coordinates: [BUILDINGS] },
   layout: [],
   run: (ctx) => {
-    // Reads what it is about to overwrite — what anti-clobber demands of any re-run over a value
-    // that survived the jump.
     ctx.read(BUILDINGS);
-    ctx.read(TRANSFORMERS);
-    ctx.commit({ buildings: fc([building("b1")]), transformers: fc([building("t1")]) });
+    ctx.commit({ buildings: fc([building("b1")]) });
   },
   validate: () => [],
 });
@@ -76,122 +76,142 @@ const save = defineModule({
 });
 
 const registry: ModuleRegistry = Object.fromEntries(
-  [start, draw, grid, save].map((module) => [module.id, module]),
+  [start, draw, settings, grid, save].map((module) => [module.id, module]),
 );
 
-const FLOW = [start, draw, grid, save].map((module) => ({ id: module.id, moduleId: module.id }));
+/** Seed placements, ids `"<n>-<name>"`, contiguous from 0. */
+const PLACED: Flow = [
+  { id: "0-start", moduleId: "start" },
+  { id: "1-draw", moduleId: "draw" },
+  { id: "2-settings", moduleId: "settings" },
+  { id: "3-grid", moduleId: "grid" },
+  { id: "4-save", moduleId: "save" },
+];
 
-async function runAll(store: ReturnType<typeof createStore>): Promise<void> {
-  const engine = createEngine(store);
-  for (const module of [start, draw, grid, save]) {
-    await engine.runModule(module, { id: module.id });
+async function fillAll(store: ReturnType<typeof createStore>): Promise<void> {
+  const run = createEngine(store).runModule;
+  // Fill the placements the terminal actually depends on — `settings` is left un-run, so the
+  // repair tests can prove it is never touched.
+  for (const placement of [PLACED[0], PLACED[1], PLACED[3], PLACED[4]]) {
+    await runPlacement(PLACED, registry, store, run, placement);
   }
 }
 
 
-describe("T20c — a jump drops back without throwing the tail away", () => {
-  it("prunes only what a later node uses, keeping configuration and unused outputs", async () => {
+describe("a run fills on first use and appends on re-use", () => {
+  it("fills a pending seed placement, then appends a successor placement", async () => {
     const store = createStore(seed());
-    await runAll(store);
+    const run = createEngine(store).runModule;
 
-    const plan = planJump(FLOW, registry, store, "draw");
+    await runPlacement(PLACED, registry, store, run, PLACED[0]);
+    await runPlacement(PLACED, registry, store, run, PLACED[1]);
 
-    // coordinates (written by the target, required by grid) and buildings (required by save)
-    expect(plan.cascade.map((op) => op.path)).toEqual(["/coordinates", "/buildings"]);
-    // …while the value upstream of the target, the tail's own configuration, and an output
-    // nothing consumes are all left alone.
-    expect(store.data.region).toBeDefined();
-    expect(store.data.transformers).toEqual(fc([building("t1")]));
-    expect(store.data.saveResult).toEqual({ modelId: 1, created: true });
-    expect(plan).toMatchObject({ index: 1, to: "draw", from: "save" });
+    // First run of `grid` FILLS its seed placement, `3-grid`.
+    const first = await runPlacement(PLACED, registry, store, run, PLACED[3]);
+    expect(first).toBe("3-grid");
+    expect(store.log[2].node).toEqual({ id: "3-grid", moduleId: "grid" });
+
+    // A re-run APPENDS a successor — `n` counts every placement so far (0..4 seeded), so it is 5.
+    const second = await runPlacement(transcript(PLACED, store.log), registry, store, run, PLACED[3]);
+    expect(second).toBe("5-grid");
+    expect(store.log[3].node?.id).toBe("5-grid");
+
+    // Both occurrences remain in the transcript.
+    expect(transcript(PLACED, store.log).map((node) => node.id)).toEqual([
+      "0-start",
+      "1-draw",
+      "2-settings",
+      "3-grid",
+      "4-save",
+      "5-grid",
+    ]);
   });
 
-  it("discards nothing when the tail needs none of the target's work — and rests the position on it", async () => {
+  it("mints a fresh successor id on repeat runs — never a reused n", async () => {
     const store = createStore(seed());
-    await runAll(store);
+    const run = createEngine(store).runModule;
+    await runPlacement(PLACED, registry, store, run, PLACED[0]);
+    await runPlacement(PLACED, registry, store, run, PLACED[1]);
 
-    const transaction = jumpTo(FLOW, registry, store, "save");
+    const ids: Array<string | undefined> = [];
+    let placed = PLACED;
+    for (let i = 0; i < 3; i += 1) {
+      const id = await runPlacement(placed, registry, store, run, PLACED[3]);
+      ids.push(id);
+      placed = transcript(PLACED, store.log);
+    }
 
-    expect(transaction.cascade).toEqual([]); // the zero-diff jump: a move that discards nothing
-    expect(transaction).toMatchObject({ kind: "jump", jump: { from: "save", to: "save" } });
-    // Nothing was thrown away, so pruning alone would not move anything: the jump's own entry is what makes this
-    // a re-save rather than a no-op — the session rests on the target. The frontier stays past it and `save`
-    // stays done, because a move changes no data.
-    expect(position(FLOW, registry, store)).toMatchObject({ index: 4, complete: true, restingIndex: 3 });
-    expect(nodeStates(FLOW, registry, store).save).toBe("done");
+    expect(ids).toEqual(["3-grid", "5-grid", "6-grid"]);
+    expect(new Set(ids).size).toBe(3); // monotonic, never reused
   });
 
-  it("refuses a forward jump and writes nothing", async () => {
+  it("targets an un-run placement to fill, and a committed one to append", () => {
     const store = createStore(seed());
-    const engine = createEngine(store);
-    await engine.runModule(start, { id: "start" });
-    await engine.runModule(draw, { id: "draw" });
-    const before = store.log.length;
+    const pending = runTarget(PLACED, store, PLACED[3]);
+    expect(pending).toEqual({ id: "3-grid", moduleId: "grid" });
 
-    expect(() => jumpTo(FLOW, registry, store, "save")).toThrow(JumpNotBackwards);
-    expect(store.log).toHaveLength(before);
-  });
-
-  it("undoes a jump like any other transaction, restoring exactly what it discarded", async () => {
-    const store = createStore(seed());
-    await runAll(store);
-    const priorBuildings = store.data.buildings;
-
-    jumpTo(FLOW, registry, store, "draw");
-    expect(store.data.coordinates).toBeUndefined();
-    expect(store.data.buildings).toBeUndefined();
-
-    store.undo();
-
-    expect(store.data.coordinates).toEqual([[[8.6, 49.4]]]);
-    expect(store.data.buildings).toEqual(priorBuildings);
+    store.applyTransaction([{ op: "replace", path: "/buildings", prev: undefined, next: fc() }], [], {
+      node: { id: "3-grid", moduleId: "grid" },
+    });
+    const reRun = runTarget(PLACED, store, PLACED[3]);
+    expect(reRun).toEqual({ id: "5-grid", moduleId: "grid" });
   });
 });
 
-describe("T20c — walking the tail re-runs only what the jump invalidated", () => {
-  it("runs the invalidated nodes in flow order and elides the rest", async () => {
+
+describe("repair appends the affected tail to a fixpoint — and only the affected tail", () => {
+  it("re-runs the producer of the terminal's missing port, and skips the untouched middle", async () => {
     const store = createStore(seed());
-    await runAll(store);
-    jumpTo(FLOW, registry, store, "draw");
+    await fillAll(store);
+    const run = createEngine(store).runModule;
 
-    const engine = createEngine(store);
-    const ran = await walkTail(FLOW, registry, store, engine.runModule);
+    // The change pruned grid's output; save is now blocked on its required `buildings`.
+    store.applyTransaction([], [
+      { op: "remove", path: "/buildings", prev: fc([building("b1")]) },
+    ]);
+    expect(store.data.buildings).toBeUndefined();
 
-    // `start` was never touched, and `save` came back valid once `buildings` was re-derived.
-    expect(ran).toEqual(["draw", "grid"]);
-    expect(position(FLOW, registry, store).complete).toBe(true);
+    const appended = await repair(PLACED, registry, store, run, "save");
+
+    expect(appended).toEqual(["5-grid"]);
+    expect(store.data.buildings).toEqual(fc([building("b1")]));
+    // `settings` writes a port nothing downstream reads — it is never re-run.
+    expect(store.log.every((commit) => commit.node?.id !== "2-settings")).toBe(true);
   });
 
-  it("elides a node whose inputs a re-run restores unchanged", async () => {
+  it("iterates to a fixpoint: repairs a producer's own missing input first", async () => {
     const store = createStore(seed());
-    await runAll(store);
-    jumpTo(FLOW, registry, store, "grid");
+    await fillAll(store);
+    const run = createEngine(store).runModule;
 
-    const engine = createEngine(store);
-    const ran = await walkTail(FLOW, registry, store, engine.runModule);
+    // Both draw's output and grid's output are gone: repair must re-run draw before grid.
+    store.applyTransaction([], [
+      { op: "remove", path: "/coordinates", prev: [[[8.6, 49.4]]] },
+      { op: "remove", path: "/buildings", prev: fc([building("b1")]) },
+    ]);
 
-    // Only buildings was discarded, and grid re-derives it identically: save's input is whole
-    // again and its own output was never thrown away, so it is not run.
-    expect(ran).toEqual(["grid"]);
-    expect(nodeStates(FLOW, registry, store)).toEqual({
-      start: "done",
-      draw: "done",
-      grid: "done",
-      save: "done",
-    });
+    const appended = await repair(PLACED, registry, store, run, "save");
+
+    expect(appended).toEqual(["5-draw", "6-grid"]);
+    expect(store.data.coordinates).toEqual([[[8.6, 49.4]]]);
+    expect(store.data.buildings).toEqual(fc([building("b1")]));
   });
 
-  it("stops before a node the caller wants the user to see", async () => {
+  it("does nothing when the terminal is already runnable", async () => {
     const store = createStore(seed());
-    await runAll(store);
-    jumpTo(FLOW, registry, store, "draw");
+    await fillAll(store);
+    const run = createEngine(store).runModule;
 
-    const engine = createEngine(store);
-    const ran = await walkTail(FLOW, registry, store, engine.runModule, {
-      stopWhen: (node) => node.moduleId === "grid",
-    });
+    expect(await repair(PLACED, registry, store, run, "save")).toEqual([]);
+  });
 
-    expect(ran).toEqual(["draw"]);
-    expect(nodeStates(FLOW, registry, store).grid).toBe("stale");
+  it("stops rather than throwing when nothing produces a missing port", async () => {
+    const store = createStore(seed());
+    await fillAll(store);
+    const run = createEngine(store).runModule;
+
+    const orphan = [{ id: "0-save", moduleId: "save" }];
+    // No upstream placement in this transcript can produce `buildings`.
+    expect(await repair(orphan, registry, store, run, "save")).toEqual([]);
   });
 });

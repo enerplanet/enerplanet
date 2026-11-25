@@ -1,18 +1,4 @@
-/**
- * `compare-variant`'s tests.
- *
- * Two things are asserted, the same two worth asserting about any module: that its **declaration** is
- * consistent (`contractIssues`) and honest (`deriveInfluence`), and that its **behaviour** is what it claims —
- * through the real engine, and through the source slot's own state machine.
- *
- * The node is a **view**: it commits nothing. That is asserted directly — a run leaves its zero-diff trace and
- * changes no port — rather than left implied, because "declares a port but writes none" is the whole design.
- *
- * Both sides arrive through the slot, so the source cases install a fake gateway and assert what the view knows
- * at each point: nothing before a request, both sides loaded once a gateway arrives after the request (the
- * child-before-parent order a host hits), a per-side failure and a per-side absence reported as the two
- * different things they are, and one request per pair.
- */
+/** `compare-variant`'s tests: its declaration, its behaviour, and the source slot's state machine. */
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   assertInfluenceHonest,
@@ -46,10 +32,7 @@ function summary(overrides: Partial<CompareVariantSummary> = {}): CompareVariant
   return { sumProduction: 100, sumConsumption: 90, peakDemand: 5, ...overrides };
 }
 
-/**
- * A gateway that answers from a script and remembers what it was asked. The default answer is keyed by the
- * model id, so a per-side difference is visible.
- */
+/** A gateway that answers from a script and remembers what it was asked, keyed by model id. */
 function fakeGateway(
   answer: (modelId: number) => CompareVariantSummary | null = (modelId) =>
     summary({ sumProduction: modelId }),
@@ -119,18 +102,16 @@ describe("compare-variant's run", () => {
 
   it("is left behind after its run even on a store it does not touch", async () => {
     const store = createStore({ ...compareVariant.mock });
-    const sealed = await createEngine(store).runModule(compareVariant.module, { id: NODE });
+    const sealed = await createEngine(store).runModule(compareVariant.module, { id: NODE, moduleId: compareVariant.module.id });
 
-    // The trace exists (so a jump's re-arm clears), and it carries no ops.
+    // The trace exists (so the placement reads `done`), and it carries no ops.
     expect(sealed?.primary).toHaveLength(0);
   });
 });
 
 describe("compare-variant's gate", () => {
   it("says nothing once a variant has been recorded — a variant with no results is still comparable", () => {
-    // The variant's own results are not this node's gate: a freshly made variant has none, and demanding them
-    // would deadlock the flow. Presence of the record is all that is required — the counts below are irrelevant
-    // to the gate, and that is the point.
+    // The variant's own results are not this node's gate; presence of the record is all that is required.
     expect(issuesFor({ modelVariant: variant() })).toEqual([]);
     expect(issuesFor({ modelVariant: variant({ variantModelId: 99, title: undefined }) })).toEqual([]);
   });

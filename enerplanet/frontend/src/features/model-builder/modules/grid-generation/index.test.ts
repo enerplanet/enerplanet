@@ -1,23 +1,4 @@
-/**
- * `grid-generation`'s tests.
- *
- * Written failing first.
- *
- * The declaration cases pin what this module *is*: it requires the drawn area and the region it sits in, and
- * produces the whole synthetic grid — five ports at once, because a grid of half a network is not a grid.
- * The `affect` cases pin the broad invalidation: *either* input invalidates the **entire**
- * output, so the cascade downstream (building-demand → technologies) can never be reached by a partial
- * rewrite. That is the invalidation, and getting it wrong is how stale demand survives a
- * redrawn area.
- *
- * The engine is **injected**, not reached for, and that is not a test convenience: the grid
- * engine is a provider slot, so swapping it is part of the contract. These cases swap in a fake and assert what
- * the module writes — and, when the engine fails, what it does *not*.
- *
- * (The rules the core enforces — undeclared writes, clobber, the required gate — are demonstrated in the
- * example module's tests, where the module that exists to show the frame lives. This file is about *this*
- * module.)
- */
+/** `grid-generation`'s tests: its declaration, and its injected engine. */
 import { describe, expect, it } from "vitest";
 import {
   contractIssues,
@@ -145,8 +126,7 @@ describe("grid-generation's run", () => {
   });
 
   it("writes them as one transaction — a grid arrives whole or not at all", async () => {
-    // `seal` stays at its `at-completion` default: five ports in one sealed transaction, so no consumer can
-    // ever observe a grid with its lines missing. One log entry, carrying all five paths, is the proof.
+    // `seal` stays at `at-completion`: five ports in one sealed transaction.
     setGridEngine(recordingEngine());
 
     const { store } = await runInScratch({ module: gridGeneration.module, mock: DRAWN });
@@ -163,8 +143,7 @@ describe("grid-generation's run", () => {
   });
 
   it("writes nothing when the engine fails", async () => {
-    // A failed generation must leave no half-built grid behind: no buildings without their lines, no lines
-    // pointing at transformers that were never written.
+    // A failed generation leaves no half-built grid behind.
     setGridEngine({
       generate: () => Promise.reject(new Error("pylovo is unreachable")),
     });
@@ -181,8 +160,7 @@ describe("grid-generation's run", () => {
   });
 
   it("reports what is missing rather than running with nothing to generate from", async () => {
-    // The verdict a host acts on: this is what makes the node show as incomplete, and what the save node
-    // would turn into "what is missing".
+    // The verdict a host acts on: what makes the node show as incomplete.
     const { issues } = await runInScratch({
       module: gridGeneration.module,
       mock: { region: REGION },
@@ -192,10 +170,7 @@ describe("grid-generation's run", () => {
   });
 
   it("reports an empty result as unfinished, not as a grid", async () => {
-    // The module's own half of the completeness rule. It *may* find nothing — an empty FeatureCollection is
-    // a fact the store is allowed to hold — but a model built on no buildings is not one this module stands
-    // behind. Reported rather than thrown, so the empty grid is still visible on the map and the reason is
-    // on screen; the node simply never reads as done, and the flow rests here.
+    // An empty grid is reported, not thrown: the node simply never reads as done.
     const empty: GridResult = {
       buildings: { type: "FeatureCollection", features: [] },
       transformers: { type: "FeatureCollection", features: [] },
@@ -206,23 +181,21 @@ describe("grid-generation's run", () => {
     setGridEngine(recordingEngine(empty));
 
     const store = createStore({ ...DRAWN });
-    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id });
+    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id, moduleId: gridGeneration.module.id });
 
     expect(store.data.buildings?.features).toHaveLength(0); // it did write — the result is real
-    // Asked *after* the run, which is when this judgement has anything to judge: the same call the position
-    // makes to decide whether the node has finished.
+    // Asked after the run, when this judgement has something to judge.
     expect(gridGeneration.module.validate?.({ store: store.data })).toEqual([
       { port: "buildings", message: "The area yielded no buildings — nothing to model." },
     ]);
   });
 
   it("asks for nothing once the grid holds buildings", async () => {
-    // The other side of the same rule: the gate must not fire on a healthy grid, or every node would read
-    // as unfinished forever and the flow could never complete.
+    // The gate must not fire on a healthy grid.
     setGridEngine(recordingEngine());
 
     const store = createStore({ ...DRAWN });
-    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id });
+    await createEngine(store).runModule(gridGeneration.module, { id: gridGeneration.module.id, moduleId: gridGeneration.module.id });
 
     expect(gridGeneration.module.validate?.({ store: store.data })).toEqual([]);
   });
@@ -238,17 +211,14 @@ describe("grid-generation's data-loss rule", () => {
   });
 
   it("warns when demand or technology work stands on the grid that would go", () => {
-    // This is the loss that actually matters, and the one the user cannot see from the button: regenerating
-    // invalidates the work *downstream* of the grid.
+    // Regenerating invalidates the work downstream of the grid.
     expect(needsConfirmation({ ...DRAWN, technologies: { electricity: [] } })).toBe(true);
     expect(needsConfirmation({ ...DRAWN, buildingParams: { electricity: {} } })).toBe(true);
   });
 });
 
 describe("the layer order", () => {
-  // The contract has the module hand back what `getLayerOrder` returned, reordered — not a list of only its
-  // own layers. `setLayerOrder` wants every layer named exactly once, so a partial list throws while any other
-  // module is mounted, and the draw never lands: the grid only appeared once the other module had unmounted.
+  // The contract hands back the full layer order, not only this module's layers.
   const AREA = "area-draw-polygons";
   const MINE = ["buildings", "lines", "mvLines", "transformers"];
 

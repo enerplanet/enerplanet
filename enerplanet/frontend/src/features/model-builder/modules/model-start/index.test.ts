@@ -1,12 +1,4 @@
-/**
- * `model-start`'s tests.
- *
- * The declaration cases carry most of the weight here, because this module's whole job *is* its declaration:
- * it requires nothing (which is what makes it an entry node), and it owns the model's identity and metadata
- * surface. The behaviour cases then show what a gesture seeds and what `validate()` refuses to start with.
- *
- * Written failing first.
- */
+/** `model-start`'s tests: its declaration (most of the weight) and its behaviour. */
 import { describe, it, expect } from "vitest";
 import {
   contractIssues,
@@ -107,13 +99,12 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME, fromDate: FROM, toDate: TO, resolution: 15 });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.modelName).toBe(NAME.trim()); // trimmed on the way in
     expect(store.data.fromDate).toBe(FROM);
     expect(store.data.toDate).toBe(TO);
-    // A hold asking for 15 gets 60: only 60-minute steps are supported, and this node states the one value the
-    // system takes rather than offering a picker that would be overwritten on save.
+    // A hold asking for 15 gets 60: resolution is the one value the system takes.
     expect(store.data.resolution).toBe(60);
 
     expect(store.log).toHaveLength(1);
@@ -126,8 +117,7 @@ describe("model-start's behaviour", () => {
       "/resolution",
       "/toDate",
     ]);
-    // The three settings no step produces ride along with the identity, rather than waiting for the save to
-    // invent them.
+    // The three settings no step produces ride along with the identity.
     expect(store.data.cookingCarrier).toBe(DEFAULT_COOKING_CARRIER);
     expect(store.data.mode).toBe(DEFAULT_RUN_MODE);
     expect(store.data.electricityPrices).toEqual(NO_OWN_PRICES);
@@ -138,7 +128,7 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { region: REGION });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.region).toEqual(REGION);
   });
@@ -147,23 +137,19 @@ describe("model-start's behaviour", () => {
     const store = createStore({ workspaceId: 7, userId: "abc" });
     const engine = createEngine(store);
 
-    // Declared, but never written: a form does not invent a workspace, and overwriting one would be this
-    // module overreaching. An untouched port is the proof.
+    // `workspace` is declared but never written.
     hold(NODE, { modelName: NAME });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.workspaceId).toBe(7);
     expect(store.data.userId).toBe("abc");
   });
 
   it("changes no data but still records the run when the hold would change nothing", async () => {
-    // The store is seeded with the same defaults the module writes, so the only thing this run *could* say is
-    // what the hold says — and that changes nothing. It still seals one zero-diff transaction: a node revisited
-    // after a jump has to be able to clear its re-arm without inventing an edit.
+    // A no-op run still seals one zero-diff transaction.
     const store = createStore({
       modelName: NAME.trim(),
-      // 60, because that is the one resolution this module accepts and it will otherwise correct the store — a
-      // write that is real work, not noise, and this test is about the run that has nothing to say.
+      // 60 is the one resolution this module accepts, so the store is corrected.
       resolution: 60,
       cookingCarrier: DEFAULT_COOKING_CARRIER,
       mode: DEFAULT_RUN_MODE,
@@ -172,7 +158,7 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.log).toHaveLength(1);
     expect(store.log[0].primary).toHaveLength(0);
@@ -180,14 +166,12 @@ describe("model-start's behaviour", () => {
   });
 
   it("corrects a resolution the model already holds, instead of clobbering it", async () => {
-    // The store holds 15 and the module holds 60. Writing it is a *read-then-write*, which is what the engine's
-    // anti-clobber rule asks for — write a port the store already fills without reading it first and the whole
-    // run is refused with `clobber`, taking the region choice down with it.
+    // Writing over a filled port is a read-then-write, which the anti-clobber rule asks for.
     const store = createStore({ resolution: 15 });
     const engine = createEngine(store);
 
     hold(NODE, { region: REGION });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.resolution).toBe(60);
     // And the region the user chose landed in the same transaction, rather than being lost to the refusal.
@@ -195,13 +179,12 @@ describe("model-start's behaviour", () => {
   });
 
   it("leaves a resolution of 60 alone", async () => {
-    // Already correct is not a reason to write. The store still gets the three settings this module seeds, but
-    // `resolution` is not among the ports it touches.
+    // Already correct is not a reason to write: `resolution` is untouched.
     const store = createStore({ resolution: 60 });
     const engine = createEngine(store);
 
     hold(NODE, {});
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.log[0].primary.map((op) => op.path)).not.toContain("/resolution");
   });
@@ -218,14 +201,12 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME, fromDate: FROM, toDate: TO, region: REGION });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
     expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
 
-    // The form omits whatever the user did not retype, so coming back to this node and pressing Apply again
-    // holds *nothing*. That must not un-finish work the store already holds — the node is still done, and the
-    // user is not asked to retype what they already set.
+    // Pressing Apply again holds nothing, which must not un-finish the node.
     hold(NODE, {});
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
     expect(store.data.modelName).toBe(NAME.trim());
@@ -236,13 +217,12 @@ describe("model-start's behaviour", () => {
     const engine = createEngine(store);
 
     hold(NODE, { modelName: NAME, fromDate: FROM, toDate: TO, region: REGION });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
     expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
 
-    // Coming back to swap the region changes one field. The name and period are untouched and already in the
-    // store, so the node must stay finished — the user should not have to retype what they already set.
+    // Swapping the region leaves the name and period untouched, so the node stays finished.
     hold(NODE, { region: { country: "NL", state: "ZH" } });
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(modelStart.module.validate?.({ store: store.data })).toEqual([]);
   });
@@ -259,8 +239,7 @@ describe("model-start's behaviour", () => {
 
 describe("model-start's period range", () => {
   it("maps a range to the two quarters' outer bounds onto the scenario's fixed year", () => {
-    // A range is the earlier quarter's `start` bound to the later quarter's `end`, both on `SCENARIO_DATE_YEAR`
-    // — a non-leap year keeps the days in line with the 365-day scenario series.
+    // A range binds the earlier quarter's `start` to the later's `end`.
     expect(periodDates(Q1, Q1)).toEqual({ fromDate: YEAR_START, toDate: Q1_END });
     expect(periodDates(Q2, Q4)).toEqual({ fromDate: Q2_START, toDate: YEAR_END });
     expect(periodDates(Q1, Q4)).toEqual({ fromDate: YEAR_START, toDate: YEAR_END });
@@ -295,8 +274,7 @@ describe("model-start's period range", () => {
   });
 
   it("renders the period's months from the stored dates, in the given language", () => {
-    // The months come from `Intl` on the actual stored dates, so the preview cannot disagree with the model.
-    // No year: a scenario has none of its own, so printing one would claim a calendar year the weather lacks.
+    // Preview months come from `Intl` on the stored dates; no year, which a scenario lacks.
     expect(periodPreview(Q2_START, YEAR_END, EN)).toBe("April – December");
     expect(periodPreview(YEAR_START, Q1_END, EN)).toBe("January – March");
     // No period, no line — the caller says so instead of printing an empty one.
@@ -310,7 +288,7 @@ describe("model-start's period range", () => {
 
     // A range is picked through the module's own hold/run path, exactly as the panel's buttons do.
     hold(NODE, periodDates(Q2, Q4) ?? {});
-    await engine.runModule(modelStart.module, { id: NODE });
+    await engine.runModule(modelStart.module, { id: NODE, moduleId: modelStart.module.id });
 
     expect(store.data.fromDate).toBe(Q2_START);
     expect(store.data.toDate).toBe(YEAR_END);

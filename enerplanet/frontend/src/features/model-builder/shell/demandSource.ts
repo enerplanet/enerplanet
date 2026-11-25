@@ -1,22 +1,7 @@
 /**
  * The demand-estimate source the frame installs: pylovo, through EnerPlanET's own backend.
  *
- * The module declares the slot (`modules/building-demand/source.ts`) and never learns which source it has;
- * this is the implementation a host provides, beside the grid engine and the weather source and for the same
- * reason — a module may only depend on `@model-builder/core`, while the app's CSRF-aware axios instance is the
- * app's. The module is told about this one at startup (`setDemandSource`).
- *
- * Read off the legacy service (`configurator/services/energyService.ts`), including the two things that are
- * easy to get wrong:
- *
- * - **The response is unwrapped twice.** The Go proxy returns `{ success, data }`, and the estimate endpoint's
- *   own payload may *also* be `{ status: "success", data: … }`. The legacy checks for that second layer before
- *   reading the row, and so does this.
- * - **The class it answers with may differ from the one asked for.** The service resolves a profile and reports
- *   the class it actually used, which is what the heat mirror then looks up — so the answer, not the request,
- *   decides the heat rate.
- *
- * One request per building, because that is what the legacy does: the batch endpoint exists but has no callers.
+ * The module declares the slot (`modules/building-demand/source.ts`) and never learns which source it has.
  */
 
 import axios from "@/lib/axios";
@@ -79,8 +64,7 @@ export const pylovoDemandSource: DemandEstimateSource = {
 
     const row = rowOf(response.data.data);
 
-    // The class the service *used* — normalised the same way the heat mirror normalises it, so the lookup
-    // that follows actually finds the rate the backend would have used.
+    // The class the service *used* — normalised the same way the heat mirror normalises it.
     const fClass = normalizeFClass(String(row.f_class ?? row.parsed_class ?? attributes.buildingType)) || "unknown";
 
     return {

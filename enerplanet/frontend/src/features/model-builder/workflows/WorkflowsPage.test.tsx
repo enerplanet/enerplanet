@@ -1,11 +1,4 @@
-/**
- * The workflows header's link to the example modules. It is an external link, so what matters is
- * that it carries the GitHub URL and opens in a new tab.
- *
- * `@spatialhub/i18n` is stubbed to echo the fallback, as `WorkflowEditor.test.tsx` does, so the assertion is
- * about the link rather than about copy. The page reads through `workflowService`; the fetch runs in an
- * effect, which a static render never executes, but the module is stubbed so no HTTP client is constructed.
- */
+/** The workflows header's link to the example modules: that it carries the GitHub URL and opens in a new tab. */
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 

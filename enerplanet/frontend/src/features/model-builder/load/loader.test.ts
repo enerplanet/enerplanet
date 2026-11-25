@@ -1,8 +1,6 @@
 /**
- * The Loader — the mirror of the save: adopt the artefact, reattach the flow by reference, and
+ * The loader — the mirror of the save: adopt the artefact, take the placed flow it carried, and
  * re-derive the states.
- *
- * Written failing first.
  */
 import { describe, it, expect } from "vitest";
 import { loadSession } from "./loader";
@@ -49,9 +47,9 @@ function savedSession(): Artefact {
   store.applyTransaction(
     [{ op: "replace", path: "/region", prev: undefined, next: { country: "DE", state: "BW" } }],
     [],
-    { node: { id: "start" } },
+    { node: { id: "start", moduleId: "start" } },
   );
-  return toArtefact({ store, workflow: WORKFLOW, modelId: 7 });
+  return toArtefact({ store, workflow: WORKFLOW, flow: FLOW, modelId: 7 });
 }
 
 describe("loadSession", () => {
@@ -59,16 +57,16 @@ describe("loadSession", () => {
     const outcome = await loadSession({
       gateway: gatewayWith(savedSession()),
       modelId: 7,
-      flow: FLOW,
       registry,
     });
 
     if (outcome.kind !== "session") throw new Error(`expected a session, got ${outcome.kind}`);
 
     expect(outcome.session.store.data.region).toEqual({ country: "DE", state: "BW" });
-    expect(outcome.session.store.cursor).toBe(1);
     expect(outcome.session.divergence).toBeUndefined();
-    // The flow was reattached by the caller, and the node reads as done — derived, not stored.
+    // The flow the artefact carried is returned as-is — it is a stored fact now, not reconstructed.
+    expect(outcome.session.flow).toEqual(FLOW);
+    // The states re-derive from the log, and the node reads as done — derived, not stored.
     expect(outcome.session.states).toEqual({ start: "done" });
     expect(outcome.session.position).toMatchObject({ index: 1, complete: true });
   });
@@ -77,7 +75,7 @@ describe("loadSession", () => {
     const artefact = savedSession();
     artefact.projection = { ...artefact.projection, region: { country: "XX", state: "YY" } };
 
-    const outcome = await loadSession({ gateway: gatewayWith(artefact), modelId: 7, flow: FLOW, registry });
+    const outcome = await loadSession({ gateway: gatewayWith(artefact), modelId: 7, registry });
 
     if (outcome.kind !== "session") throw new Error("expected a session");
 
@@ -87,7 +85,7 @@ describe("loadSession", () => {
   });
 
   it("reports a model with no session as an answer, not an error", async () => {
-    const outcome = await loadSession({ gateway: gatewayWith(undefined), modelId: 7, flow: FLOW, registry });
+    const outcome = await loadSession({ gateway: gatewayWith(undefined), modelId: 7, registry });
 
     expect(outcome).toEqual({ kind: "none" });
   });

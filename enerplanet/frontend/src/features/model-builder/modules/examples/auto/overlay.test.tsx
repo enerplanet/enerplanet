@@ -1,10 +1,4 @@
-/**
- * `example-auto`'s full-screen auto state — in progress, done, or failed with a manual re-run.
- *
- * The module is a template for the `auto` path, so this is the demonstration: it has no button to start with,
- * and the only control anywhere on it is the **manual re-run**, and only after a failure. The states are
- * rendered to a string (`@spatialhub/i18n` echoes the key) because the app has no DOM test environment.
- */
+/** `example-auto`'s full-screen auto state: running, done, or failed with a manual re-run. */
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { AutoRunState } from "@model-builder/core";

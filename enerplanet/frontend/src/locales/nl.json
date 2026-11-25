@@ -3224,6 +3224,16 @@
         "subflowNote": "Een subflow is een fragment: hij wordt in een andere workflow ingevoegd en gevalideerd waar hij wordt ingevoegd, niet op zichzelf."
       },
       "editor": {
+        "addNode": "Knooppunt toevoegen",
+        "addSuggestion": "Suggestie toevoegen",
+        "noNodes": "Geen knooppunten.",
+        "pickModule": "Module toevoegen…",
+        "suggested": "Voorgestelde volgende stappen",
+        "suggestedEmpty": "Nog geen suggesties. Voeg hieronder een suggestie toe om te beginnen.",
+        "suggestedHint": "Vervolgstappen die worden aangeboden zodra de laatste stap van de keten is uitgevoerd. Elke suggestie wordt als één geheel toegevoegd.",
+        "suggestedProblem": "De voorgestelde volgende stappen zijn ongeldig: {{reason}}",
+        "suggestionTitle": "Titel",
+        "suggestionWhy": "Waarom (het doel)",
         "back": "Terug naar de lijst",
         "version": "versie {{version}}",
         "unsaved": "Niet-opgeslagen wijzigingen",
@@ -3258,7 +3268,8 @@
         "subflowOwnedBy": "Stappen uit \"{{label}}\" - bewerkt in die workflow, niet hier.",
         "subflowExpansionFailed": "Deze workflow kan hier niet worden uitgevouwen.",
         "recursive": "zou deze workflow bevatten - een subflow kan zichzelf niet bevatten, direct noch transitief",
-        "unresolved": "kan niet worden opgelost - hij noemt een module of workflow die deze build niet heeft"
+        "unresolved": "kan niet worden opgelost - hij noemt een module of workflow die deze build niet heeft",
+        "pickWorkflow": "Workflows"
       }
     },
     "run-meme-calliope": {
@@ -3345,6 +3356,9 @@
         "partial": "één kant nog niet gedraaid",
         "empty": "geen kant gedraaid"
       }
+    },
+    "recommended": {
+      "title": "Voorgestelde volgende stappen"
     }
   }
 }

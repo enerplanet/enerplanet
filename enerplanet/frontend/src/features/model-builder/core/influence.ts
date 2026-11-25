@@ -1,18 +1,9 @@
 /**
  * The influence-honesty prober — the generated contract test.
  *
- * A module *declares* which outputs each input can invalidate (`affect`). This prober verifies
- * the declaration instead of trusting it: perturb one input at a time, run the module against
- * both a baseline and the perturbed store, and compare the fingerprints of its declared ports.
- *
- * **Why the check is asymmetric.** Only *under*-declaration is dangerous: elision skips a
- * node whose affecting inputs look unchanged, so an undeclared edge lets a node be skipped that
- * should have re-run — silent stale data. Over-declaration merely prunes more than necessary,
- * which costs work and nothing else. So under-declared fails the module; over-declared is
- * reported for information.
- *
- * The probe runs through the real engine, so it also exercises the write boundary: a module
- * that blind-writes, or writes outside its params, fails here for that reason too.
+ * A module declares which outputs each input can invalidate (`affect`); this prober verifies the
+ * declaration instead of trusting it, perturbing one input at a time and comparing the fingerprints
+ * of the module's declared ports.
  */
 
 import { createEngine } from "./engine";
@@ -22,13 +13,7 @@ import type { ModelData, PortKey } from "./ports";
 import { createStore } from "./store";
 
 export interface InfluenceProbe {
-  /**
-   * Fixture values, keyed by port.
-   *
-   * Supply every port the module declares **and any port it might read through `ctx.store`** —
-   * an undeclared store read is the sneakiest way to under-declare, and it is only caught if
-   * the port is in here to be perturbed.
-   */
+  /** Fixture values, keyed by port — every port the module declares or might read through `ctx.store`. */
   samples: Partial<ModelData>;
   /** Overrides for ports whose fixture `perturb` cannot meaningfully vary. */
   perturbations?: Partial<ModelData>;
@@ -67,8 +52,7 @@ export async function deriveInfluence(module: Module, probe: InfluenceProbe): Pr
       input,
     );
 
-    // A port the module both reads and rewrites is a *self-edge* — inherent to read → rewrite,
-    // and never something invalidation has to declare (a port cannot invalidate itself).
+    // A self-edge (read → rewrite) is inherent, not a declared influence.
     const changed = ports.filter(
       (port) => port !== input && fingerprint(baseline[port]) !== fingerprint(after[port]),
     );
@@ -127,7 +111,7 @@ async function runOnce(
   const store = createStore({ ...samples } as ModelData);
 
   try {
-    await createEngine(store).runModule(module, { id: module.id });
+    await createEngine(store).runModule(module, { id: module.id, moduleId: module.id });
   } catch (err) {
     if (perturbedPort === undefined) throw err;
     throw new Error(
@@ -147,12 +131,7 @@ const PERTURBED_FEATURE: GeoJSON.Feature = {
   geometry: { type: "Point", coordinates: [0, 0] },
 };
 
-/**
- * Produce a different value *of the same kind*, so a module notices the change.
- *
- * Collections gain an element (shape-preserving for nested arrays), records gain a key,
- * primitives are bumped. `undefined` becomes a value so an absent port can be probed too.
- */
+/** Produce a different value of the same kind, so a module notices the change. */
 export function perturb(value: unknown): unknown {
   if (value === undefined || value === null) return { perturbed: true };
 

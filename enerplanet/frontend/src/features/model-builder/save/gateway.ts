@@ -1,19 +1,13 @@
 /**
- * The gateway — the backend seam this feature owns ("Adapters").
+ * The gateway — the backend seam this feature owns.
  *
- * The save is a **two-call split** (settled 2026-11):
- *
- * - **Call A** writes the *legacy* model payload (`model.json` / `config`) through the endpoints that
- *   already exist, unchanged in shape, because parity with the legacy editor is the point;
- * - **Call B** writes the *session artefact* (history + store data) through the isolated session API.
- *
- * A must run first and the order is not a preference: B's row carries a foreign key to the model, and
- * a first save has no model until A returns its id.
+ * The save is a two-call split: Call A writes the legacy model payload (`model.json` / `config`) through
+ * the endpoints that already exist, unchanged in shape, because parity is the point; Call B writes the
+ * session artefact through the isolated session API. A must run first — B's row carries a foreign key to
+ * the model, and a first save has no model until A returns its id.
  *
  * Everything below is an interface because the core is I/O-free: the real adapter binds the existing
- * `modelService` / `pylovoService` clients, and tests bind a recorder. The legacy *side-effects* of a
- * create — finalising user-placed transformers, claiming the draft's series — belong to the adapter
- * too, behind `createModel`, so the save logic never grows a legacy special case.
+ * `modelService` / `pylovoService` clients, and tests bind a recorder.
  */
 
 import type { Artefact, WorkflowRef } from "../core/artefact";
@@ -22,8 +16,8 @@ import type { Artefact, WorkflowRef } from "../core/artefact";
 export type SaveStatus = "draft" | "incomplete" | "modified";
 
 /**
- * The legacy model payload — the wire shape of Call A, kept as close to the legacy
- * `saveAreaData` output as TypeScript allows (the backend owns the schema).
+ * The legacy model payload — the wire shape of Call A, as close to the legacy `saveAreaData` output as
+ * TypeScript allows (the backend owns the schema).
  */
 export interface LegacyModelPayload {
   title: string;

@@ -1,17 +1,6 @@
 /**
- * The default-workflow loader — how the definition reaches the frame now that it is a database row.
- *
- * The loader's job is to turn untrusted configuration into exactly what the core already takes: a `Flow`,
- * a `ModuleRegistry`, and the seed ports that exist before any node runs. `toWorkflow` is deliberately pure
- * and separate from the fetch, so the shape can be exercised without a fixture or a server — and the cases
- * below are mostly the *refusals*. A workflow that names a module nobody registered, or places two nodes
- * under one id, cannot be walked; it should fail here, loudly, rather than half-work later.
- *
- * `loadDefaultWorkflow` is the one binding that fetches it, so it is pinned against a mocked client the way
- * the workflows service is. It reports *no default* as `undefined` rather than throwing — a data condition,
- * not a transport fault.
- *
- * Written failing first.
+ * The default-workflow loader: `toWorkflow` turns an untrusted definition into a flow, a registry and
+ * seed ports, and mostly refuses what cannot be walked.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import example from "./fixtures";
@@ -36,11 +25,7 @@ const ENTRIES: readonly BuilderModule[] = [example];
 /** Two ports the fixture wants, so the seed is meaningful rather than empty. */
 const SEED = { modelName: "Dev model", resolution: 60 };
 
-/**
- * A lookup resolving nothing. The cases that do not compose a subflow still take one — the loader now builds
- * its flow through `expand`, which needs the seam — and an empty lookup is what a document with no subflow
- * node effectively sees.
- */
+/** A lookup resolving nothing. */
 const noLookup: WorkflowLookup = () => undefined;
 
 /** A lookup over the given documents, keyed by each document's own id — the id a subflow references. */
@@ -124,8 +109,7 @@ describe("a workflow definition becomes what the core takes", () => {
 
     const workflow = toWorkflow(document, ENTRIES, lookupFrom(child), SEED);
 
-    // The subflow node itself is not emitted — it is not a module — and its child is namespaced by its id and
-    // labelled under its label, the flattening `expand` defines.
+    // The subflow node itself is not emitted; its child is namespaced by its id and labelled under its label.
     expect(workflow.flow).toEqual([
       { id: "adjust/example", moduleId: "example", label: "Adjust / Example" },
     ]);
@@ -169,8 +153,6 @@ describe("a workflow definition becomes what the core takes", () => {
   it("builds the reference a session artefact points at, from the definition's own id and version", () => {
     const workflow = toWorkflow({ ...DEFINITION, version: 3 }, ENTRIES, noLookup, SEED);
 
-    // The reference is a fact about the workflow, not a constant some caller invented — which is why the
-    // definition carries the version and this file builds the pair.
     expect(workflow.ref).toEqual({ id: DEV_FLOW_ID, version: 3 });
   });
 
@@ -230,8 +212,7 @@ describe("the workflow the shell actually loads", () => {
   });
 
   it("resolves a subflow from the same list — one fetch, no per-subflow request", async () => {
-    // The fragment is a row like any other: it is refused only as the flow *to run*, and inserting it as a
-    // subflow is exactly what `isSubflow` is for. One `GET /workflows` supplies both it and the default.
+    // The fragment is a row like any other: it is refused only as the flow *to run*, not as a subflow.
     const childRow: WorkflowSummary = {
       workflow_id: CHILD_FLOW_ID,
       version: 1,
@@ -298,8 +279,7 @@ describe("the workflow a requested id names", () => {
   const REQUESTED_FLOW_ID = "variant-flow";
 
   it("loads the row whose document id was requested, not the one marked default", async () => {
-    // The request is the seam the picker drives: a pathway is a different load, so the builder is handed
-    // which stored flow to open. Matched on the document's own id — the id a session references.
+    // The request is matched on the document's own id — the id a session references.
     const variantRow: WorkflowSummary = {
       workflow_id: REQUESTED_FLOW_ID,
       version: 1,
@@ -327,10 +307,54 @@ describe("the workflow a requested id names", () => {
   });
 });
 
+describe("the loader refuses a malformed recommended list", () => {
+  /** A well-formed section: the list is untrusted input, so what it accepts is pinned beside what it refuses. */
+  const GOOD_SECTION = {
+    key: "insulate",
+    label: "Insulate",
+    description: "Add insulation and re-run.",
+    nodes: [{ id: "example", moduleId: "example" }],
+  };
+
+  it("accepts a well-formed list and carries the document through", () => {
+    const document = { ...DEFINITION, recommended: [GOOD_SECTION] };
+
+    const workflow = toWorkflow(document, ENTRIES, noLookup, SEED);
+
+    expect(workflow.document.recommended?.[0]?.key).toBe("insulate");
+  });
+
+  it("refuses a blank key", () => {
+    const document = { ...DEFINITION, recommended: [{ ...GOOD_SECTION, key: "" }] };
+
+    expect(() => toWorkflow(document, ENTRIES, noLookup, SEED)).toThrow(
+      /malformed recommended list.*blank key/,
+    );
+  });
+
+  it("refuses two suggestions sharing a title", () => {
+    const document = { ...DEFINITION, recommended: [GOOD_SECTION, { ...GOOD_SECTION }] };
+
+    expect(() => toWorkflow(document, ENTRIES, noLookup, SEED)).toThrow(
+      /malformed recommended list.*share the title "Insulate"/,
+    );
+  });
+
+  it("refuses a section whose node fails the discriminant", () => {
+    const document = {
+      ...DEFINITION,
+      recommended: [{ ...GOOD_SECTION, nodes: [{ id: "x" }] }],
+    };
+
+    expect(() => toWorkflow(document, ENTRIES, noLookup, SEED)).toThrow(
+      /malformed recommended list.*malformed node/,
+    );
+  });
+});
+
 describe("the shipped dev-flow fixture", () => {
   it("is walkable against the seed it names, so the fixture stays true as modules are added", () => {
-    // No longer the builder's source (Stage 2), but it is the document the backend seeds, so it must stay
-    // placeable: the core's own gating, not a re-implementation.
+    // The document the backend seeds, so it must stay placeable: the core's own gating, not a re-implementation.
     const workflow = toWorkflow(devFlowDefinition, MODULES, noLookup, devSeed);
 
     expect(isValidFlow(workflow.flow, workflow.registry, workflow.seeds)).toBe(true);

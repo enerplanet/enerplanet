@@ -1,13 +1,7 @@
 /**
  * The weather archive slot — what `weather` needs from a host, and nothing more.
  *
- * The module declares that it *can* offer archives and never learns where they come from; a host installs the
- * implementation at startup, the same shape as the grid engine and the region slot. That is what keeps this
- * module free of the app's HTTP client, and what lets its tests run against a fake.
- *
- * **The list lives here, outside React**, for the same reason `model-start`'s regions do: a load has to be
- * startable from the install, not only from a component's mount, or it is never started at all (see
- * `setWeatherSource`).
+ * The list lives here, outside React, so a load can be started from the install (see `modules/weather.md`).
  */
 
 import { useEffect, useSyncExternalStore } from "react";
@@ -21,10 +15,8 @@ export interface WeatherArchives {
 }
 
 /**
- * What this module needs from a host: the archives it may choose from.
- *
- * One method, and deliberately not a year-by-archive lookup: the choice is *stored*, never fetched, and the
- * years are here only so the picker is honest about what the backend can actually serve.
+ * What this module needs from a host: the archives it may choose from. One method, deliberately not a
+ * year-by-archive lookup. The years are here only so the picker is honest about what the backend can serve.
  */
 export interface WeatherSource {
   listArchives(): Promise<WeatherArchives>;
@@ -59,19 +51,11 @@ export function setWeatherSource(next: WeatherSource | null): void {
   inFlight = null;
   publish({ archives: NO_ARCHIVES, loading: next !== null, failed: false });
 
-  // **Installing a source is what asks for the archives.** The panel mounts before the shell's install effect
-  // runs — React runs child effects first — so the mount-time load in `useArchives` finds no source and bails,
-  // and nothing would ever ask again. Without this the picker sits on "loading" and the request is never made.
+  // Installing a source is what asks for the archives: the panel mounts before the shell's install effect runs.
   if (next !== null) void loadArchives();
 }
 
-/**
- * Load the archives, once per source.
- *
- * Deduplicated while a load is in flight, and a no-op once one has landed: `loading` is the flag that says a
- * load is owed. `setWeatherSource` raises it and starts the load, the answer lowers it — so a panel that
- * mounts later joins the running load instead of asking again.
- */
+/** Load the archives, once per source — deduplicated while in flight and a no-op once one has landed. */
 export function loadArchives(): Promise<void> {
   if (!state.loading) return Promise.resolve();
   if (inFlight !== null) return inFlight;

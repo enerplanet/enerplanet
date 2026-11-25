@@ -1,162 +1,153 @@
 /**
- * Re-run and jump mechanics.
+ * Re-run and repair mechanics.
  *
- * A jump moves the session back inside the **same** immutable flow; it never appends a node and
- * never mints an instance id. Two things happen, and they are deliberately different in kind:
- *
- * 1. **the jump discards** — but only what a later node actually *uses*. A port nothing reads is
- *    not worth throwing away (the node that owns it overwrites it when it runs again), and a
- *    node's own configuration is worth keeping. So the prune is the intersection of "required by
- *    a node at or after the target" and "written by a node at or after the target": what the tail
- *    genuinely depends on. Who wrote what comes from the log, not from the modules' declarations —
- *    a module may declare a param it never writes.
- * 2. **the jump rests the position on its target** — that is `position.ts`'s job, from the jump's own
- *    entry, so even a jump that discards nothing (a bare re-save) moves the position. It is not a
- *    mark on the target's *state*: a move writes no data, so nothing goes stale, and the target stays
- *    `done`. What the jump does is leave the session *resting* there, until a newer entry (a run) takes over.
- *
- * Nothing about correctness rests on the prune: when the target does run again, its own
- * transaction carries the influence cascade that prunes whatever its new value affects. The
- * prune is what makes the discarding *visible before it happens*, and what marks the tail stale
- * so the walk below knows where to pick up.
+ * Which placement a run targets — a placement with no commit is filled, one that already ran is
+ * appended to — and goal-driven repair toward a terminal's required ports.
  */
 
-import { portPath, type DiffOp, type Transaction } from "./diff";
-import { JumpNotBackwards } from "./errors";
-import type { Flow, FlowNode, ModuleRegistry } from "./flow";
-import { requiredPorts, isAutoModule, type Module, type NodeRef } from "./module";
+import {
+  nodeName,
+  placementId,
+  transcript,
+  type Flow,
+  type FlowNode,
+  type ModuleRegistry,
+} from "./flow";
+import { isAutoModule, requiredPorts, type Module, type NodeRef } from "./module";
 import type { PortKey } from "./ports";
-import { position, positionReport } from "./position";
-import { writtenPortsOf } from "./replay";
 import type { Store } from "./store";
 
-export interface JumpPlan {
-  /** The target's index in the immutable flow. */
-  index: number;
-  to: string;
-  /** Where the session is now — the ledger's `from`. */
-  from: string;
-  /** What the jump discards: only ports the tail uses, as `remove` ops. */
-  cascade: DiffOp[];
-}
-
-/** The node the session is currently on; the last node once the flow is complete. */
-export function currentId(flow: Flow, registry: ModuleRegistry, store: Store): string | undefined {
-  const here = position(flow, registry, store);
-  // A jump rests the session on its target (`position.ts`), so that is where it is — even on a flow whose
-  // every node is done. Only when the flow is complete *and* no jump is current does the session fall back
-  // to the last node, so the frame stays on the module that finished rather than emptying out.
-  if (here.restingIndex !== undefined) return flow[here.restingIndex].id;
-  return flow.length === 0 ? undefined : flow[flow.length - 1].id;
-}
-
-/** What a jump to `targetId` would discard, without sealing anything — the UI's preview. */
-export function planJump(
-  flow: Flow,
-  registry: ModuleRegistry,
-  store: Store,
-  targetId: string,
-): JumpPlan {
-  const index = flow.findIndex((node) => node.id === targetId);
-  if (index === -1) {
-    throw new Error(`[model-builder] node "${targetId}" is not in the flow`);
-  }
-
-  const used = new Set<PortKey>();
-  const written: PortKey[] = [];
-
-  for (const node of flow.slice(index)) {
-    const module: Module | undefined = registry[node.moduleId];
-    if (module === undefined) continue;
-    for (const port of requiredPorts(module)) used.add(port);
-    for (const port of writtenPortsOf(store.log, node.id, store.cursor) as PortKey[]) {
-      if (!written.includes(port)) written.push(port);
-    }
-  }
-
-  const cascade = written
-    .filter((port) => used.has(port) && store.data[port] !== undefined)
-    .map((port) => ({ op: "remove" as const, path: portPath(port), prev: store.data[port] }));
-
-  return { index, to: targetId, from: currentId(flow, registry, store) ?? targetId, cascade };
-}
-
-/**
- * Seal a jump: one transaction naming where the session came from and went, discarding the used
- * tail values in its own `cascade`. Refuses a forward target before writing anything.
- */
-export function jumpTo(
-  flow: Flow,
-  registry: ModuleRegistry,
-  store: Store,
-  targetId: string,
-): Transaction {
-  const plan = planJump(flow, registry, store, targetId);
-  if (plan.index > position(flow, registry, store).index) throw new JumpNotBackwards(targetId);
-
-  // `auto` is the target module's fact (`Module.auto`), not the node's — history records which step a jump
-  // belongs to and whether it was automatic, and now the module is where that is declared.
-  const targetModule = registry[flow[plan.index].moduleId];
-  return store.applyTransaction([], plan.cascade, {
-    node: {
-      id: targetId,
-      ...(targetModule !== undefined && isAutoModule(targetModule) ? { auto: true } : {}),
-    },
-    kind: "jump",
-    jump: { from: plan.from, to: plan.to },
-  });
-}
-
-/** How the walk runs a node — `engine.runModule` satisfies this. */
+/** How the walk runs a placement — `engine.runModule` satisfies this. */
 export type RunNode = (module: Module, node: NodeRef) => Promise<unknown>;
 
-export interface WalkOptions {
-  /**
-   * Stop *before* a node matching this predicate (the node is left stale, not skipped).
-   *
-   * The session layer uses it to stop at the end of an auto chain and hand control back to the
-   * user; the default walks the whole tail.
-   */
-  stopWhen?: (node: FlowNode) => boolean;
+/** The placement a run should target: fill a placement with no commit, otherwise append a successor placement. */
+export function runTarget(placed: Flow, store: Store, placement: FlowNode): NodeRef {
+  const hasCommit = store.log.some((commit) => commit.node?.id === placement.id);
+  if (!hasCommit) {
+    return { id: placement.id, moduleId: placement.moduleId };
+  }
+  const current = transcript(placed, store.log);
+  return { id: placementId(current.length, nodeName(placement)), moduleId: placement.moduleId };
 }
 
 /**
- * Walk the flow from the current position, running every node that is not done.
+ * Run one placement, filling it on first use or appending a successor on re-use.
  *
- * This is the re-run: a node whose outputs survived the jump was never affected, so it is
- * **elided** and not run at all. Nodes whose inputs the jump discarded run in flow order, and
- * each seals its own transaction — so a re-run that re-derives an identical value leaves the
- * nodes behind it done, and they stay elided too.
- *
- * A node whose required inputs are still missing is skipped rather than run: the engine would refuse it,
- * and running the nodes after it is still meaningful.
- *
- * @returns the node ids that actually ran, in order.
+ * @returns the placement id the run sealed into, or `undefined` when the module is unknown or the
+ *          run was refused — the walker skips rather than throwing.
  */
-export async function walkTail(
-  flow: Flow,
+export async function runPlacement(
+  placed: Flow,
   registry: ModuleRegistry,
   store: Store,
   run: RunNode,
-  options: WalkOptions = {},
+  placement: FlowNode,
+): Promise<string | undefined> {
+  const module: Module | undefined = registry[placement.moduleId];
+  if (module === undefined) return undefined;
+
+  const target = runTarget(placed, store, placement);
+  const ref: NodeRef = isAutoModule(module) ? { ...target, auto: true } : target;
+  const before = store.log.length;
+
+  try {
+    await run(module, ref);
+  } catch {
+    return undefined;
+  }
+
+  // The engine always seals a trace, so a grown log means the run landed.
+  return store.log.length > before ? ref.id : undefined;
+}
+
+/**
+ * Goal-driven repair toward a terminal placement: re-run the placements whose output the
+ * terminal's missing required ports need, iterating to a fixpoint.
+ *
+ * @param terminalName the terminal's name — a `moduleId`, or the seed node's own id.
+ * @returns the successor placement ids the repair appended, in transcript order.
+ */
+export async function repair(
+  placed: Flow,
+  registry: ModuleRegistry,
+  store: Store,
+  run: RunNode,
+  terminalName: string,
 ): Promise<string[]> {
   const ran: string[] = [];
+  // A fixpoint cap: a module whose re-run never fills the port would otherwise append forever.
+  const maxPasses = 64;
 
-  for (let index = 0; index < flow.length; index += 1) {
-    const node = flow[index];
-    if (options.stopWhen?.(node) === true) break;
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    const current = transcript(placed, store.log);
+    const terminalIndex = findTerminal(current, terminalName);
+    if (terminalIndex < 0) break;
 
-    // States change as we go, so the report is read fresh at every step.
-    const report = positionReport(flow, registry, store)[index];
-    if (report.state === "done") continue;
-    if (report.blocked.length > 0) continue;
+    const terminal = current[terminalIndex];
+    const terminalModule: Module | undefined = registry[terminal.moduleId];
+    if (terminalModule === undefined) break;
+    if (missingRequired(terminalModule, store).length === 0) break;
 
-    const module: Module | undefined = registry[node.moduleId];
-    if (module === undefined) continue;
+    // Every placement whose output is needed to satisfy the terminal's missing inputs.
+    const needed = new Set<FlowNode>();
+    const order: FlowNode[] = [];
+    const visit = (placement: FlowNode, index: number): void => {
+      const module: Module | undefined = registry[placement.moduleId];
+      if (module === undefined) return;
+      for (const port of missingRequired(module, store)) {
+        const producer = producerOf(current, registry, index, port);
+        if (producer === undefined || needed.has(producer)) continue;
+        needed.add(producer);
+        order.push(producer);
+        visit(producer, current.indexOf(producer));
+      }
+    };
+    visit(terminal, terminalIndex);
 
-    await run(module, { id: node.id, ...(isAutoModule(module) ? { auto: true } : {}) });
-    ran.push(node.id);
+    if (order.length === 0) break;
+    // Transcript order, so a producer runs before the placement that consumes its output.
+    order.sort((a, b) => current.indexOf(a) - current.indexOf(b));
+
+    let appended = false;
+    for (const placement of order) {
+      const id = await runPlacement(current, registry, store, run, placement);
+      if (id !== undefined) {
+        ran.push(id);
+        appended = true;
+      }
+    }
+
+    // Nothing landed: no further pass can make progress.
+    if (!appended) break;
   }
 
   return ran;
+}
+
+/** The terminal's required ports that are absent from the store right now. */
+function missingRequired(module: Module, store: Store): PortKey[] {
+  return requiredPorts(module).filter((port) => store.data[port] === undefined);
+}
+
+/** The latest placement strictly before `beforeIndex` whose module declares `port` writable. */
+function producerOf(
+  current: Flow,
+  registry: ModuleRegistry,
+  beforeIndex: number,
+  port: PortKey,
+): FlowNode | undefined {
+  for (let index = beforeIndex - 1; index >= 0; index -= 1) {
+    const module: Module | undefined = registry[current[index].moduleId];
+    if (module?.params.some((param) => param.port === port)) return current[index];
+  }
+  return undefined;
+}
+
+/** The index of the latest placement matching this name — its stable name or its module id. */
+function findTerminal(current: Flow, name: string): number {
+  for (let index = current.length - 1; index >= 0; index -= 1) {
+    const node = current[index];
+    if (node.moduleId === name || nodeName(node) === name) return index;
+  }
+  return -1;
 }

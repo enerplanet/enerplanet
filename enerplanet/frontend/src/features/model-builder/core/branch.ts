@@ -1,17 +1,6 @@
 /**
- * Branching — the "New Model" choice at the prompt.
- *
- * A branch is **full duplex**: it carries a copy of the projection at the cursor, a copy of the log
- * *prefix* that produced it, and the pending change as its own first transaction — while the source
- * session is left bit-identical. Nothing is shared and nothing is referenced, so the branch replays
- * its own diffs and loads without its parent.
- *
- * What does *not* come along is the source's redo tail. A branch has no discard stack: the tail is
- * the source's business, and carrying it would let a branch undo work it never did.
- *
- * The core stays free of the model record: `POST /api/models` creates and names the new model, and
- * the caller snapshots the artefact once it has the id. What this returns is the session, plus the
- * family link the backend records.
+ * Branching — the "New Model" choice at the prompt: a full-duplex copy of the projection and log,
+ * with the pending edit as its own first commit.
  */
 
 import type { DiffOp } from "./diff";
@@ -24,7 +13,7 @@ export interface PendingEdit {
   primary: readonly DiffOp[];
   /** Downstream values it invalidates, when the caller has staged it. */
   cascade?: readonly DiffOp[];
-  /** The node that produced the edit, when it came from one. */
+  /** The placement that produced the edit, when it came from one. */
   node?: NodeRef;
 }
 
@@ -41,11 +30,7 @@ export interface BranchRequest {
   /** The source model's family identity, as the backend knows it. */
   parent: { modelId?: number; groupId?: number };
   pending: PendingEdit;
-  /**
-   * The branch session's own store options — the invalidation seam (`deriveCascade`) above all.
-   * It is a function, so it cannot be copied out of the source; a caller that omits it gets a
-   * branch whose redo derives no cascade. `restore` is this function's own and cannot be passed in.
-   */
+  /** The branch session's own store options — the invalidation seam above all. */
   options?: StoreOptions;
 }
 
@@ -56,24 +41,16 @@ export interface BranchResult {
 }
 
 export function branch({ store, parent, pending, options }: BranchRequest): BranchResult {
-  // The branch starts where the source sits: its state at the cursor, and the log prefix that
-  // produced it. Both are copied — a branch shares nothing with the session it came from.
-  //
-  // Slicing at the cursor is intent, not the guard: `applyTransaction` below truncates any tail
-  // itself, so passing the whole log would land in the same place. Saying "the prefix" here
-  // means the branch does not depend on that happening.
-  const prefix = store.log.slice(0, store.cursor);
+  // The branch starts where the source sits: its current state and the whole log.
   const session = createStore(structuredClone(store.initial), {
     ...options,
     restore: {
       projection: structuredClone(store.data),
-      log: prefix,
-      cursor: store.cursor,
+      log: store.log,
     },
   });
 
-  // The edit the prompt was holding becomes the branch's first transaction. Sealed against the
-  // branch's own tip, so none of the source's discarded work can be resurrected here.
+  // The held edit becomes the branch's first commit.
   session.applyTransaction(pending.primary, pending.cascade ?? [], { node: pending.node });
 
   return {
