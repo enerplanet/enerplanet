@@ -15,6 +15,7 @@
 #   scripts/deploy-heat-stack.sh --prefix sim2 up
 #   scripts/deploy-heat-stack.sh --prefix sim2 render    # generate + validate only
 #   scripts/deploy-heat-stack.sh --prefix sim2 fixtures  # (re)load the fixture sets
+#   scripts/deploy-heat-stack.sh --prefix sim2 check     # compare with scripts/regions.yaml
 #   scripts/deploy-heat-stack.sh --prefix sim2 status
 #   scripts/deploy-heat-stack.sh --prefix sim2 down
 #
@@ -92,7 +93,7 @@ Options:
   --dry-run              print the plan, change nothing
   -h, --help             this text
 
-Commands: up (default) | render | fixtures | status | down
+Commands: up (default) | render | fixtures | check | status | down
 USAGE
 }
 
@@ -110,7 +111,7 @@ while [ $# -gt 0 ]; do
     --volumes)        DOWN_VOLUMES=1; shift ;;
     --dry-run)        DRY_RUN=1; shift ;;
     -h|--help)        usage; exit 0 ;;
-    up|render|fixtures|status|down) COMMAND="$1"; shift ;;
+    up|render|fixtures|check|status|down) COMMAND="$1"; shift ;;
     -*)               die "unknown option '$1' (try --help)" ;;
     *)                die "unknown command '$1' (try --help)" ;;
   esac
@@ -545,6 +546,24 @@ cmd_status() {
   return 0
 }
 
+# cmd_check — fail unless the stack holds everything scripts/regions.yaml lists.
+# The check needs both private networks, so it runs in a throwaway container
+# from PyLovo's own image, which carries Python and PyYAML.
+cmd_check() {
+  local image name="$PREFIX-regions-check"
+  image=$(docker inspect --format '{{.Config.Image}}' "$PREFIX-pylovo-api-1") \
+    || die "no PyLovo container for prefix '$PREFIX'; deploy it first"
+  log "checking the stack against scripts/regions.yaml"
+  docker create --rm --name "$name" --network "$NET_HEAT" \
+    -e WEATHER_API_KEY="$WEATHER_API_KEY" -v "$REPO_ROOT/scripts:/check:ro" \
+    --entrypoint python "$image" -I /check/check-regions.py /check/regions.yaml >/dev/null \
+    || die "could not create $name"
+  docker network connect "$NET_PYLOVO" "$name" \
+    || { docker rm "$name" >/dev/null; die "could not attach $name to $NET_PYLOVO"; }
+  docker start -a "$name" || die "the stack is missing data scripts/regions.yaml lists"
+  ok "the stack holds every region in scripts/regions.yaml"
+}
+
 cmd_fixtures() {
   log "loading fixtures (weather, city2tabula, pylovo)"
   [ -n "$FIXTURES_DIR" ] && export FIXTURES_DIR
@@ -608,8 +627,10 @@ case "$COMMAND" in
     if [ "$DO_FIXTURES" = 1 ]; then pull_fixtures; fi
     validate_overrides
     cmd_up
+    cmd_check
     ;;
   status)   preflight; cmd_status ;;
-  fixtures) preflight; cmd_fixtures ;;
+  fixtures) preflight; cmd_fixtures; cmd_check ;;
+  check)    preflight; cmd_check ;;
   down)     preflight; cmd_down ;;
 esac
