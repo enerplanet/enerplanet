@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react';
 import type * as maplibregl from 'maplibre-gl';
 import type { Map as OlMap } from 'ol';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
+
+import type { PointerTarget } from '@/features/polygon-drawer/PolygonDrawer';
 
 import { addOrUpdatePolygon } from './maplibre-layers';
 
@@ -102,34 +105,45 @@ export function editHandleAt(rings: LngLat[][], pixel: Pixel, project: (c: LngLa
   return nearest;
 }
 
+/** Index of the area (lon/lat rings, first corner not repeated) that contains point, or -1. */
+export function areaAt(rings: LngLat[][], point: LngLat): number {
+  return rings.findIndex((ring) => ring.length >= 3 && booleanPointInPolygon(point, { type: 'Polygon', coordinates: [[...ring, ring[0]]] }));
+}
+
+/** What the 3D sketch reports, as the 2D drawer's callbacks of the same purpose do. */
+export interface AreaSketch3DCallbacks {
+  /** Gets the corners of a closed area as lon/lat; without it the sketch is off. */
+  onClose?: (ring: LngLat[]) => void;
+  onOpenChange?: (open: boolean) => void;
+  /** Gets a polygon's new corners once an edit press ends. */
+  onRingChanged?: (polygon: number, ring: LngLat[]) => void;
+  onRemoved?: (polygon: number) => void;
+  onCornerCount?: (count: number) => void;
+  onPointerTarget?: (target: PointerTarget) => void;
+}
+
 /**
  * Draws an area on the ground of the 3D view: each click places a corner where the pointer meets the
  * ground, a click on the first corner or a right-click closes the area, Escape abandons it. As in 2D, an area cannot
  * start on a building, which a click opens instead. onClose gets the corners as lon/lat. While no area is
  * being drawn, the drawn areas are edited as on the 2D map: the corner or edge point under the pointer is
  * marked, dragging a corner moves it, dragging an edge adds a corner, Alt+click deletes a corner of an area
- * with more than three. onRingChanged gets the polygon's new corners once the press ends.
+ * with more than three and the whole area of a triangle, Shift+click deletes the area under the pointer.
  */
 export function useAreaSketch3D(
   mapRef: React.RefObject<maplibregl.Map | null>,
   mapReady: boolean,
   olMap: OlMap,
-  onClose: ((ring: LngLat[]) => void) | undefined,
-  onOpenChange: ((open: boolean) => void) | undefined,
   cancelTrigger: number,
   areas: LngLat[][] | undefined,
-  onRingChanged: ((polygon: number, ring: LngLat[]) => void) | undefined,
+  callbacks: AreaSketch3DCallbacks,
 ): React.RefObject<AreaSketch3D | null> {
   const sketchRef = useRef<AreaSketch3D | null>(null);
-  const onCloseRef = useRef(onClose);
-  const onOpenChangeRef = useRef(onOpenChange);
-  onCloseRef.current = onClose;
-  onOpenChangeRef.current = onOpenChange;
+  const on = useRef(callbacks);
+  on.current = callbacks;
   const areasRef = useRef(areas);
   areasRef.current = areas;
-  const onRingChangedRef = useRef(onRingChanged);
-  onRingChangedRef.current = onRingChanged;
-  const enabled = !!onClose;
+  const enabled = !!callbacks.onClose;
 
   useEffect(() => {
     const map = mapRef.current;
@@ -154,7 +168,16 @@ export function useAreaSketch3D(
       cursor = null;
       nearStart = false;
       render();
-      if (wasOpen) onOpenChangeRef.current?.(false);
+      if (wasOpen) {
+        on.current.onOpenChange?.(false);
+        on.current.onCornerCount?.(0);
+      }
+    };
+    let target: PointerTarget = 'outside';
+    const setTarget = (next: PointerTarget) => {
+      if (next === target) return;
+      target = next;
+      on.current.onPointerTarget?.(next);
     };
     const isNearStart = (pixel: [number, number]) => {
       if (corners.length < 3) return false;
@@ -165,7 +188,7 @@ export function useAreaSketch3D(
     const close = () => {
       const ring = corners;
       reset();
-      onCloseRef.current?.(ring);
+      on.current.onClose?.(ring);
     };
 
     sketchRef.current = {
@@ -177,17 +200,19 @@ export function useAreaSketch3D(
           return true;
         }
         corners = [...corners, ground(pixel)];
-        if (corners.length === 1) onOpenChangeRef.current?.(true);
+        if (corners.length === 1) on.current.onOpenChange?.(true);
+        on.current.onCornerCount?.(corners.length);
         render();
         return true;
       },
       move: (pixel, onModelFeature) => {
         if (corners.length === 0) {
           if (dragging) return 'move';
-          const at = handleAt(pixel)?.at;
-          const next = at ? ground(at) : null;
+          const hit = handleAt(pixel);
+          const next = hit ? ground(hit.at) : null;
           if (next !== handle) { handle = next; render(); }
-          if (at) return 'move';
+          setTarget(targetOf(hit, pixel, onModelFeature));
+          if (hit) return 'move';
           return onModelFeature ? null : 'crosshair';
         }
         cursor = ground(pixel);
@@ -195,6 +220,13 @@ export function useAreaSketch3D(
         render();
         return 'crosshair';
       },
+    };
+    // Named as the 2D drawer names them, for the hints beside the cursor; an edge point is not a corner there.
+    const targetOf = (hit: EditHandle | null, pixel: Pixel, onModelFeature: boolean): PointerTarget => {
+      const rings = areasRef.current ?? [];
+      if (hit && !hit.onEdge) return rings[hit.polygon].length <= 3 ? 'triangle-corner' : 'corner';
+      if (areaAt(rings, ground(pixel)) >= 0) return 'polygon';
+      return onModelFeature ? 'building' : 'outside';
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') reset(); };
     // The 2D map's viewport lies over the 3D one and takes the pointer.
@@ -229,14 +261,24 @@ export function useAreaSketch3D(
     // Cancelling the press keeps it from the 2D map's click and from the pan that useMapLibreMap starts.
     const onCornerDown = (e: PointerEvent) => {
       if (!e.isTrusted || e.button !== 0 || corners.length > 0 || !viewport.contains(e.target as Node)) return;
+      if (e.shiftKey) {
+        const area = areaAt(areasRef.current ?? [], ground(pixelOf(e)));
+        if (area < 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        on.current.onRemoved?.(area);
+        return;
+      }
       const hit = handleAt(pixelOf(e));
       if (!hit) return;
       e.preventDefault();
       e.stopPropagation();
       const ring = [...(areasRef.current ?? [])[hit.polygon]];
       if (e.altKey) {
-        // A triangle keeps its corners: deleting one would leave no area.
-        if (!hit.onEdge && ring.length > 3) onRingChangedRef.current?.(hit.polygon, ring.filter((_, i) => i !== hit.corner));
+        // Deleting a corner of a triangle would leave no area, so the whole area goes, as in 2D.
+        if (hit.onEdge) return;
+        if (ring.length > 3) on.current.onRingChanged?.(hit.polygon, ring.filter((_, i) => i !== hit.corner));
+        else on.current.onRemoved?.(hit.polygon);
         return;
       }
       if (hit.onEdge) ring.splice(hit.corner + 1, 0, ground(hit.at));
@@ -255,12 +297,13 @@ export function useAreaSketch3D(
     const onCornerUp = () => {
       const done = dragging;
       dragging = null;
-      if (done?.moved) onRingChangedRef.current?.(done.polygon, done.ring);
+      if (done?.moved) on.current.onRingChanged?.(done.polygon, done.ring);
     };
     window.addEventListener('pointerdown', onCornerDown, true);
     window.addEventListener('pointermove', onCornerMove);
     window.addEventListener('pointerup', onCornerUp);
     const onLeave = () => {
+      setTarget('outside');
       if (!cursor && !handle) return;
       cursor = null;
       handle = null;
@@ -281,7 +324,10 @@ export function useAreaSketch3D(
       window.removeEventListener('pointerup', onCornerUp);
       viewport.removeEventListener('pointerleave', onLeave);
       sketchRef.current = null;
-      if (corners.length > 0) onOpenChangeRef.current?.(false);
+      if (corners.length > 0) {
+        on.current.onOpenChange?.(false);
+        on.current.onCornerCount?.(0);
+      }
       map.off('remove', onRemove);
       map.off('idle', addLayers);
       if (!removed) setData(sketchData([], null, false));

@@ -556,16 +556,20 @@ export function addOrUpdatePolygon(map: maplibregl.Map, coordinates: [number, nu
 
   map.addSource('user-polygon', { type: 'geojson', data: fc });
 
+  // The corners share the source; a line layer would join them all into one line across the areas.
+  const areaOnly: maplibregl.FilterSpecification = ['!', ['has', 'corner']];
   map.addLayer({
     id: 'user-polygon-fill',
     type: 'fill',
     source: 'user-polygon',
+    filter: areaOnly,
     paint: { 'fill-color': POLYGON_COLORS.fill },
   });
   map.addLayer({
     id: 'user-polygon-stroke',
     type: 'line',
     source: 'user-polygon',
+    filter: areaOnly,
     paint: { 'line-color': POLYGON_COLORS.stroke, 'line-width': 2.5 },
   });
   // The corner handles of the 2D drawer's Modify style (PolygonDrawer).

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { editHandleAt } from './useAreaSketch3D';
+import { areaAt, editHandleAt } from './useAreaSketch3D';
 
 // Corners given in pixels: the projection is the identity.
 const square: [number, number][] = [[0, 0], [100, 0], [100, 100], [0, 100]];
@@ -24,5 +24,19 @@ describe('editHandleAt', () => {
   it('gives nothing out of reach or inside an area', () => {
     expect(editHandleAt([square], [50, 50], project, 10)).toBeNull();
     expect(editHandleAt([square], [150, 150], project, 10)).toBeNull();
+  });
+});
+
+describe('areaAt', () => {
+  const west: [number, number][] = [[12.9, 48.8], [12.95, 48.8], [12.95, 48.85], [12.9, 48.85]];
+  const east: [number, number][] = [[13.0, 48.8], [13.05, 48.8], [13.0, 48.85]];
+
+  it('gives the index of the area holding the point', () => {
+    expect(areaAt([west, east], [12.92, 48.82])).toBe(0);
+    expect(areaAt([west, east], [13.01, 48.81])).toBe(1);
+  });
+
+  it('gives -1 between the areas', () => {
+    expect(areaAt([west, east], [12.97, 48.82])).toBe(-1);
   });
 });

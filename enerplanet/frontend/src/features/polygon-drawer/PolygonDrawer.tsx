@@ -28,8 +28,9 @@ const CORNER_TOLERANCE_PX = 10;
 const MIN_POLYGON_AREA_M2 = 1;
 // Marks the drawer's Draw interaction, so drawPolygon finds it among the map's interactions.
 const AREA_DRAW = "areaDraw";
-// Holds the drawer's polygon source on its Modify interaction, so setAreaRing can edit it.
+// Hold the drawer's polygon source and its remover on its Modify interaction, so the 3D view can edit areas.
 const AREA_SOURCE = "areaSource";
+const AREA_REMOVE = "areaRemove";
 
 /**
  * Adds a polygon through the map's PolygonDrawer, as if its corners (lon/lat) had been clicked: the 3D view,
@@ -53,8 +54,7 @@ export function drawPolygon(map: Map, ring: [number, number][]): void {
  * follow the polygons the drawer reports.
  */
 export function setAreaRing(map: Map, polygon: number, ring: [number, number][]): void {
-  const modify = map.getInteractions().getArray().find((i): i is Modify => i instanceof Modify && !!i.get(AREA_SOURCE));
-  const feature = (modify?.get(AREA_SOURCE) as VectorSource | undefined)?.getFeatures()[polygon];
+  const { modify, feature } = areaPolygon(map, polygon);
   const geometry = feature?.getGeometry() as Polygon | undefined;
   if (!modify || !feature || !geometry) throw new Error(`No area polygon ${polygon} to set ${ring.length} corners on`);
   // The listeners read only the source, not the event's map event.
@@ -64,6 +64,19 @@ export function setAreaRing(map: Map, polygon: number, ring: [number, number][])
   const corners = ring.map((c) => fromLonLat(c));
   geometry.setCoordinates([[...corners, corners[0]], ...geometry.getCoordinates().slice(1)]);
   fire("modifyend");
+}
+
+/** Deletes one of the drawer's polygons as a Shift+click on the 2D map would. Indexes as for setAreaRing. */
+export function removeArea(map: Map, polygon: number): void {
+  const { modify, feature } = areaPolygon(map, polygon);
+  const remove = modify?.get(AREA_REMOVE) as ((f: Feature) => void) | undefined;
+  if (!feature || !remove) throw new Error(`No area polygon ${polygon} to delete`);
+  remove(feature);
+}
+
+function areaPolygon(map: Map, polygon: number): { modify?: Modify; feature?: Feature } {
+  const modify = map.getInteractions().getArray().find((i): i is Modify => i instanceof Modify && !!i.get(AREA_SOURCE));
+  return { modify, feature: (modify?.get(AREA_SOURCE) as VectorSource | undefined)?.getFeatures()[polygon] };
 }
 
 interface PolygonDrawerProps {
@@ -718,6 +731,7 @@ export const PolygonDrawer: FC<PolygonDrawerProps> = ({
         if (remaining.length === 0) onClearAllRef.current?.();
         else onPolygonModifiedRef.current?.(remaining);
       };
+      modifyInteractionRef.current?.set(AREA_REMOVE, removePolygon);
       const cornerFeatureAt = (pixel: number[]) =>
         enableEditing
           ? vectorSource.getFeatures().find((f) =>

@@ -7,7 +7,7 @@ import { AreaSelectTour } from "@/features/guided-tour/AreaSelectTour";
 import { MapContainer } from "@/components/shared/MapContainer";
 import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useAreaSelect";
 import { PolygonDrawer } from "@/features/polygon-drawer";
-import { drawPolygon, setAreaRing, type PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
+import { drawPolygon, removeArea, setAreaRing, type PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -560,15 +560,14 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [actions]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
-  // The hints name 2D mouse actions, so 3D shows none.
   const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
-  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null && !isMapLibre3D);
+  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
 
   // Primitive selectors: they change when another building is hovered, not on every move.
   const hoveredOsmId = useModelStore((s) => s.buildingTooltip ? s.buildingTooltip.osmId ?? "" : null);
   const hoveredDisabled = useModelStore((s) => s.buildingTooltip?.disabled === true);
   const hoveredBuilding = hoveredBuildingOf(hoveredOsmId, hoveredDisabled, selectedBuildingIds);
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null && !isMapLibre3D);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -700,9 +699,14 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 selectedBuildingOsmIds={buildingAssign.selectedBuildingsForAssign}
                 isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
                 visible={isMapLibre3D}
-                onAreaDrawn={activeMode === null ? (ring) => drawPolygon(map, ring) : undefined}
-                onAreaRingChanged={(polygon, ring) => setAreaRing(map, polygon, ring)}
-                onSketchOpenChange={actions.setIsDrawing}
+                areaSketch={{
+                  onClose: activeMode === null ? (ring) => drawPolygon(map, ring) : undefined,
+                  onOpenChange: actions.setIsDrawing,
+                  onRingChanged: (polygon, ring) => setAreaRing(map, polygon, ring),
+                  onRemoved: (polygon) => removeArea(map, polygon),
+                  onCornerCount: setCurrentPointCount,
+                  onPointerTarget: setPointerTarget,
+                }}
                 cancelSketchTrigger={cancelSketch}
                 onBuildingClick={ml3d.handleMl3dBuildingClick}
                 onTransformerClick={ml3d.handleMl3dTransformerClick}
