@@ -91,7 +91,7 @@ export function useMapLibreLayers(
     if (!map.isStyleLoaded()) return;
 
     // Use pre-reprojected data
-    const colorMap = buildClusterColorMap(buildings, lines, transformers);
+    const colorMap = buildClusterColorMap(buildings, lines);
 
     addOrUpdateBuildings(map, buildings, colorMap, selectedBuildingOsmIds);
     addOrUpdateLvLines(map, lines, colorMap);

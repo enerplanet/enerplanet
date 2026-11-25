@@ -10,6 +10,7 @@ import type { FeatureLike } from 'ol/Feature';
 import { Point } from 'ol/geom';
 import { getCenter } from 'ol/extent';
 import { ColorConfig } from '@/constants/color-config';
+import { isTechShown } from '@/components/map-controls/maplibre/techMarksStore';
 import { getPrimaryFClassFromClasses, parseFClassValue } from '@/features/configurator/utils/fClassUtils';
 
 // Helper function to get line width based on voltage or capacity
@@ -67,7 +68,8 @@ export const DARK_CLUSTER_COLORS = [
     '#4a2d4a', '#3d4a1f', '#5c2d2d', '#1f4a5c', '#4d4d1a',
 ];
 
-function getTransformerColor(index: number, alpha: number = 0.9): string {
+/** Colour of the transformer cluster at this index; 3D draws its cables and transformers with it too. */
+export function getTransformerColor(index: number, alpha: number = 0.9): string {
     if (index < DARK_CLUSTER_COLORS.length) {
         const hex = DARK_CLUSTER_COLORS[index];
         const r = Number.parseInt(hex.slice(1, 3), 16);
@@ -272,7 +274,7 @@ function addTechIconStyles(
     const techs = feature.get('techs');
     if (!techs || typeof techs !== 'object') return;
 
-    const techKeys = iconTechKeys(techs);
+    const techKeys = iconTechKeys(techs).filter(isTechShown);
     if (techKeys.length === 0) return;
     const numTechs = techKeys.length;
     if (!feature.getGeometry()) return;

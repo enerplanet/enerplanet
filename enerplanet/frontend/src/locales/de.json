@@ -151,7 +151,9 @@
     "cancel": "Zeichnen abbrechen",
     "legendPv": "PV",
     "legendStorage": "Speicher",
-    "legendHeat": "Wärmeversorgung"
+    "legendHeat": "Wärmeversorgung",
+    "legendMvLine": "Mittelspannungsleitung",
+    "legendLvLine": "Niederspannungsleitung, Farbe je Transformator"
   },
   "gridNotifications": {
     "gridGenerated": "Netz generiert: {{count}} Gebäude gefunden",

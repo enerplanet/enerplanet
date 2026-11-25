@@ -67,7 +67,7 @@ import {
 import { formatFClassLabel } from '@/features/configurator/utils/fClassUtils';
 import { MapLibre3DOverlay } from '@/components/map-controls/maplibre';
 import { BaseLayerSwitcher } from '@/components/map-controls/BaseLayerSwitcher';
-import { View3dLegend } from '@/components/map-controls/maplibre/View3dLegend';
+import { MapLegend } from '@/components/map-controls/MapLegend';
 import { CopyrightFooter } from '@/components/app-layout/CopyrightFooter';
 import { connectionKey, isOverloaded, normalizeLocId } from '@/features/simulation-charts/pypsa';
 import { formatCurrency, formatNumber } from '@/utils/formatNumber';
@@ -1021,7 +1021,7 @@ export const ModelResultsViewer = () => {
           <div ref={mapRef} className="w-full h-full" />
           {map && <MapControls />}
           {map && <BaseLayerSwitcher />}
-          {map && isMapLibre3D && <View3dLegend />}
+          {map && <MapLegend grid buildings={buildingsGeoJSON} />}
           {map && isMapLibre3D && (
             <MapLibre3DOverlay
               olMap={map}

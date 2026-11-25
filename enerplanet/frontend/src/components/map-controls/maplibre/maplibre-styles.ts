@@ -1,15 +1,23 @@
-/**
- * MapLibre base style — OpenFreeMap Positron (free vector tiles, no API key).
- * Sharp rendering with proper 3D label rotation. No usage limits.
- */
-export const BASE_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+import type { StyleSpecification } from 'maplibre-gl';
 
-export const CLUSTER_COLORS = [
-  '#3a5d7e', '#4c7440', '#7e4a4a', '#776048', '#5e4e7c',
-  '#2e7070', '#946e40', '#3e6c3e', '#6c4e82', '#2e6262',
-  '#90683e', '#5e3e70', '#3e6082', '#82623c', '#4e7052',
-  '#704e70', '#60723e', '#825252', '#3e7082', '#72723e',
-] as const;
+/**
+ * MapLibre base style: OpenStreetMap raster tiles, the 2D map's base map, so both views show the same map.
+ * The glyphs serve the transformer labels' font; OSM is credited by the 2D map's attribution, visible in 3D.
+ */
+export const BASE_STYLE: StyleSpecification = {
+  version: 8,
+  glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+  },
+  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+};
 
 export const BUILDING_COLORS = {
   fallback: '#9ca3af',

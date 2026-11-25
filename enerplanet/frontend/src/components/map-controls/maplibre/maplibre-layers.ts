@@ -2,8 +2,10 @@ import type * as maplibregl from 'maplibre-gl';
 import { Popup as MapLibrePopup } from 'maplibre-gl';
 import {
   BUILDING_COLORS, LV_LINE_COLORS, MV_LINE_COLORS,
-  TRANSFORMER_COLORS, POLYGON_COLORS, CLUSTER_COLORS, BOUNDARY_COLORS, USER_MODEL_COLORS,
+  TRANSFORMER_COLORS, POLYGON_COLORS, BOUNDARY_COLORS, USER_MODEL_COLORS,
 } from './maplibre-styles';
+import { getTransformerColor } from '@/features/interactive-map/utils/mapStyleUtils';
+import { collectTransformerIds } from '@/features/configurator/hooks/useAreaSelect/helpers/gridAssignments';
 
 /** Popup content as text: model titles and region names are user or data input, never HTML. */
 function boldText(text: string): HTMLElement {
@@ -40,32 +42,16 @@ function getClusterKeyFromProps(
   return `s:${rawText}`;
 }
 
-function compareClusterKeys(a: string, b: string): number {
-  const aNum = a.startsWith('n:') ? Number(a.slice(2)) : NaN;
-  const bNum = a.startsWith('n:') ? Number(b.slice(2)) : NaN;
-  const aIsNum = Number.isFinite(aNum);
-  const bIsNum = Number.isFinite(bNum);
-  if (aIsNum && bIsNum) return aNum - bNum;
-  if (aIsNum) return -1;
-  if (bIsNum) return 1;
-  return a.localeCompare(b);
-}
+type WithProperties = { features?: Array<{ properties?: Record<string, unknown> | null }> } | null | undefined;
 
-export function buildClusterColorMap(...geojsonSources: any[]): Map<string, string> {
-  const ids = new Set<string>();
-  for (const geojson of geojsonSources) {
-    if (!geojson?.features) continue;
-    for (const f of geojson.features) {
-      const key = getClusterKeyFromProps(f.properties as Record<string, unknown> | undefined);
-      if (key) ids.add(key);
-    }
-  }
-  const sorted = Array.from(ids).sort(compareClusterKeys);
-  const colorMap = new Map<string, string>();
-  sorted.forEach((key, index) => {
-    colorMap.set(key, CLUSTER_COLORS[index % CLUSTER_COLORS.length]);
-  });
-  return colorMap;
+/**
+ * Cluster colours keyed as getClusterKeyFromProps keys them, matching the 2D map: the transformer ids of
+ * buildings and cables, ascending, take the 2D palette in turn.
+ */
+export function buildClusterColorMap(buildings: WithProperties, lines: WithProperties): Map<string, string> {
+  const ids = new Set([...collectTransformerIds(buildings?.features ?? []), ...collectTransformerIds(lines?.features ?? [])]);
+  const sorted = [...ids].sort((a, b) => a - b);
+  return new Map(sorted.map((id, index) => [`n:${id}`, getTransformerColor(index, 1)]));
 }
 
 function assignClusterColors(features: any[], colorMap: Map<string, string>, fallback: string): void {
@@ -97,6 +83,9 @@ function toFeatureCollection(input: any): GeoJSON.FeatureCollection | null {
 // surfaces (see maplibre-lod2), since the footprint heights are estimates.
 // Highlights sit slightly above the footprint so they draw over it.
 const HIGHLIGHT_HEIGHT = 0.1;
+
+// A cable without a power flow result has no loading_percent; `to-number` would read the null as 0, a low load.
+const loadingPercent: maplibregl.ExpressionSpecification = ['to-number', ['coalesce', ['get', 'loading_percent'], -1], -1];
 
 const separatorWidthExpr: maplibregl.ExpressionSpecification = [
   'interpolate',
@@ -293,7 +282,7 @@ export function addOrUpdateLvLines(map: maplibregl.Map, geojson: any, colorMap: 
       id: 'lv-lines-casing',
       type: 'line',
       source: 'lv-lines',
-      paint: { 'line-color': ['get', '_cluster_color'], 'line-width': 4, 'line-opacity': 0.12, 'line-blur': 2 },
+      paint: { 'line-color': ['get', '_cluster_color'], 'line-width': 6, 'line-opacity': 0.15, 'line-blur': 2 },
       layout: { 'line-cap': 'round', 'line-join': 'round' },
     });
   }
@@ -306,15 +295,15 @@ export function addOrUpdateLvLines(map: maplibregl.Map, geojson: any, colorMap: 
       paint: {
         'line-color': [
           'case',
-          ['>=', ['to-number', ['get', 'loading_percent'], -1], 100], 'rgba(239, 68, 68, 0.95)',
-          ['>=', ['to-number', ['get', 'loading_percent'], -1], 80], 'rgba(249, 115, 22, 0.95)',
-          ['>=', ['to-number', ['get', 'loading_percent'], -1], 60], 'rgba(234, 179, 8, 0.95)',
-          ['>=', ['to-number', ['get', 'loading_percent'], -1], 40], 'rgba(132, 204, 22, 0.95)',
-          ['>=', ['to-number', ['get', 'loading_percent'], -1], 0], 'rgba(34, 197, 94, 0.95)',
+          ['>=', loadingPercent, 100], 'rgba(239, 68, 68, 0.95)',
+          ['>=', loadingPercent, 80], 'rgba(249, 115, 22, 0.95)',
+          ['>=', loadingPercent, 60], 'rgba(234, 179, 8, 0.95)',
+          ['>=', loadingPercent, 40], 'rgba(132, 204, 22, 0.95)',
+          ['>=', loadingPercent, 0], 'rgba(34, 197, 94, 0.95)',
           ['get', '_cluster_color'],
         ],
-        'line-width': 1.5,
-        'line-opacity': 0.9,
+        'line-width': 2.5,
+        'line-opacity': 0.95,
       },
       layout: { 'line-cap': 'round', 'line-join': 'round' },
     });
@@ -340,7 +329,7 @@ export function addOrUpdateMvLines(map: maplibregl.Map, geojson: any): void {
       id: 'mv-lines-glow',
       type: 'line',
       source: 'mv-lines',
-      paint: { 'line-color': MV_LINE_COLORS.core, 'line-width': 5, 'line-opacity': 0.1, 'line-blur': 2 },
+      paint: { 'line-color': MV_LINE_COLORS.core, 'line-width': 12, 'line-opacity': 0.12, 'line-blur': 2 },
       layout: { 'line-cap': 'round', 'line-join': 'round' },
     });
   }
@@ -349,7 +338,7 @@ export function addOrUpdateMvLines(map: maplibregl.Map, geojson: any): void {
       id: 'mv-lines-inner',
       type: 'line',
       source: 'mv-lines',
-      paint: { 'line-color': MV_LINE_COLORS.core, 'line-width': 2.5, 'line-opacity': 0.3 },
+      paint: { 'line-color': MV_LINE_COLORS.core, 'line-width': 7, 'line-opacity': 0.3 },
       layout: { 'line-cap': 'round', 'line-join': 'round' },
     });
   }
@@ -358,7 +347,8 @@ export function addOrUpdateMvLines(map: maplibregl.Map, geojson: any): void {
       id: 'mv-lines-core',
       type: 'line',
       source: 'mv-lines',
-      paint: { 'line-color': MV_LINE_COLORS.core, 'line-width': 1.5, 'line-opacity': 0.9 },
+      // Wider than the 2.5 px low-voltage core, so the two read apart in 3D as in 2D.
+      paint: { 'line-color': MV_LINE_COLORS.core, 'line-width': 4.5, 'line-opacity': 0.95 },
       layout: { 'line-cap': 'round', 'line-join': 'round' },
     });
   }
@@ -398,42 +388,38 @@ export function addOrUpdateConnections(map: maplibregl.Map, geojson: GeoJSON.Fea
 }
 
 const TRANSFORMER_IMG_ID = 'transformer-3d';
-const TRANSFORMER_IMG_URL = '/images/3d_transformer.png';
-let transformerImgLoading: Promise<void> | null = null;
+// The 2D map's transformer icon (transformerStyleFunction), white on the cluster colour.
+const TRANSFORMER_IMG_URL = '/images/transformer-icon.svg';
+const TRANSFORMER_IMG_PX = 48;
+// Decoded once per page; each map gets its own copy, since leaving 3D removes the map with its images.
+let transformerImg: Promise<ImageData | null> | null = null;
 
-function ensureTransformerImage(map: maplibregl.Map): Promise<void> {
-  if (map.hasImage(TRANSFORMER_IMG_ID)) return Promise.resolve();
-  if (transformerImgLoading) return transformerImgLoading;
-
-  transformerImgLoading = new Promise<void>((resolve) => {
+function loadTransformerImage(): Promise<ImageData | null> {
+  transformerImg ??= new Promise<ImageData | null>((resolve) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = async () => {
-      const size = 128;
+    img.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = TRANSFORMER_IMG_PX;
+      canvas.height = TRANSFORMER_IMG_PX;
       const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0, size, size);
-
-      try {
-        const bitmap = await createImageBitmap(canvas);
-        if (!map.hasImage(TRANSFORMER_IMG_ID)) {
-          map.addImage(TRANSFORMER_IMG_ID, bitmap);
-        }
-      } catch {
-        const imageData = ctx.getImageData(0, 0, size, size);
-        if (!map.hasImage(TRANSFORMER_IMG_ID)) {
-          map.addImage(TRANSFORMER_IMG_ID, imageData);
-        }
-      }
-      resolve();
+      ctx.drawImage(img, 0, 0, TRANSFORMER_IMG_PX, TRANSFORMER_IMG_PX);
+      resolve(ctx.getImageData(0, 0, TRANSFORMER_IMG_PX, TRANSFORMER_IMG_PX));
     };
-    img.onerror = () => { transformerImgLoading = null; resolve(); };
+    img.onerror = () => {
+      console.warn(`[3d] transformer icon ${TRANSFORMER_IMG_URL} failed to load`);
+      transformerImg = null;
+      resolve(null);
+    };
     img.src = TRANSFORMER_IMG_URL;
   });
+  return transformerImg;
+}
 
-  return transformerImgLoading;
+async function ensureTransformerImage(map: maplibregl.Map): Promise<void> {
+  if (map.hasImage(TRANSFORMER_IMG_ID)) return;
+  const image = await loadTransformerImage();
+  // Drawn at twice the 24 px icon, so it stays sharp on high-density screens.
+  if (image && !map.hasImage(TRANSFORMER_IMG_ID)) map.addImage(TRANSFORMER_IMG_ID, image, { pixelRatio: 2 });
 }
 
 export function addOrUpdateTransformers(map: maplibregl.Map, geojson: any, colorMap: Map<string, string>): void {
@@ -457,31 +443,30 @@ export function addOrUpdateTransformers(map: maplibregl.Map, geojson: any, color
       id: 'transformers-base',
       type: 'circle',
       source: 'transformers',
-      paint: { 'circle-radius': 14, 'circle-color': ['get', '_cluster_color'], 'circle-opacity': 0.12, 'circle-blur': 0.8 },
+      paint: { 'circle-radius': 19, 'circle-color': TRANSFORMER_COLORS.glow, 'circle-blur': 0.4 },
     });
     map.addLayer({
       id: 'transformers-cluster',
       type: 'circle',
       source: 'transformers',
       paint: {
-        'circle-radius': 7,
+        'circle-radius': 13,
         'circle-color': '#ffffff',
-        'circle-opacity': 0.95,
         'circle-stroke-color': ['get', '_cluster_color'],
-        'circle-stroke-width': 2,
+        'circle-stroke-width': 2.5,
       },
     });
     map.addLayer({
       id: 'transformers-inner',
       type: 'circle',
       source: 'transformers',
-      paint: { 'circle-radius': 4, 'circle-color': ['get', '_cluster_color'], 'circle-opacity': 0.9 },
+      paint: { 'circle-radius': 10, 'circle-color': ['get', '_cluster_color'] },
     });
     map.addLayer({
       id: 'transformers-extrusion',
       type: 'symbol',
       source: 'transformers',
-      layout: { 'icon-image': TRANSFORMER_IMG_ID, 'icon-size': 0.18, 'icon-allow-overlap': true, 'icon-anchor': 'center' },
+      layout: { 'icon-image': TRANSFORMER_IMG_ID, 'icon-size': 0.7, 'icon-allow-overlap': true, 'icon-anchor': 'center' },
     });
     map.addLayer({
       id: 'transformers-label',
@@ -491,7 +476,7 @@ export function addOrUpdateTransformers(map: maplibregl.Map, geojson: any, color
         'text-field': ['concat', ['to-string', ['coalesce', ['get', 'rated_power_kva'], '']], ' kVA'],
         'text-size': 9,
         'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-        'text-offset': [0, 1.4],
+        'text-offset': [0, 1.9],
         'text-anchor': 'top',
         'text-allow-overlap': true,
       },

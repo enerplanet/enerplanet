@@ -59,7 +59,7 @@ import {
 
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
-import { View3dLegend } from "@/components/map-controls/maplibre/View3dLegend";
+import { MapLegend } from "@/components/map-controls/MapLegend";
 import { GridStatsBadge } from "./components/GridStatsBadge";
 import { WorkflowBar } from "@/components/map-controls/WorkflowBar";
 import { cn } from "@/lib/utils";
@@ -726,7 +726,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               gridIdToTrafoCapacity={gridIdToTrafoCapacity}
               gridIdToPeakLoad={gridIdToPeakLoad}
             />
-            {isMapLibre3D && <View3dLegend />}
+            <MapLegend
+              grid={(pylovoLayers.pylovoGridData?.lines?.features?.length ?? 0) > 0}
+              buildings={pylovoLayers.pylovoGridData?.buildings}
+              techsFor={pylovoLayers.buildingTechs}
+            />
             <GridActionBar
               hasGridData={siteMode && (pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
               isAddTransformerMode={addTransformer.isAddTransformerMode}

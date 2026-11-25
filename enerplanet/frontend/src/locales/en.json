@@ -151,7 +151,9 @@
     "cancel": "Cancel drawing",
     "legendPv": "PV",
     "legendStorage": "Storage",
-    "legendHeat": "Heat supply"
+    "legendHeat": "Heat supply",
+    "legendMvLine": "Medium-voltage line",
+    "legendLvLine": "Low-voltage line, colour per transformer"
   },
   "gridNotifications": {
     "gridGenerated": "Grid generated: {{count}} buildings found",
