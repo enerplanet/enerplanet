@@ -151,7 +151,9 @@
     "cancel": "Zeichnen abbrechen",
     "legendPv": "PV",
     "legendStorage": "Speicher",
-    "legendHeat": "Wärmeversorgung"
+    "legendHeat": "Wärmeversorgung",
+    "legendMvLine": "Mittelspannungsleitung",
+    "legendLvLine": "Niederspannungsleitung, Farbe je Transformator"
   },
   "gridNotifications": {
     "gridGenerated": "Netz generiert: {{count}} Gebäude gefunden",
@@ -1614,6 +1616,7 @@
       "resetAreaConfirmTitle": "Bereich zurücksetzen?",
       "resetAreaConfirmDescription": "Entfernt alle gezeichneten Polygone, gesetzte Transformatoren und Gebäudezuordnungen.",
       "disableSelected": "Ausgewählte Gebäude deaktivieren",
+      "enableSelected": "Ausgewählte Gebäude aktivieren",
       "importArea": "Gebiet importieren",
       "exportArea": "Gebiet exportieren",
       "regenerateGrid": "Netz neu erzeugen",

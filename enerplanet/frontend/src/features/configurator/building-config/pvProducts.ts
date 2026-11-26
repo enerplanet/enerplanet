@@ -55,3 +55,55 @@ export function moduleOf(constraints: readonly { key: string; value: unknown }[]
   const kwp = numberOf(constraints, 'module_power_kwp');
   return width && height && kwp ? { width, height, kwp } : DEFAULT_PV_MODULE;
 }
+
+type Values = PvProductCopy['constraints'];
+
+/** The building's own PV values and its copies of the products its arrays name. */
+export interface PvValues {
+  /** The values of the building's product, used by the arrays that name no product. */
+  constraints?: Values;
+  copies?: Record<string, PvProductCopy>;
+}
+
+/** values with key set to value, added when absent. */
+function setValue(values: Values, key: string, value: unknown): Values {
+  return values.some((c) => c.key === key)
+    ? values.map((c) => (c.key === key ? { ...c, value } : c))
+    : [...values, { key, value }];
+}
+
+/**
+ * values with one parameter of product id set: the building's own values when
+ * id is the building's product, else that product's copy, taken from the
+ * catalogue on its first edit. A stored copy of the building's product is kept
+ * in step. A product neither stored nor in the catalogue leaves values as they are.
+ */
+export function withProductValue(
+  values: PvValues,
+  id: string,
+  key: string,
+  value: number | string,
+  buildingProductId: string | undefined,
+  catalogue: readonly TechnologyProduct[] | undefined,
+): PvValues {
+  const product = catalogue?.find((p) => p.id === id);
+  const own = id === buildingProductId;
+  const copy = values.copies?.[id] ?? (own ? undefined : product && copyOfProduct(product));
+  if (!own && !copy) return values;
+  return {
+    constraints: own ? setValue(values.constraints ?? (product ? copyOfProduct(product).constraints : []), key, value) : values.constraints,
+    copies: copy ? { ...values.copies, [id]: { ...copy, constraints: setValue(copy.constraints, key, value) } } : values.copies,
+  };
+}
+
+/** The product with each parameter at its stored value where values has a number or text for it. */
+export function withValues(product: TechnologyProduct, values: Values): TechnologyProduct {
+  const stored = new Map(values.map((c) => [c.key, c.value]));
+  return {
+    ...product,
+    constraints: product.constraints.map((c) => {
+      const value = stored.get(c.key);
+      return typeof value === 'number' || typeof value === 'string' ? { ...c, default_value: value } : c;
+    }),
+  };
+}

@@ -7,6 +7,7 @@ import { addSiteStation, moveSiteStation } from "@/features/configurator/utils/s
 import { useAuthStore } from "@/store/auth-store";
 import { isCoordinateInsidePolygons } from "@/features/configurator/utils/geometryUtils";
 import { useModelStore } from "@/features/configurator/store/modelStore";
+import { lonLatAt3D } from "@/components/map-controls/maplibre/useMapLibreMap";
 
 // pylovo attaches a site station to the nearest road within 200 m
 // (snap_site_transformers_to_network), so a site station may stand that far outside the area.
@@ -158,8 +159,9 @@ export const useAddTransformerMode = ({
     }
 
     const handleMapClick = (evt: any) => {
-      const coords = map.getCoordinateFromPixel(evt.pixel);
-      const lonLat = toLonLat(coords);
+      const e = evt.originalEvent as MouseEvent;
+      // As for a move: the 3D view gives the ground point, which the flat 2D map misses once tilted.
+      const lonLat = lonLatAt3D(e.clientX, e.clientY) ?? toLonLat(map.getCoordinateFromPixel(evt.pixel));
       const lonLatPair: [number, number] = [lonLat[0], lonLat[1]];
 
       const positionError = stationPositionError(lonLatPair, allPolygonsRef.current, t);
@@ -328,9 +330,8 @@ export const useMoveTransformerMode = ({
     };
 
     const handlePointerUp = async (e: PointerEvent) => {
-      const pixel = map.getEventPixel(e);
-      const coords = map.getCoordinateFromPixel(pixel);
-      const lonLat = toLonLat(coords);
+      // A tilted 3D view does not line up with the flat 2D map under it, so the 3D view gives the ground point.
+      const lonLat = lonLatAt3D(e.clientX, e.clientY) ?? toLonLat(map.getCoordinateFromPixel(map.getEventPixel(e)));
       const lonLatPair: [number, number] = [lonLat[0], lonLat[1]];
 
       const positionError = stationPositionError(lonLatPair, allPolygonsRef.current, tRef.current);

@@ -180,12 +180,12 @@ const TooltipModelledBuilding: FC<{ profile: StoredDemandProfile }> = ({ profile
     );
 };
 
-/** A fixed button that abandons the polygon being drawn, beside the Escape shortcut. */
+/** A fixed button that abandons the polygon being drawn, beside the Escape shortcut; it sits above the map credits. */
 const CancelDrawingButton: FC<{ visible: boolean; onCancel?: () => void }> = ({ visible, onCancel }) => {
     const { t } = useTranslation();
     if (!visible || !onCancel) return null;
     return (
-        <div className="pointer-events-none absolute bottom-6 left-1/2 z-40 -translate-x-1/2">
+        <div className="pointer-events-none absolute bottom-12 left-1/2 z-40 -translate-x-1/2">
             <button
                 type="button"
                 onClick={onCancel}

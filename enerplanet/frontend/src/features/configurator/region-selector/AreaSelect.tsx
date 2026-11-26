@@ -7,7 +7,7 @@ import { AreaSelectTour } from "@/features/guided-tour/AreaSelectTour";
 import { MapContainer } from "@/components/shared/MapContainer";
 import { useAreaSelect, type AreaData } from "@/features/configurator/hooks/useAreaSelect";
 import { PolygonDrawer } from "@/features/polygon-drawer";
-import { drawPolygon, moveAreaCorner, type PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
+import { drawPolygon, removeArea, setAreaRing, type PointerTarget } from "@/features/polygon-drawer/PolygonDrawer";
 import type { PylovoGridData } from "@/features/configurator/types/area-select";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -59,7 +59,7 @@ import {
 
 // Extracted components
 import { MapOverlays } from "./components/MapOverlays";
-import { View3dLegend } from "@/components/map-controls/maplibre/View3dLegend";
+import { MapLegend } from "@/components/map-controls/MapLegend";
 import { GridStatsBadge } from "./components/GridStatsBadge";
 import { WorkflowBar } from "@/components/map-controls/WorkflowBar";
 import { cn } from "@/lib/utils";
@@ -377,7 +377,16 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     setExclusionsChanged(changes.length > 0);
   }, [pylovoLayers.pylovoGridData, pylovoLayers.pylovoLayersRef, setExclusionsChanged]);
   useEffect(checkExclusions, [checkExclusions]);
-  const onBuildingsChanged = useCallback(() => { setIsModified(true); checkExclusions(); }, [setIsModified, checkExclusions]);
+  // The 2D map keeps the disabled flag on its building features; the 3D view gets their ids.
+  const [disabledOsmIds, setDisabledOsmIds] = useState<string[]>([]);
+  const readDisabled = useCallback(() => {
+    const ids = collectBuildingsFromLayers(pylovoLayers.pylovoLayersRef.current)
+      .filter((f) => f.get("activated") === false)
+      .map((f) => String(f.get("osm_id")));
+    setDisabledOsmIds((prev) => (prev.join() === ids.join() ? prev : ids));
+  }, [pylovoLayers.pylovoLayersRef]);
+  useEffect(readDisabled, [readDisabled, pylovoLayers.pylovoGridData]);
+  const onBuildingsChanged = useCallback(() => { setIsModified(true); checkExclusions(); readDisabled(); }, [setIsModified, checkExclusions, readDisabled]);
   const buildingSelection = useBuildingSelection({
     map,
     pylovoLayersRef: pylovoLayers.pylovoLayersRef,
@@ -386,6 +395,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
     onBuildingsChanged,
   });
   const selectedBuildingIds = useModelStore((s) => s.selectedBuildingIds);
+  // The 3D view marks the buildings picked for assignment, or else the Ctrl+click selection.
+  const selectedOsmIds3D = useMemo(
+    () => (buildingAssign.isBuildingAssignMode ? buildingAssign.selectedBuildingsForAssign : [...selectedBuildingIds]),
+    [buildingAssign.isBuildingAssignMode, buildingAssign.selectedBuildingsForAssign, selectedBuildingIds],
+  );
 
   // ── Heat-add bootstrap (one-time "auto-assign vs manual" prompt) ──
   const heatBootstrapOpen = useModelStore((s) => s.heatBootstrapOpen);
@@ -560,15 +574,14 @@ export const AreaSelect: FC<AreaSelectProps> = ({
   }, [actions]);
 
   // ── Drawing helpers ──────────────────────────────────────────────
-  // The hints name 2D mouse actions, so 3D shows none.
   const isMapLibre3D = useMapStore((s) => s.selectedBaseLayerId === "maplibre_3d");
-  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null && !isMapLibre3D);
+  const drawHint = drawHintKey(state.isDrawing, currentPointCount, pointerTarget, state.pointerOnMap && activeMode === null);
 
   // Primitive selectors: they change when another building is hovered, not on every move.
   const hoveredOsmId = useModelStore((s) => s.buildingTooltip ? s.buildingTooltip.osmId ?? "" : null);
   const hoveredDisabled = useModelStore((s) => s.buildingTooltip?.disabled === true);
   const hoveredBuilding = hoveredBuildingOf(hoveredOsmId, hoveredDisabled, selectedBuildingIds);
-  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null && !isMapLibre3D);
+  const deleteHint = deleteHintKey(pointerTarget, heldKeys, hoveredBuilding, state.pointerOnMap && !state.isDrawing && activeMode === null);
 
   const handlePolygonDrawnWithLimit = async (
     coordinates: [number, number][],
@@ -667,18 +680,16 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               style={{ right: "calc(1rem + var(--sidebar-offset, 0rem))" }}
             >
               <div className="flex min-w-0 flex-1 justify-center">
-                {!isMapLibre3D && (
-                  <div className="pointer-events-auto">
-                    <WorkflowBar
-                      polygonCount={state.allPolygons.length}
-                      isGeneratingGrid={state.isGeneratingGrid}
-                      hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
-                      siteMode={siteMode}
-                      hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
-                      gridStale={gridStale}
-                    />
-                  </div>
-                )}
+                <div className="pointer-events-auto">
+                  <WorkflowBar
+                    polygonCount={state.allPolygons.length}
+                    isGeneratingGrid={state.isGeneratingGrid}
+                    hasGridData={(pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
+                    siteMode={siteMode}
+                    hasAddedTransformer={hasUserTransformer(pylovoLayers.pylovoGridData)}
+                    gridStale={gridStale}
+                  />
+                </div>
               </div>
               {gridResultIds.length > 0 && (
                 <div className="md-fade-in pointer-events-auto w-60 shrink-0 xl:w-72">
@@ -697,14 +708,21 @@ export const AreaSelect: FC<AreaSelectProps> = ({
                 availableBoundaryGeoJSON={pylovoLayers.availableBoundaryGeoJSON}
                 showBoundary={pylovoLayers.showBoundary}
                 polygonCoordinates={state.allPolygons}
-                selectedBuildingOsmIds={buildingAssign.selectedBuildingsForAssign}
+                selectedBuildingOsmIds={selectedOsmIds3D}
+                disabledBuildingOsmIds={disabledOsmIds}
                 isBuildingAssignMode={buildingAssign.isBuildingAssignMode}
                 visible={isMapLibre3D}
-                onAreaDrawn={activeMode === null ? (ring) => drawPolygon(map, ring) : undefined}
-                onAreaCornerMoved={(polygon, corner, to) => moveAreaCorner(map, polygon, corner, to)}
-                onSketchOpenChange={actions.setIsDrawing}
+                areaSketch={{
+                  onClose: activeMode === null ? (ring) => drawPolygon(map, ring) : undefined,
+                  onOpenChange: actions.setIsDrawing,
+                  onRingChanged: (polygon, ring) => setAreaRing(map, polygon, ring),
+                  onRemoved: (polygon) => removeArea(map, polygon),
+                  onCornerCount: setCurrentPointCount,
+                  onPointerTarget: setPointerTarget,
+                }}
                 cancelSketchTrigger={cancelSketch}
                 onBuildingClick={ml3d.handleMl3dBuildingClick}
+                onBuildingPick={buildingSelection.pick}
                 onTransformerClick={ml3d.handleMl3dTransformerClick}
                 onBuildingHover={ml3d.handleMl3dBuildingHover}
                 onTransformerHover={ml3d.handleMl3dTransformerHover}
@@ -726,7 +744,11 @@ export const AreaSelect: FC<AreaSelectProps> = ({
               gridIdToTrafoCapacity={gridIdToTrafoCapacity}
               gridIdToPeakLoad={gridIdToPeakLoad}
             />
-            {isMapLibre3D && <View3dLegend />}
+            <MapLegend
+              grid={(pylovoLayers.pylovoGridData?.lines?.features?.length ?? 0) > 0}
+              buildings={pylovoLayers.pylovoGridData?.buildings}
+              techsFor={pylovoLayers.buildingTechs}
+            />
             <GridActionBar
               hasGridData={siteMode && (pylovoLayers.pylovoGridData?.buildings?.features?.length ?? 0) > 0}
               isAddTransformerMode={addTransformer.isAddTransformerMode}
@@ -762,7 +784,9 @@ export const AreaSelect: FC<AreaSelectProps> = ({
             onRegenerateGrid={gridStale ? actions.handleRegenerateGrid : undefined}
             isGeneratingGrid={state.isGeneratingGrid}
             selectedBuildingCount={buildingSelection.selectedCount}
+            selectedDisabledCount={disabledOsmIds.filter((id) => selectedBuildingIds.has(id)).length}
             onDisableSelectedBuildings={buildingSelection.disableSelected}
+            onEnableSelectedBuildings={buildingSelection.enableSelected}
             isLoadingPreference={isLoadingPreference}
             currentWorkspace={currentWorkspace}
             preferredWorkspaceId={preferredWorkspaceId ?? undefined}
@@ -889,7 +913,7 @@ export const AreaSelect: FC<AreaSelectProps> = ({
         onBuildingEdited={(osmId, buem) => { pylovoLayers.storeBuildingBuem(osmId, buem); setIsModified(true); }}
         onBuildingReset={(osmId) => { pylovoLayers.storeBuildingBuem(osmId, undefined); setIsModified(true); }}
         pvFor={pylovoLayers.buildingPv}
-        onPvArrays={(osmId, arrays, products) => { pylovoLayers.storePvArrays(osmId, arrays, products); setIsModified(true); }}
+        onPvArrays={(osmId, arrays, products, constraints) => { pylovoLayers.storePvArrays(osmId, arrays, products, constraints); setIsModified(true); }}
         techsFor={pylovoLayers.buildingTechs}
         locationFor={pylovoLayers.buildingLocation}
         onTechsChange={(osmId, techs) => { pylovoLayers.storeBuildingTechs(osmId, techs); setIsModified(true); }}

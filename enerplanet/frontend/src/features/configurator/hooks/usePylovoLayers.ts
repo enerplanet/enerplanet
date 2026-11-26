@@ -238,14 +238,14 @@ export const usePylovoLayers = ({ map, editMode, loadedConfig }: { map: OLMap | 
       ? { typeLabel: tech.alias, arrays: tech.arrays ?? null, productId: tech.product, constraints: tech.constraints, products: tech.products }
       : null;
   }, [findBuilding]);
-  /** Stores the arrays chosen in PV mode, and the copies of the products they name, on the building's PV technology. */
-  const storePvArrays = useCallback((osmId: string, arrays: PvArray[], products: Record<string, PvProductCopy>) => {
+  /** Stores the arrays chosen in PV mode, the copies of the products they name and the building's own PV values on its PV technology. */
+  const storePvArrays = useCallback((osmId: string, arrays: PvArray[], products: Record<string, PvProductCopy>, constraints?: PvProductCopy['constraints']) => {
     const feature = findBuilding(osmId);
     const techs = feature?.get('techs');
     if (!feature || !techs?.pv_supply) return;
     const { products: _replaced, ...pvSupply } = techs.pv_supply;
     const copies = Object.keys(products).length > 0 ? { products } : {};
-    feature.set('techs', { ...techs, pv_supply: { ...pvSupply, arrays, ...copies } });
+    feature.set('techs', { ...techs, pv_supply: { ...pvSupply, arrays, ...copies, ...(constraints && { constraints }) } });
   }, [findBuilding]);
   /** The centre of the building's map feature as WGS84 [lon, lat], or null when it is not on the map. */
   const buildingLocation = useCallback((osmId: string): [number, number] | null => {

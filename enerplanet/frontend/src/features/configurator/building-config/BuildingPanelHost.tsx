@@ -66,7 +66,9 @@ export type OnBuildingEdited = (osmId: string, buem: StoredBuem) => void;
 export type OnBuildingReset = (osmId: string) => void;
 
 /** Receives a building's PV arrays after each change in PV mode. */
-export type OnPvArrays = (osmId: string, arrays: PvArray[], products: Record<string, PvProductCopy>) => void;
+export type OnPvArrays = (
+  osmId: string, arrays: PvArray[], products: Record<string, PvProductCopy>, constraints: PvProductCopy['constraints'] | undefined,
+) => void;
 
 /** Receives a building's technologies after each edit in the Technologies tab. */
 export type OnTechsChange = (osmId: string, techs: BuildingTechs) => void;
@@ -106,8 +108,9 @@ const ResetNotice: FC<{ onReset: () => void }> = ({ onReset }) => {
 /** Says that the OSM outline covers several 3D buildings and which one the view shows. */
 const SharedOutlineNotice: FC<{ count: number }> = ({ count }) => {
   const { t } = useTranslation();
+  // Kept above the package's undo button, centred at bottom-16 of Building3DView.
   return (
-    <div className="bg-card pointer-events-none absolute bottom-20 left-1/2 z-40 w-max max-w-xl -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow-lg">
+    <div className="bg-card pointer-events-none absolute bottom-32 left-1/2 z-40 w-max max-w-xl -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow-lg">
       <p className="text-muted-foreground">{t('buildingConfig.sharedOutline', { count })}</p>
     </div>
   );
@@ -189,7 +192,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const mode = useConfiguratorModeStore((s) => s.mode);
   const setMode = useConfiguratorModeStore((s) => s.setMode);
   const storeArrays = useCallback(
-    (arrays: PvArray[], products: Record<string, PvProductCopy>) => onPvArrays?.(osmId, arrays, products),
+    (arrays: PvArray[], products: Record<string, PvProductCopy>, constraints: PvProductCopy['constraints'] | undefined) =>
+      onPvArrays?.(osmId, arrays, products, constraints),
     [onPvArrays, osmId],
   );
   const storeTechs = useCallback((next: BuildingTechs) => onTechsChange?.(osmId, next), [onTechsChange, osmId]);
@@ -208,7 +212,7 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
   const pvCatalogue = usePvCatalogue();
   const pvMode = usePvMode(
     osmId, country, shownPv, t('buildingConfig.pv.shadingNotice'), storeArrays, objectId, t, geometry?.surfaces ?? null,
-    technologies ? removePv : undefined, pvCatalogue,
+    building?.envelope ?? null, technologies ? removePv : undefined, pvCatalogue,
   );
 
   if (preparing) {
@@ -240,9 +244,8 @@ const PanelBody: FC<PanelBodyProps> = ({ osmId, modelId, ownerPath, onExit, onEd
 
   const detached = edited && geometry !== null
     && isEnvelopeDetached(geometry.surfaces, new Set(Object.keys(building.envelope)));
-  // Only a saved model's building with stored series has a CSV to download.
-  const seriesCsvUrl = modelId && demandProfile
-    ? `${config.api.baseUrl}/models/${modelId}/buildings/${encodeURIComponent(osmId)}/series.csv`
+  const seriesCsvUrl = demandProfile
+    ? `${config.api.baseUrl}/${ownerPath}/buildings/${encodeURIComponent(osmId)}/series.csv`
     : undefined;
 
   return (

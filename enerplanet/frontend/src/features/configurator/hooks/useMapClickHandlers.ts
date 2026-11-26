@@ -205,9 +205,30 @@ export const useMapClickHandlers = ({
       pending = setTimeout(() => showTooltip(feature, lastPixel), HOVER_DELAY_MS);
     };
 
+    // A technology dragged from the drawer sends no pointer events, so the building it would drop on is outlined from the drag.
+    const viewport = map.getViewport();
+    const handleDragOver = (e: DragEvent) => {
+      if (!in3D() && useModelStore.getState().draggingTech) setHovered(map.getEventPixel(e));
+    };
+    const handleDragLeave = (e: DragEvent) => {
+      if (!viewport.contains(e.relatedTarget as Node | null)) setHovered(null);
+    };
+    const clearHovered = () => setHovered(null);
+
     map.on('click', handleClick);
     map.on('pointermove', handlePointerMove);
-    return () => { clearTimeout(pending); map.un('click', handleClick); map.un('pointermove', handlePointerMove); map.removeLayer(hoverLayer); };
+    viewport.addEventListener('dragover', handleDragOver);
+    viewport.addEventListener('dragleave', handleDragLeave);
+    viewport.addEventListener('drop', clearHovered);
+    return () => {
+      clearTimeout(pending);
+      map.un('click', handleClick);
+      map.un('pointermove', handlePointerMove);
+      viewport.removeEventListener('dragover', handleDragOver);
+      viewport.removeEventListener('dragleave', handleDragLeave);
+      viewport.removeEventListener('drop', clearHovered);
+      map.removeLayer(hoverLayer);
+    };
   }, [map, isDrawing, suppressMapInteractions]);
 
   const handleCloseTransformerDialog = useCallback(() => { setTransformerDialogOpen(false); setSelectedTransformer(null); }, [setTransformerDialogOpen, setSelectedTransformer]);

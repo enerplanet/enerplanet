@@ -38,6 +38,7 @@ interface AreaSurfaces {
 // is open, so it is kept per set of buildings for later 3D views. The request
 // itself is kept, so an area asked for twice at the same time is fetched once.
 const areaCache = new Map<string, Promise<AreaSurfaces>>();
+const NO_AREA: AreaSurfaces = { country: null, surfaces: new Map(), credits: [] };
 // The PV surface lookup runs one call per building; this many run at a time.
 const PARALLEL_REQUESTS = 4;
 // An open 3D view asks again this often, this many times, for buildings City2TABULA had not filled in.
@@ -148,7 +149,7 @@ function areaSurfaces(key: string, buildings: GeoJSON.FeatureCollection): Promis
  * another way; loading is true until the area is read.
  */
 export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, enabled: boolean): { surfaces: Map<string, Lod2Surface[]>; loading: boolean; country: string | null; credits: DatasetCredit[] } {
-  const [area, setArea] = useState<AreaSurfaces>(() => ({ country: null, surfaces: new Map(), credits: [] }));
+  const [area, setArea] = useState<AreaSurfaces>(NO_AREA);
   const [loading, setLoading] = useState(false);
   // The building data is rebuilt on many renders; the lookup restarts only when
   // the set of buildings changes, and reads their outlines from this ref.
@@ -160,7 +161,12 @@ export function useLod2Surfaces(buildings: GeoJSON.FeatureCollection | null, ena
 
   useEffect(() => {
     const current = buildingsRef.current;
-    if (!enabled || !current?.features?.length || !buildingKey) return;
+    if (!enabled) return;
+    // Deleting every area removes the buildings, and their models with them.
+    if (!current?.features?.length || !buildingKey) {
+      setArea(NO_AREA);
+      return;
+    }
     let cancelled = false;
     let retry: ReturnType<typeof setTimeout> | undefined;
     setLoading(true);

@@ -1307,6 +1307,7 @@
     },
     "mapHeader": {
       "disableSelected": "Geselecteerde gebouwen uitschakelen",
+      "enableSelected": "Geselecteerde gebouwen inschakelen",
       "importArea": "Gebied importeren",
       "exportArea": "Gebied exporteren",
       "regenerateGrid": "Net opnieuw genereren",
@@ -2165,7 +2166,9 @@
     "cancel": "Tekenen annuleren",
     "legendPv": "PV",
     "legendStorage": "Opslag",
-    "legendHeat": "Warmtevoorziening"
+    "legendHeat": "Warmtevoorziening",
+    "legendMvLine": "Middenspanningslijn",
+    "legendLvLine": "Laagspanningslijn, kleur per transformator"
   },
   "forms": {
     "user": {

@@ -113,6 +113,46 @@ func TestLink_ReplacesTheSameSeriesAndKeepsOwnersApart(t *testing.T) {
 	assert.Empty(t, modelLinks, "deleting a model removes its links")
 }
 
+func TestLink_UnlinksBuemSeriesTheNewProfileLacksAndKeepsUploads(t *testing.T) {
+	s := NewStore(scratchDB(t))
+	withCooling := buemProfile("key-cooling", 1)
+	withCooling.Series["cooling"] = SeriesData{Unit: "kWh", Values: []float32{3}}
+	before, err := s.Save(withCooling)
+	require.NoError(t, err)
+	after, err := s.Save(buemProfile("key-no-cooling", 2))
+	require.NoError(t, err)
+	upload := buemProfile("key-upload", 4)
+	upload.Origin, upload.OwnerUserID = "uploaded", "u"
+	uploaded, err := s.Save(upload)
+	require.NoError(t, err)
+
+	draft := Owner{DraftID: "draft-1"}
+	link := func(building, series string, profile int64) Link {
+		return Link{BuildingRef: building, Series: series, ProfileID: profile, Source: "user"}
+	}
+	require.NoError(t, s.Link(draft, "rev-1", []Link{
+		link("a", "heating", before), link("a", "electricity", before), link("a", "cooling", before),
+		link("b", "heating", before), link("b", "cooling", uploaded),
+	}))
+
+	// Cooling switched off for both buildings: a's BuEM cooling goes, b's uploaded cooling stays.
+	require.NoError(t, s.Link(draft, "rev-2", []Link{
+		link("a", "heating", after), link("a", "electricity", after),
+		link("b", "heating", after), link("b", "electricity", after),
+	}))
+
+	links, err := s.Links(draft)
+	require.NoError(t, err)
+	got := map[string]int64{}
+	for _, l := range links {
+		got[l.BuildingRef+"/"+l.Series] = l.ProfileID
+	}
+	assert.Equal(t, map[string]int64{
+		"a/heating": after, "a/electricity": after,
+		"b/heating": after, "b/electricity": after, "b/cooling": uploaded,
+	}, got)
+}
+
 func TestSave_OwnerMatchesOrigin(t *testing.T) {
 	tx := scratchDB(t)
 	s := NewStore(tx)
