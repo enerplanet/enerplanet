@@ -195,7 +195,13 @@
     },
     "copied": "Gekopieerd",
     "copy": "Kopiëren",
-    "saved": "Opgeslagen"
+    "saved": "Opgeslagen",
+    "theme": {
+      "switchToDark": "Overschakelen naar donkere modus",
+      "switchToLight": "Overschakelen naar lichte modus",
+      "switchToDarkTitle": "Overschakelen naar donkere modus",
+      "switchToLightTitle": "Overschakelen naar lichte modus"
+    }
   },
   "dashboard": {
     "stats": {
@@ -497,7 +503,9 @@
       "notInResult": "Niet in dit resultaat",
       "transmissionUtilization": "Transmissiebenutting",
       "overloadedConnection": "Overbelaste leiding",
-      "loadingPreliminary": "Voorlopig: elke leiding wordt beoordeeld tegen de zwakste kabel in het net, dus een hoge benutting overschat de werkelijke kabel."
+      "loadingPreliminary": "Voorlopig: elke leiding wordt beoordeeld tegen de zwakste kabel in het net, dus een hoge benutting overschat de werkelijke kabel.",
+      "pypsaRunStatus": "Status van de PyPSA-loadflowberekening",
+      "busiestLine": "Zwaarst belaste lijn"
     },
     "chartLabels": {
       "amount": "Bedrag",

@@ -242,6 +242,7 @@ const FLOW_LABELS: Record<string, [string, string]> = {
   batteryIn: ['results.buildingDetail.flow.batteryIn', 'Battery charging'],
   batteryOut: ['results.buildingDetail.flow.batteryOut', 'Battery discharging'],
   batteryLoss: ['results.buildingDetail.flow.batteryLoss', 'Battery losses'],
+  battery_storage: ['results.buildingDetail.flow.batteryStorage', 'Battery storage'],
   pv_supply: ['results.buildingDetail.flow.pv', 'Solar PV'],
   air_source_heat_pump: ['results.buildingDetail.flow.heatPump', 'Heat pump'],
   air_conditioner: ['results.buildingDetail.flow.airConditioner', 'Air conditioner'],
@@ -258,6 +259,14 @@ export function flowLabel(key: string, carrier: string, t: Translate): string {
   if (entry) return t(entry[0], entry[1]);
   const text = key.replaceAll('_', ' ');
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Output-per-input ratio name of a converter: efficiency for boilers, else COP for heat and EER for cooling. */
+export function converterRatio(key: string, carrier: string): [string, string] {
+  if (/boiler/.test(key)) return ['results.buildingDetail.flow.efficiency', 'efficiency'];
+  if (carrier === 'heat') return ['results.buildingDetail.flow.cop', 'COP'];
+  if (carrier === 'cooling') return ['results.buildingDetail.flow.eer', 'EER'];
+  return ['results.buildingDetail.flow.efficiency', 'efficiency'];
 }
 
 /** Label for model-wide flows, where the line flows are the grid connection at the transformer. */

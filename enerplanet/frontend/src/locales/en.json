@@ -263,7 +263,13 @@
     },
     "copied": "Copied",
     "copy": "Copy",
-    "saved": "Saved"
+    "saved": "Saved",
+    "theme": {
+      "switchToDark": "Switch to dark mode",
+      "switchToLight": "Switch to light mode",
+      "switchToDarkTitle": "Switch to Dark Mode",
+      "switchToLightTitle": "Switch to Light Mode"
+    }
   },
   "forms": {
     "user": {
@@ -636,7 +642,8 @@
       "publicDemand": "Public Building Demand",
       "industrialDemand": "Industrial Demand",
       "agriculturalDemand": "Agricultural Demand",
-      "otherBuildings": "Other buildings"
+      "otherBuildings": "Other buildings",
+      "airSourceHeatPump": "Air Source Heat Pump"
     },
     "charts": {
       "costDistribution": "Cost Distribution",
@@ -770,7 +777,9 @@
       "notInResult": "Not in this result",
       "transmissionUtilization": "Transmission Utilization",
       "overloadedConnection": "Overloaded wire",
-      "loadingPreliminary": "Preliminary: each wire is rated against the weakest cable in its grid, so a high utilisation overstates the actual cable."
+      "loadingPreliminary": "Preliminary: each wire is rated against the weakest cable in its grid, so a high utilisation overstates the actual cable.",
+      "pypsaRunStatus": "PyPSA Run Status",
+      "busiestLine": "Busiest line"
     },
     "chartLabels": {
       "amount": "Amount",
