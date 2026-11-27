@@ -3,14 +3,12 @@ import { Clock, RefreshCw, LogOut } from "lucide-react";
 import { Button } from "@spatialhub/ui";
 import { useSessionTimer } from "@/hooks/useSessionTimer";
 import { useAuthStore } from "@/store/auth-store";
-import { useNavigate } from "react-router-dom";
 
 const BANNER_THRESHOLD_SECONDS = 180; // Show banner when <= 3 minutes remain
 
 export const SessionExpiryBanner: React.FC = () => {
   const { isWarning, resetTimer, formatTime, isActive, getRemainingSeconds } = useSessionTimer();
   const logout = useAuthStore(state => state.logout);
-  const navigate = useNavigate();
 
   const [localSeconds, setLocalSeconds] = useState(0);
 
@@ -37,8 +35,7 @@ export const SessionExpiryBanner: React.FC = () => {
   if (!isActive || !isWarning || localSeconds > BANNER_THRESHOLD_SECONDS) return null;
 
   const handleLogout = () => {
-    logout();
-    navigate("/login");
+    logout("/login");
   };
 
   const isUrgent = localSeconds <= 60;

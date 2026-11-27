@@ -263,7 +263,13 @@
     },
     "copied": "Kopiert",
     "copy": "Kopieren",
-    "saved": "Gespeichert"
+    "saved": "Gespeichert",
+    "theme": {
+      "switchToDark": "Zum dunklen Modus wechseln",
+      "switchToLight": "Zum hellen Modus wechseln",
+      "switchToDarkTitle": "Zum dunklen Modus wechseln",
+      "switchToLightTitle": "Zum hellen Modus wechseln"
+    }
   },
   "forms": {
     "user": {
@@ -636,7 +642,8 @@
       "publicDemand": "Öffentliches Gebäude Bedarf",
       "industrialDemand": "Industrieller Bedarf",
       "agriculturalDemand": "Landwirtschaftlicher Bedarf",
-      "otherBuildings": "Sonstige Gebäude"
+      "otherBuildings": "Sonstige Gebäude",
+      "airSourceHeatPump": "Luftwärmepumpe"
     },
     "charts": {
       "costDistribution": "Kostenverteilung",
@@ -663,8 +670,8 @@
       "selfSufficiency": "Eigenversorgungsgrad",
       "grid": "Netz",
       "battery": "Batterie",
-      "batteryCharging": "Batterie laden",
-      "batteryDischarging": "Batterie entladen",
+      "batteryCharging": "Batterieladung",
+      "batteryDischarging": "Batterieentladung",
       "energy": "Energie",
       "noEnergyBalanceData": "Keine Energiebilanzdaten verfügbar",
       "peak": "Spitze",
@@ -683,7 +690,7 @@
         "pv": "Solar-PV"
       },
       "flowKind": "Sankey-Diagramm, Gesamtsumme des Laufs",
-      "fromBoilers": "{{energy}} aus Kesseln",
+      "fromBoilers": "{{energy}} aus Heizkesseln",
       "heatPumpShare": "Anteil Wärmepumpen",
       "heatPumpShareInfo": "Anteil der im Zeitraum gelieferten Wärme, der aus Wärmepumpen stammte.",
       "heatSummaryInfo": "Wärmesummen über den gesamten Zeitraum, über alle Gebäude summiert.",
@@ -718,7 +725,12 @@
       "typicalDay": "Typischer Tag",
       "typicalDayInfo": "Durchschnittliche Leistung pro Stunde des Tages über die gewählten Monate, über alle Gebäude summiert. Lieferungen über null, Verbräuche darunter; der höchste Balken unter null ist der Zeitpunkt der Bedarfsspitze.",
       "typicalKind": "Stundenprofil, durchschnittlicher Tag",
-      "used": "Verbraucht"
+      "used": "Verbraucht",
+      "short": {
+        "gridImport": "Netzbezug",
+        "appliances": "Geräte",
+        "export": "Netzeinspeisung"
+      }
     },
     "grid": {
       "noData": "Keine PyPSA-Netzdaten verfügbar",
@@ -770,7 +782,9 @@
       "notInResult": "Nicht in diesem Ergebnis",
       "transmissionUtilization": "Übertragungsauslastung",
       "overloadedConnection": "Überlastete Leitung",
-      "loadingPreliminary": "Vorläufig: Jede Leitung wird gegen das schwächste Kabel ihres Netzes bewertet, daher überschätzt eine hohe Auslastung das tatsächliche Kabel."
+      "loadingPreliminary": "Vorläufig: Jede Leitung wird gegen das schwächste Kabel ihres Netzes bewertet, daher überschätzt eine hohe Auslastung das tatsächliche Kabel.",
+      "pypsaRunStatus": "Status der PyPSA-Lastflussberechnung",
+      "busiestLine": "Am stärksten belastete Leitung"
     },
     "chartLabels": {
       "amount": "Betrag",
@@ -831,7 +845,24 @@
       "floorAreaLabel": "Nutzfläche",
       "flow": {
         "converterLabel": "{{energy}} in · {{ratio}} {{value}}",
-        "electricity": "Strom"
+        "electricity": "Strom",
+        "appliances": "Geräte und Beleuchtung",
+        "heatDemand": "Raumwärme und Warmwasser",
+        "coolingDemand": "Kühlung",
+        "gasDemand": "Gasverbrauch",
+        "lineIn": "Aus dem Ortsnetz",
+        "lineOut": "In das Ortsnetz",
+        "batteryIn": "Batterieladung",
+        "batteryOut": "Batterieentladung",
+        "batteryLoss": "Batterieverluste",
+        "batteryStorage": "Batteriespeicher",
+        "pv": "Solar-PV",
+        "heatPump": "Wärmepumpe",
+        "airConditioner": "Klimaanlage",
+        "boiler": "Heizkessel",
+        "cop": "COP",
+        "eer": "EER",
+        "efficiency": "Wirkungsgrad"
       },
       "footprint": "Grundfläche",
       "gas": "Gas",

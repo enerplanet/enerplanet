@@ -171,6 +171,9 @@ func (h *ModelHandler) CreateModel(c *gin.Context) {
 		return
 	}
 
+	if req.IsCopy != nil && *req.IsCopy {
+		req.WorkspaceID = h.copyWorkspace(c, userCtx.UserID, req.WorkspaceID)
+	}
 	if req.WorkspaceID != nil {
 		if !h.ensureWorkspaceAccess(c, userCtx.UserID, *req.WorkspaceID, errAccessDeniedWorkspace) {
 			return

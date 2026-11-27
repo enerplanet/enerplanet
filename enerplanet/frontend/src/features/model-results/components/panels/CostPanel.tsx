@@ -26,6 +26,7 @@ const COST_TECH_I18N_KEYS: Record<string, string> = {
   wind_turbine_supply: 'results.techNames.windTurbine',
   biomass_supply: 'results.techNames.biomass',
   battery_storage: 'results.techNames.batteryStorage',
+  air_source_heat_pump: 'results.techNames.airSourceHeatPump',
   geothermal_supply: 'results.techNames.geothermal',
   transformer_supply: 'results.techNames.gridElectricity',
   grid_trafo_import: 'results.techNames.gridElectricity',

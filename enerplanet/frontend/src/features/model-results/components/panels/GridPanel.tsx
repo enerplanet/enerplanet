@@ -499,7 +499,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
           <GatedSection
             requires="convergence"
             capabilities={capabilities}
-            title="PyPSA Run Status"
+            title={t('results.grid.pypsaRunStatus', 'PyPSA Run Status')}
             icon={AlertTriangle}
           >
           <div className={CHART_CARD_CLASS}>
@@ -636,7 +636,7 @@ const GridPanel = ({ pypsaData, capabilities, selectedBus, setSelectedBus, selec
               <div className="space-y-2 text-xs">
                 {capabilities.lineLoading && (
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-muted-foreground">Busiest line</span>
+                    <span className="text-muted-foreground">{t('results.grid.busiestLine', 'Busiest line')}</span>
                     <span className="text-right font-medium text-foreground">
                       {busiestLine
                         ? `${busiestLine.name} • ${busiestLine.peakLoadingPercent !== undefined ? `${formatNumber(busiestLine.peakLoadingPercent, 1)}%` : formatApparentPowerValue(busiestLine.peakApparentKva)}`

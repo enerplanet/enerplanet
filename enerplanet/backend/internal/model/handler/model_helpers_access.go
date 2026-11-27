@@ -101,6 +101,21 @@ func (h *ModelHandler) ensureWorkspaceAccess(c *gin.Context, userID string, work
 	return false
 }
 
+// copyWorkspace is where a copy goes: the original's workspace when the user may
+// work in it, otherwise the user's own default workspace. A copy of another
+// user's model therefore stays private to the person who made it.
+func (h *ModelHandler) copyWorkspace(c *gin.Context, userID string, requested *uint) *uint {
+	svc := h.newModelService()
+	if requested != nil && svc.UserHasWorkspaceAccessWithEmail(userID, c.GetString("user_email"), *requested) {
+		return requested
+	}
+	ws, err := svc.GetDefaultWorkspace(userID)
+	if err != nil {
+		return requested
+	}
+	return &ws.ID
+}
+
 func bindJSONOrBadRequest(c *gin.Context, req any) bool {
 	if err := c.ShouldBindJSON(req); err != nil {
 		httputil.BadRequest(c, "Invalid request data")

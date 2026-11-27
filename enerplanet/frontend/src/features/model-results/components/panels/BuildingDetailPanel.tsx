@@ -10,7 +10,7 @@ import { useThemeColors } from "@/features/simulation-charts/pypsa/chartUtils";
 import { carrierDisplay, formatCarrierEnergy, formatCarrierPower } from "../../carrierUnits";
 import { resultFill } from "@/constants/tech-colors";
 import { useResultColors } from "../../hooks/useResultColors";
-import { allocateFlows, netBattery, type BuildingFlow, CarrierResult, flowLabel, installedCapacities, selfSufficiency, summariseFlows } from "../../buildingFlows";
+import { allocateFlows, converterRatio, netBattery, type BuildingFlow, CarrierResult, flowLabel, installedCapacities, selfSufficiency, summariseFlows } from "../../buildingFlows";
 import ChartInfoTooltip from "../ui/ChartInfoTooltip";
 import { BuildingProfileChart, firstSeason, ProfileResolution, Season } from "./BuildingProfileChart";
 
@@ -119,12 +119,6 @@ const useRank = (key: string) => {
   return i < 0 ? 1.5 : i;
 };
 
-/** Ratio name by output carrier: COP for heat, EER for cooling. */
-const RATIO_NAMES: Record<string, [string, string]> = {
-  heat: ["results.buildingDetail.flow.cop", "COP"],
-  cooling: ["results.buildingDetail.flow.eer", "EER"],
-};
-
 /** Splits a long name at the space nearest its middle, so compact labels need less width. */
 function twoLines(name: string): string {
   if (name.length <= 16) return name;
@@ -174,7 +168,7 @@ function sankeyGraph(results: CarrierResult[], t: TFn, label: typeof flowLabel, 
     }
     for (const f of r.flows.filter((f) => f.side === "supply" && isConverter.has(f.key))) {
       const input = used.get(f.key)!;
-      const [key, fallback] = RATIO_NAMES[r.carrier] ?? ["results.buildingDetail.flow.efficiency", "efficiency"];
+      const [key, fallback] = converterRatio(f.key, r.carrier);
       converters.set(label(f.key, r.carrier, t), t("results.buildingDetail.flow.converterLabel", "{{energy}} in · {{ratio}} {{value}}",
         { energy: formatCarrierEnergy(input, "power", 1), ratio: t(key, fallback), value: String(Number((f.totalKwh / input).toFixed(2))) }));
     }

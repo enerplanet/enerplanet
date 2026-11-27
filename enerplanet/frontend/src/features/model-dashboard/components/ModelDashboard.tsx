@@ -1066,7 +1066,7 @@ export const EnergyRiskDashboard: React.FC<EnergyRiskDashboardProps> = () => {
 							) : (
 								<>
 									{!isLoading && filteredModels.length > 0 ? (
-										<div className={`md-fade-in flex min-h-0 flex-col overflow-hidden ${CARD_CLASS}`}>
+										<div className={`md-fade-in flex min-h-0 flex-1 flex-col overflow-hidden ${CARD_CLASS}`}>
 									<div className="min-h-0 w-full flex-1 overflow-auto">
 										<table className="w-full min-w-[47rem] table-fixed xl:min-w-[63.5rem]">
 											<ModelColumns />
