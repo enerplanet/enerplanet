@@ -479,7 +479,7 @@ export function addOrUpdateTransformers(map: maplibregl.Map, geojson: any, color
       layout: {
         'text-field': ['concat', ['to-string', ['coalesce', ['get', 'rated_power_kva'], '']], ' kVA'],
         'text-size': 9,
-        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-font': ['Noto Sans Bold'],
         'text-offset': [0, 1.9],
         'text-anchor': 'top',
         'text-allow-overlap': true,
