@@ -11,7 +11,7 @@ interface AuthState {
 	setUser: (user: User | null) => void;
 	init: (data: { user: User | null; sessionTimeout?: number }) => Promise<void>;
 	updateUser: (user: Partial<User>) => void;
-	logout: (callback?: (data: { success: boolean; [key: string]: unknown }) => void) => void;
+	logout: (redirectTo: string) => void;
 	logoutSessionExpired: () => void;
 	reset: () => void;
 }
@@ -33,16 +33,17 @@ export const useAuthStore = create<AuthState>()(
 				if (!user) return;
 				set({ user: { ...user, ...update } });
 			},
-			logout: (callback) => {
-				get().reset();
+			logout: (redirectTo) => {
 				// Clears the server session and session_id cookie for both
-				// password and SSO logins.
-				void axios.post("/logout").then(({ data: response }) => {
-					callback?.(response);
-				}).catch((error: unknown) => {
+				// password and SSO logins. The page reloads rather than resetting the user in
+				// place: a reset re-renders mounted pages, whose requests then fail with 401.
+				void axios.post("/logout").catch((error: unknown) => {
 					if (import.meta.env.DEV) {
 						console.error("Logout error:", error);
 					}
+				}).finally(() => {
+					useAuthStore.persist.clearStorage();
+					globalThis.location.replace(redirectTo);
 				});
 			},
 			logoutSessionExpired: () => {
