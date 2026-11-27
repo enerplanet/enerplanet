@@ -6,7 +6,7 @@ import type { StyleSpecification } from 'maplibre-gl';
  */
 export const BASE_STYLE: StyleSpecification = {
   version: 8,
-  glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
+  glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
   sources: {
     osm: {
       type: 'raster',

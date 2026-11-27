@@ -113,8 +113,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       documentation: () => window.open(DOCUMENTATION_URL, "_blank", "noopener,noreferrer"),
       logout: async () => {
         closeNotificationStream();
-        logout();
-        navigate("/");
+        logout("/");
       },
     }),
     [navigate, logout]
