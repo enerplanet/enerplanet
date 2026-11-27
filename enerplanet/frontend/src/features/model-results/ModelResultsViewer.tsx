@@ -1197,7 +1197,10 @@ export const ModelResultsViewer = () => {
                   { id: 'overview' as RightPanelView, label: t('results.tabs.overview'), icon: BarChart3 },
                   { id: 'energy' as RightPanelView, label: t('results.tabs.energy'), icon: LineChart },
                   { id: 'cost' as RightPanelView, label: t('results.tabs.cost'), icon: DollarSign },
-                  { id: 'grid' as RightPanelView, label: t('results.tabs.grid'), icon: Network },
+                  // Calliope results carry no power flow; the grid tab needs a PyPSA run.
+                  ...(capabilities.convergence
+                    ? [{ id: 'grid' as RightPanelView, label: t('results.tabs.grid'), icon: Network }]
+                    : []),
                 ].map(tab => (
                   <button
                     key={tab.id}
