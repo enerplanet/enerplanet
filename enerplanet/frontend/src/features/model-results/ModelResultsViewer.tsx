@@ -94,7 +94,7 @@ const familyFrame: Record<ModelMenuRow['role'], string> = {
 };
 
 const ModelDropdownItem = ({ row, isSelected, onSelect, style }: ModelDropdownItemProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { model, role, copyCount, selectable, closesFamily } = row;
   const Icon = role === 'parent' ? Layers : FileBarChart;
   return (
@@ -131,7 +131,7 @@ const ModelDropdownItem = ({ row, isSelected, onSelect, style }: ModelDropdownIt
               )}
               {!selectable && <span>{t('results.notRun')}</span>}
               {model.region && <span>{model.region}</span>}
-              <span>{new Date(model.created_at).toLocaleDateString()}</span>
+              <span>{new Date(model.created_at).toLocaleDateString(i18n.language)}</span>
             </div>
           </div>
           {isSelected && (
@@ -395,7 +395,7 @@ function calculateModelStats(model: ModelInfo, turbineData: Record<string, WindT
 }
 
 export const ModelResultsViewer = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -858,8 +858,8 @@ export const ModelResultsViewer = () => {
                   )}
                   <span className="flex items-center gap-1 whitespace-nowrap" title={`${model.resolution} min ${t('results.resolution')}`}>
                     <Calendar className="w-4 h-4" />
-                    {new Date(model.from_date).toLocaleDateString()} -{' '}
-                    {new Date(model.to_date).toLocaleDateString()}
+                    {new Date(model.from_date).toLocaleDateString(i18n.language)} -{' '}
+                    {new Date(model.to_date).toLocaleDateString(i18n.language)}
                   </span>
                   <span className="hidden items-center gap-1 whitespace-nowrap 2xl:flex">
                     <Clock className="w-4 h-4" />

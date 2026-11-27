@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { StructuredModelResults } from '@/features/model-results/types';
+import en from '@/locales/en.json';
 import { feedInIncome, netCost, transformStructuredCostBreakdown } from './costUtils';
+
+// Category labels resolve against the English locale file, as in the app.
+vi.mock('@spatialhub/i18n', () => ({
+  i18n: { t: (key: string) => key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], en) },
+}));
 
 // Cost rows as stored for an operate run: feed-in revenue is a negative cost.
 const results = {

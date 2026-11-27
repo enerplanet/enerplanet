@@ -37,9 +37,9 @@ function energyAtScaleOf(kwh: number, reference: number, carrier: string): strin
 }
 
 const SHORT_LABELS: Record<string, [string, string]> = {
-  pv_supply: ['results.energy.short.pv', 'Solar PV'],
+  pv_supply: ['results.buildingDetail.flow.pv', 'Solar PV'],
   lineIn: ['results.energy.short.gridImport', 'Grid import'],
-  air_source_heat_pump: ['results.energy.short.heatPump', 'Heat pump'],
+  air_source_heat_pump: ['results.buildingDetail.flow.heatPump', 'Heat pump'],
   demand: ['results.energy.short.appliances', 'Appliances'],
   lineOut: ['results.energy.short.export', 'Export'],
 };

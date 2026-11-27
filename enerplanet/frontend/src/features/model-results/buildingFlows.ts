@@ -242,6 +242,7 @@ const FLOW_LABELS: Record<string, [string, string]> = {
   batteryIn: ['results.buildingDetail.flow.batteryIn', 'Battery charging'],
   batteryOut: ['results.buildingDetail.flow.batteryOut', 'Battery discharging'],
   batteryLoss: ['results.buildingDetail.flow.batteryLoss', 'Battery losses'],
+  battery_storage: ['results.buildingDetail.flow.batteryStorage', 'Battery storage'],
   pv_supply: ['results.buildingDetail.flow.pv', 'Solar PV'],
   air_source_heat_pump: ['results.buildingDetail.flow.heatPump', 'Heat pump'],
   air_conditioner: ['results.buildingDetail.flow.airConditioner', 'Air conditioner'],

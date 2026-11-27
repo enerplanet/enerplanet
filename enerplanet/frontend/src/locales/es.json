@@ -263,7 +263,13 @@
     },
     "copied": "Copiado",
     "copy": "Copiar",
-    "saved": "Guardado"
+    "saved": "Guardado",
+    "theme": {
+      "switchToDark": "Cambiar al modo oscuro",
+      "switchToLight": "Cambiar al modo claro",
+      "switchToDarkTitle": "Cambiar al modo oscuro",
+      "switchToLightTitle": "Cambiar al modo claro"
+    }
   },
   "forms": {
     "user": {
@@ -763,7 +769,9 @@
       "notInResult": "No está en este resultado",
       "transmissionUtilization": "Utilización del transporte",
       "overloadedConnection": "Línea sobrecargada",
-      "loadingPreliminary": "Preliminar: cada línea se evalúa frente al cable más débil de su red, por lo que una utilización alta sobrestima el cable real."
+      "loadingPreliminary": "Preliminar: cada línea se evalúa frente al cable más débil de su red, por lo que una utilización alta sobrestima el cable real.",
+      "pypsaRunStatus": "Estado del cálculo de flujo de carga de PyPSA",
+      "busiestLine": "Línea más cargada"
     },
     "chartLabels": {
       "amount": "Monto",
