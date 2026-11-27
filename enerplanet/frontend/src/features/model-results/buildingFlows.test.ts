@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocateFlows, combineCarriers, netBattery, classifyFlow, heatFigures, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows, thermalFigures, thermalFlows, flowLabel } from './buildingFlows';
+import { allocateFlows, combineCarriers, netBattery, classifyFlow, heatFigures, installedCapacities, selfSufficiencyShare, modelSelfSufficiency, selfSufficiency, summariseFlows, techFamily, systemFlows, thermalFigures, thermalFlows, flowLabel, converterRatio } from './buildingFlows';
 
 const row = (techs: string, timestep: string, value: number) =>
   ({ id: 0, model_id: 1, from_location: 'n1', carrier: 'power', techs, timestep, value });
@@ -160,5 +160,14 @@ describe('installedCapacities', () => {
       ['heat:air_source_heat_pump', 'supply', [3, 0]], ['heat:demand', 'use', [3, 0]],
       ['cooling:air_conditioner', 'supply', [0, 1]], ['cooling:demand', 'use', [0, 1]],
     ]);
+  });
+});
+
+describe('converterRatio', () => {
+  it('names the output-per-input ratio by converter: COP for heat pumps, EER for cooling, efficiency for boilers', () => {
+    expect(converterRatio('air_source_heat_pump', 'heat')[1]).toBe('COP');
+    expect(converterRatio('air_conditioner', 'cooling')[1]).toBe('EER');
+    expect(converterRatio('boiler', 'heat')[1]).toBe('efficiency');
+    expect(converterRatio('gas_boiler', 'heat')[1]).toBe('efficiency');
   });
 });
