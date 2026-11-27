@@ -78,7 +78,7 @@ func planFootprints(copies []siteCopy, linked, inArea []city2tabula.Building, fo
 		markWays(replaced, b)
 		plan.add = append(plan.add, addedBuilding{
 			Geom: footprint, Source: "city2tabula", SourceID: b.ObjectID,
-			FClass: osmClass(b, copyByWay), Floors: b.NumberOfStoreys,
+			FClass: siteClass(b, copyByWay), Floors: b.NumberOfStoreys,
 		})
 	}
 	for _, c := range copies {
@@ -114,13 +114,36 @@ func markWays(ways map[string]bool, b city2tabula.Building) {
 	}
 }
 
-// osmClass is the f_class of the 3D building's best linked OSM copy, or
-// "yes" (use unknown) when it has none.
-func osmClass(b city2tabula.Building, copyByWay map[string]siteCopy) string {
+// useClasses maps City2TABULA's use_type to the pylovo consumer category
+// (config_generation.yaml) sent for it; pylovo rejects an unknown f_class.
+// "other" says no more than OSM's "yes", so it has no entry.
+var useClasses = map[string]string{
+	"residential": "residential", "office": "office", "retail": "retail",
+	"public": "public", "commercial": "commercial", "hospitality": "commercial",
+	"education": "school", "health": "healthcare", "industry": "industrial",
+	"agriculture": "agricultural", "ancillary": "garage",
+}
+
+// siteClass is the f_class of a 3D building: its 3D use, else the class of
+// its best linked OSM copy, else "yes" (use unknown). A residential 3D use
+// gives way to a specific OSM class such as terrace or apartments.
+func siteClass(b city2tabula.Building, copyByWay map[string]siteCopy) string {
+	osm := ""
 	for _, w := range append([]string{b.OSMID}, b.OSMIDs...) {
-		if c, ok := copyByWay[w]; ok && c.FClass != "" {
-			return c.FClass
+		if c, ok := copyByWay[w]; ok && c.FClass != "" && c.FClass != "yes" && c.FClass != "building" {
+			osm = c.FClass
+			break
 		}
+	}
+	use := ""
+	if b.UseType != nil {
+		use = *b.UseType
+	}
+	if class, ok := useClasses[use]; ok && (use != "residential" || osm == "") {
+		return class
+	}
+	if osm != "" {
+		return osm
 	}
 	return "yes"
 }

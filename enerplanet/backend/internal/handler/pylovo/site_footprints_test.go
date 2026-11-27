@@ -76,3 +76,43 @@ func TestPlanFootprints_missingFootprintKeepsCopy(t *testing.T) {
 		t.Errorf("plan = %+v, want the copy kept and nothing added", plan)
 	}
 }
+
+// The 3D use decides a building's class; a residential one keeps the more
+// specific OSM class, and the 3D use "other" says nothing.
+func TestPlanFootprints_classFrom3DUse(t *testing.T) {
+	copies := []siteCopy{
+		{BuildingID: 1, OSMID: "garage", FClass: "yes"},
+		{BuildingID: 2, OSMID: "tagged", FClass: "house"},
+		{BuildingID: 3, OSMID: "row", FClass: "terrace"},
+		{BuildingID: 4, OSMID: "untagged", FClass: "yes"},
+		{BuildingID: 5, OSMID: "farm", FClass: "yes"},
+		{BuildingID: 6, OSMID: "unknown", FClass: "barn"},
+	}
+	withUse := func(b city2tabula.Building, use string) city2tabula.Building {
+		b.UseType = ptr(use)
+		return b
+	}
+	linked := []city2tabula.Building{
+		withUse(building3D("A", "31001_2463", 40, "garage"), "ancillary"),
+		withUse(building3D("B", "31001_2463", 40, "tagged"), "ancillary"),
+		withUse(building3D("C", "31001_1000", 80, "row"), "residential"),
+		withUse(building3D("D", "31001_1000", 80, "untagged"), "residential"),
+		withUse(building3D("E", "31001_2700", 200, "farm"), "agriculture"),
+		withUse(building3D("F", "31001_9998", 60, "unknown"), "other"),
+	}
+	footprints := map[string]json.RawMessage{}
+	for _, id := range []string{"A", "B", "C", "D", "E", "F"} {
+		footprints[id] = json.RawMessage(`"` + id + `"`)
+	}
+
+	plan := planFootprints(copies, linked, nil, footprints, func(json.RawMessage) bool { return true })
+
+	var got []string
+	for _, a := range plan.add {
+		got = append(got, a.SourceID+"="+a.FClass)
+	}
+	want := []string{"A=garage", "B=garage", "C=terrace", "D=residential", "E=agricultural", "F=barn"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("added = %v, want %v", got, want)
+	}
+}
